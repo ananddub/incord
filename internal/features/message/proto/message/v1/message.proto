@@ -1,0 +1,222 @@
+syntax = "proto3";
+
+package message.v1;
+
+option go_package = "github.com/ananddub/ndiscord_backend/gen/message/v1;messagev1";
+
+import "google/protobuf/timestamp.proto";
+
+service MessageService {
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+  rpc GetMessage(GetMessageRequest) returns (GetMessageResponse);
+  rpc EditMessage(EditMessageRequest) returns (EditMessageResponse);
+  rpc DeleteMessage(DeleteMessageRequest) returns (DeleteMessageResponse);
+  rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse);
+  rpc PinMessage(PinMessageRequest) returns (PinMessageResponse);
+  rpc UnpinMessage(UnpinMessageRequest) returns (UnpinMessageResponse);
+  rpc AddReaction(AddReactionRequest) returns (AddReactionResponse);
+  rpc RemoveReaction(RemoveReactionRequest) returns (RemoveReactionResponse);
+  rpc AckMessage(AckMessageRequest) returns (AckMessageResponse);
+  rpc StartTyping(StartTypingRequest) returns (StartTypingResponse);
+
+  // DM: send message directly to a user (auto-creates DM channel)
+  rpc SendDirectMessage(SendDirectMessageRequest) returns (SendDirectMessageResponse);
+
+  // Unread: get pending messages across channels
+  rpc GetUnreadCounts(GetUnreadCountsRequest) returns (GetUnreadCountsResponse);
+
+  // Streams
+  rpc StreamMessages(StreamMessagesRequest) returns (stream MessageEvent);
+  rpc StreamTyping(StreamTypingRequest) returns (stream TypingEvent);
+}
+
+enum MessageType {
+  MESSAGE_TYPE_UNSPECIFIED = 0;
+  MESSAGE_TYPE_DEFAULT = 1;
+  MESSAGE_TYPE_SYSTEM = 2;
+  MESSAGE_TYPE_REPLY = 3;
+}
+
+message Attachment {
+  string id = 1;
+  string filename = 2;
+  string url = 3;
+  string content_type = 4;
+  int64 size = 5;
+}
+
+message Reaction {
+  string emoji = 1;
+  int32 count = 2;
+  bool me = 3;
+}
+
+message Message {
+  string id = 1;
+  string channel_id = 2;
+  string author_id = 3;
+  string content = 4;
+  MessageType type = 5;
+  repeated Attachment attachments = 6;
+  repeated Reaction reactions = 7;
+  string reply_to_id = 8;
+  bool pinned = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp edited_at = 11;
+}
+
+message SendMessageRequest {
+  string channel_id = 1;
+  string content = 2;
+  MessageType type = 3;
+  string reply_to_id = 4;
+  repeated string attachment_ids = 5;
+}
+
+message SendMessageResponse {
+  Message message = 1;
+}
+
+message GetMessageRequest {
+  string channel_id = 1;
+  string message_id = 2;
+}
+
+message GetMessageResponse {
+  Message message = 1;
+}
+
+message EditMessageRequest {
+  string channel_id = 1;
+  string message_id = 2;
+  string content = 3;
+}
+
+message EditMessageResponse {
+  Message message = 1;
+}
+
+message DeleteMessageRequest {
+  string channel_id = 1;
+  string message_id = 2;
+}
+
+message DeleteMessageResponse {}
+
+message ListMessagesRequest {
+  string channel_id = 1;
+  string before = 2;
+  string after = 3;
+  int32 limit = 4;
+}
+
+message ListMessagesResponse {
+  repeated Message messages = 1;
+}
+
+message PinMessageRequest {
+  string channel_id = 1;
+  string message_id = 2;
+}
+
+message PinMessageResponse {}
+
+message UnpinMessageRequest {
+  string channel_id = 1;
+  string message_id = 2;
+}
+
+message UnpinMessageResponse {}
+
+message AddReactionRequest {
+  string channel_id = 1;
+  string message_id = 2;
+  string emoji = 3;
+}
+
+message AddReactionResponse {}
+
+message RemoveReactionRequest {
+  string channel_id = 1;
+  string message_id = 2;
+  string emoji = 3;
+}
+
+message RemoveReactionResponse {}
+
+message AckMessageRequest {
+  string channel_id = 1;
+  string message_id = 2;
+}
+
+message AckMessageResponse {}
+
+message StartTypingRequest {
+  string channel_id = 1;
+}
+
+message StartTypingResponse {}
+
+// Stream: real-time messages for a channel
+message StreamMessagesRequest {
+  string channel_id = 1;
+}
+
+enum MessageEventType {
+  MESSAGE_EVENT_TYPE_UNSPECIFIED = 0;
+  MESSAGE_EVENT_TYPE_CREATE = 1;
+  MESSAGE_EVENT_TYPE_UPDATE = 2;
+  MESSAGE_EVENT_TYPE_DELETE = 3;
+  MESSAGE_EVENT_TYPE_PIN = 4;
+  MESSAGE_EVENT_TYPE_UNPIN = 5;
+  MESSAGE_EVENT_TYPE_REACTION_ADD = 6;
+  MESSAGE_EVENT_TYPE_REACTION_REMOVE = 7;
+}
+
+message MessageEvent {
+  MessageEventType type = 1;
+  Message message = 2;
+  string channel_id = 3;
+  string message_id = 4;
+  string emoji = 5;
+  string user_id = 6;
+  google.protobuf.Timestamp timestamp = 7;
+}
+
+// Stream: typing indicators for a channel
+message StreamTypingRequest {
+  string channel_id = 1;
+}
+
+message TypingEvent {
+  string channel_id = 1;
+  string user_id = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+// DM: send directly to a user without manually creating DM channel
+message SendDirectMessageRequest {
+  string recipient_id = 1;
+  string content = 2;
+}
+
+message SendDirectMessageResponse {
+  string channel_id = 1;
+  Message message = 2;
+}
+
+// Unread: pending messages per channel
+message GetUnreadCountsRequest {}
+
+message UnreadChannel {
+  string channel_id = 1;
+  string last_read_message_id = 2;
+  int32 unread_count = 3;
+  string last_message_id = 4;
+  google.protobuf.Timestamp last_message_at = 5;
+}
+
+message GetUnreadCountsResponse {
+  repeated UnreadChannel channels = 1;
+  int32 total_unread = 2;
+}

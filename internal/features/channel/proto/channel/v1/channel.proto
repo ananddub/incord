@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package channel.v1;
+
+option go_package = "github.com/ananddub/ndiscord_backend/gen/channel/v1;channelv1";
+
+import "google/protobuf/timestamp.proto";
+
+service ChannelService {
+  rpc CreateChannel(CreateChannelRequest) returns (CreateChannelResponse);
+  rpc GetChannel(GetChannelRequest) returns (GetChannelResponse);
+  rpc UpdateChannel(UpdateChannelRequest) returns (UpdateChannelResponse);
+  rpc DeleteChannel(DeleteChannelRequest) returns (DeleteChannelResponse);
+  rpc ListGuildChannels(ListGuildChannelsRequest) returns (ListGuildChannelsResponse);
+  rpc CreateDMChannel(CreateDMChannelRequest) returns (CreateDMChannelResponse);
+  rpc ListDMChannels(ListDMChannelsRequest) returns (ListDMChannelsResponse);
+}
+
+enum ChannelType {
+  CHANNEL_TYPE_UNSPECIFIED = 0;
+  CHANNEL_TYPE_TEXT = 1;
+  CHANNEL_TYPE_VOICE = 2;
+  CHANNEL_TYPE_VIDEO = 3;
+  CHANNEL_TYPE_CATEGORY = 4;
+  CHANNEL_TYPE_DM = 5;
+  CHANNEL_TYPE_GROUP_DM = 6;
+}
+
+message Channel {
+  string id = 1;
+  string guild_id = 2;
+  string name = 3;
+  ChannelType type = 4;
+  string topic = 5;
+  int32 position = 6;
+  string parent_id = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message CreateChannelRequest {
+  string guild_id = 1;
+  string name = 2;
+  ChannelType type = 3;
+  string topic = 4;
+  string parent_id = 5;
+}
+
+message CreateChannelResponse {
+  Channel channel = 1;
+}
+
+message GetChannelRequest {
+  string channel_id = 1;
+}
+
+message GetChannelResponse {
+  Channel channel = 1;
+}
+
+message UpdateChannelRequest {
+  string channel_id = 1;
+  optional string name = 2;
+  optional string topic = 3;
+  optional int32 position = 4;
+  optional string parent_id = 5;
+}
+
+message UpdateChannelResponse {
+  Channel channel = 1;
+}
+
+message DeleteChannelRequest {
+  string channel_id = 1;
+}
+
+message DeleteChannelResponse {}
+
+message ListGuildChannelsRequest {
+  string guild_id = 1;
+}
+
+message ListGuildChannelsResponse {
+  repeated Channel channels = 1;
+}
+
+message CreateDMChannelRequest {
+  repeated string recipient_ids = 1;
+}
+
+message CreateDMChannelResponse {
+  Channel channel = 1;
+}
+
+message ListDMChannelsRequest {}
+
+message ListDMChannelsResponse {
+  repeated Channel channels = 1;
+}

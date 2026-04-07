@@ -1,0 +1,182 @@
+syntax = "proto3";
+
+package user.v1;
+
+option go_package = "github.com/ananddub/ndiscord_backend/gen/user/v1;userv1";
+
+import "google/protobuf/timestamp.proto";
+
+service UserService {
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+  rpc GetUserByUsername(GetUserByUsernameRequest) returns (GetUserByUsernameResponse);
+  rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
+
+  // Friends
+  rpc SendFriendRequest(SendFriendRequestRequest) returns (SendFriendRequestResponse);
+  rpc AcceptFriendRequest(AcceptFriendRequestRequest) returns (AcceptFriendRequestResponse);
+  rpc DeclineFriendRequest(DeclineFriendRequestRequest) returns (DeclineFriendRequestResponse);
+  rpc RemoveFriend(RemoveFriendRequest) returns (RemoveFriendResponse);
+  rpc BlockUser(BlockUserRequest) returns (BlockUserResponse);
+  rpc UnblockUser(UnblockUserRequest) returns (UnblockUserResponse);
+  rpc ListFriends(ListFriendsRequest) returns (ListFriendsResponse);
+  rpc ListPendingRequests(ListPendingRequestsRequest) returns (ListPendingRequestsResponse);
+  rpc ListBlocked(ListBlockedRequest) returns (ListBlockedResponse);
+
+  // Stream: friend activity (presence, friend request events)
+  rpc StreamFriendActivity(StreamFriendActivityRequest) returns (stream FriendActivityEvent);
+}
+
+message User {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  string avatar_url = 4;
+  string bio = 5;
+  string status = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+message UpdateUserRequest {
+  string user_id = 1;
+  optional string username = 2;
+  optional string avatar_url = 3;
+  optional string bio = 4;
+  optional string status = 5;
+}
+
+message UpdateUserResponse {
+  User user = 1;
+}
+
+message DeleteUserRequest {
+  string user_id = 1;
+}
+
+message DeleteUserResponse {}
+
+message GetUserByUsernameRequest {
+  string username = 1;
+}
+
+message GetUserByUsernameResponse {
+  User user = 1;
+}
+
+message SearchUsersRequest {
+  string query = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message SearchUsersResponse {
+  repeated User users = 1;
+  int32 total = 2;
+}
+
+// Friends
+
+enum FriendshipStatus {
+  FRIENDSHIP_STATUS_UNSPECIFIED = 0;
+  FRIENDSHIP_STATUS_PENDING = 1;
+  FRIENDSHIP_STATUS_ACCEPTED = 2;
+  FRIENDSHIP_STATUS_BLOCKED = 3;
+}
+
+message Friendship {
+  string user_id = 1;
+  string friend_id = 2;
+  FriendshipStatus status = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+
+message SendFriendRequestRequest {
+  string target_user_id = 1;
+}
+
+message SendFriendRequestResponse {
+  Friendship friendship = 1;
+}
+
+message AcceptFriendRequestRequest {
+  string requester_user_id = 1;
+}
+
+message AcceptFriendRequestResponse {
+  Friendship friendship = 1;
+}
+
+message DeclineFriendRequestRequest {
+  string requester_user_id = 1;
+}
+
+message DeclineFriendRequestResponse {}
+
+message RemoveFriendRequest {
+  string friend_id = 1;
+}
+
+message RemoveFriendResponse {}
+
+message BlockUserRequest {
+  string target_user_id = 1;
+}
+
+message BlockUserResponse {}
+
+message UnblockUserRequest {
+  string target_user_id = 1;
+}
+
+message UnblockUserResponse {}
+
+message ListFriendsRequest {}
+
+message ListFriendsResponse {
+  repeated User friends = 1;
+}
+
+message ListPendingRequestsRequest {}
+
+message ListPendingRequestsResponse {
+  repeated Friendship incoming = 1;
+  repeated Friendship outgoing = 2;
+}
+
+message ListBlockedRequest {}
+
+message ListBlockedResponse {
+  repeated User blocked = 1;
+}
+
+// Stream: friend activity
+message StreamFriendActivityRequest {}
+
+enum FriendActivityType {
+  FRIEND_ACTIVITY_TYPE_UNSPECIFIED = 0;
+  FRIEND_ACTIVITY_TYPE_PRESENCE_UPDATE = 1;
+  FRIEND_ACTIVITY_TYPE_FRIEND_REQUEST = 2;
+  FRIEND_ACTIVITY_TYPE_FRIEND_ACCEPTED = 3;
+  FRIEND_ACTIVITY_TYPE_FRIEND_REMOVED = 4;
+  FRIEND_ACTIVITY_TYPE_BLOCKED = 5;
+  FRIEND_ACTIVITY_TYPE_PROFILE_UPDATE = 6;
+}
+
+message FriendActivityEvent {
+  FriendActivityType type = 1;
+  string user_id = 2;
+  string status = 3;
+  string custom_status = 4;
+  User user = 5;
+  google.protobuf.Timestamp timestamp = 6;
+}

@@ -1,0 +1,429 @@
+package message
+
+import (
+	"context"
+	"errors"
+
+	"github.com/gocql/gocql"
+	"github.com/google/uuid"
+
+	messagev1 "github.com/ananddub/ndiscord_backend/gen/message/v1"
+	event "github.com/ananddub/ndiscord_backend/internal/shared/event"
+	"github.com/ananddub/ndiscord_backend/internal/shared/middleware"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
+type Handler struct {
+	messagev1.UnimplementedMessageServiceServer
+	svc        *Service
+	msgSubs    *event.SubscriptionManager[*messagev1.MessageEvent]
+	typingSubs *event.SubscriptionManager[*messagev1.TypingEvent]
+}
+
+func NewHandler(
+	svc *Service,
+	msgSubs *event.SubscriptionManager[*messagev1.MessageEvent],
+	typingSubs *event.SubscriptionManager[*messagev1.TypingEvent],
+) *Handler {
+	return &Handler{
+		svc:        svc,
+		msgSubs:    msgSubs,
+		typingSubs: typingSubs,
+	}
+}
+
+func (h *Handler) SendMessage(ctx context.Context, req *messagev1.SendMessageRequest) (*messagev1.SendMessageResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if userID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+
+	if req.ChannelId == "" {
+		return nil, status.Error(codes.InvalidArgument, "channel_id is required")
+	}
+	if req.Content == "" {
+		return nil, status.Error(codes.InvalidArgument, "content is required")
+	}
+
+	// TODO: resolve guildID from channel lookup for proper event routing
+	msg, err := h.svc.SendMessage(ctx, userID, req.ChannelId, "", req.Content, int32(req.Type), req.ReplyToId)
+	if err != nil {
+		return nil, mapError(err)
+	}
+
+	pbMsg, err := h.messageToProto(ctx, msg, userID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to build response")
+	}
+
+	return &messagev1.SendMessageResponse{
+		Message: pbMsg,
+	}, nil
+}
+
+func (h *Handler) GetMessage(ctx context.Context, req *messagev1.GetMessageRequest) (*messagev1.GetMessageResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+
+	if req.ChannelId == "" || req.MessageId == "" {
+		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
+	}
+
+	msg, err := h.svc.GetMessage(ctx, req.ChannelId, req.MessageId)
+	if err != nil {
+		return nil, mapError(err)
+	}
+
+	pbMsg, err := h.messageToProto(ctx, msg, userID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to build response")
+	}
+
+	return &messagev1.GetMessageResponse{
+		Message: pbMsg,
+	}, nil
+}
+
+func (h *Handler) EditMessage(ctx context.Context, req *messagev1.EditMessageRequest) (*messagev1.EditMessageResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if userID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+
+	if req.ChannelId == "" || req.MessageId == "" {
+		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
+	}
+	if req.Content == "" {
+		return nil, status.Error(codes.InvalidArgument, "content is required")
+	}
+
+	msg, err := h.svc.EditMessage(ctx, userID, req.ChannelId, "", req.MessageId, req.Content)
+	if err != nil {
+		return nil, mapError(err)
+	}
+
+	pbMsg, err := h.messageToProto(ctx, msg, userID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to build response")
+	}
+
+	return &messagev1.EditMessageResponse{
+		Message: pbMsg,
+	}, nil
+}
+
+func (h *Handler) DeleteMessage(ctx context.Context, req *messagev1.DeleteMessageRequest) (*messagev1.DeleteMessageResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if userID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+
+	if req.ChannelId == "" || req.MessageId == "" {
+		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
+	}
+
+	if err := h.svc.DeleteMessage(ctx, userID, req.ChannelId, "", req.MessageId); err != nil {
+		return nil, mapError(err)
+	}
+
+	return &messagev1.DeleteMessageResponse{}, nil
+}
+
+func (h *Handler) ListMessages(ctx context.Context, req *messagev1.ListMessagesRequest) (*messagev1.ListMessagesResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+
+	if req.ChannelId == "" {
+		return nil, status.Error(codes.InvalidArgument, "channel_id is required")
+	}
+
+	messages, err := h.svc.ListMessages(ctx, userID, req.ChannelId, req.Before, req.After, req.Limit)
+	if err != nil {
+		return nil, mapError(err)
+	}
+
+	pbMessages := make([]*messagev1.Message, len(messages))
+	for i, msg := range messages {
+		pb, err := h.messageToProto(ctx, msg, userID)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to build response")
+		}
+		pbMessages[i] = pb
+	}
+
+	return &messagev1.ListMessagesResponse{
+		Messages: pbMessages,
+	}, nil
+}
+
+func (h *Handler) PinMessage(ctx context.Context, req *messagev1.PinMessageRequest) (*messagev1.PinMessageResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if req.ChannelId == "" || req.MessageId == "" {
+		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
+	}
+
+	if err := h.svc.PinMessage(ctx, userID, req.ChannelId, "", req.MessageId); err != nil {
+		return nil, mapError(err)
+	}
+
+	return &messagev1.PinMessageResponse{}, nil
+}
+
+func (h *Handler) UnpinMessage(ctx context.Context, req *messagev1.UnpinMessageRequest) (*messagev1.UnpinMessageResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if req.ChannelId == "" || req.MessageId == "" {
+		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
+	}
+
+	if err := h.svc.UnpinMessage(ctx, userID, req.ChannelId, "", req.MessageId); err != nil {
+		return nil, mapError(err)
+	}
+
+	return &messagev1.UnpinMessageResponse{}, nil
+}
+
+func (h *Handler) AddReaction(ctx context.Context, req *messagev1.AddReactionRequest) (*messagev1.AddReactionResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if userID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+
+	if req.ChannelId == "" || req.MessageId == "" {
+		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
+	}
+	if req.Emoji == "" {
+		return nil, status.Error(codes.InvalidArgument, "emoji is required")
+	}
+
+	if err := h.svc.AddReaction(ctx, userID, req.ChannelId, "", req.MessageId, req.Emoji); err != nil {
+		return nil, mapError(err)
+	}
+
+	return &messagev1.AddReactionResponse{}, nil
+}
+
+func (h *Handler) RemoveReaction(ctx context.Context, req *messagev1.RemoveReactionRequest) (*messagev1.RemoveReactionResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if userID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+
+	if req.ChannelId == "" || req.MessageId == "" {
+		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
+	}
+	if req.Emoji == "" {
+		return nil, status.Error(codes.InvalidArgument, "emoji is required")
+	}
+
+	if err := h.svc.RemoveReaction(ctx, userID, req.ChannelId, req.MessageId, req.Emoji); err != nil {
+		return nil, mapError(err)
+	}
+
+	return &messagev1.RemoveReactionResponse{}, nil
+}
+
+func (h *Handler) AckMessage(ctx context.Context, req *messagev1.AckMessageRequest) (*messagev1.AckMessageResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if userID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+
+	if req.ChannelId == "" || req.MessageId == "" {
+		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
+	}
+
+	if err := h.svc.AckMessage(ctx, userID, req.ChannelId, req.MessageId); err != nil {
+		return nil, mapError(err)
+	}
+
+	return &messagev1.AckMessageResponse{}, nil
+}
+
+func (h *Handler) StartTyping(ctx context.Context, req *messagev1.StartTypingRequest) (*messagev1.StartTypingResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if userID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+
+	if req.ChannelId == "" {
+		return nil, status.Error(codes.InvalidArgument, "channel_id is required")
+	}
+
+	if err := h.svc.StartTyping(ctx, userID, req.ChannelId); err != nil {
+		return nil, mapError(err)
+	}
+
+	return &messagev1.StartTypingResponse{}, nil
+}
+
+// StreamMessages opens a server-streaming RPC that pushes message events for a channel.
+func (h *Handler) StreamMessages(req *messagev1.StreamMessagesRequest, stream grpc.ServerStreamingServer[messagev1.MessageEvent]) error {
+	userID := middleware.UserIDFromContext(stream.Context())
+	if userID == "" {
+		return status.Error(codes.Unauthenticated, "not authenticated")
+	}
+	if req.GetChannelId() == "" {
+		return status.Error(codes.InvalidArgument, "channel_id is required")
+	}
+
+	subID := userID + ":" + uuid.New().String()
+	ch := h.msgSubs.Subscribe(req.GetChannelId(), subID, 64)
+	defer h.msgSubs.Unsubscribe(req.GetChannelId(), subID)
+
+	for {
+		select {
+		case <-stream.Context().Done():
+			return nil
+		case evt, ok := <-ch:
+			if !ok {
+				return nil
+			}
+			if err := stream.Send(evt); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+// StreamTyping opens a server-streaming RPC that pushes typing events for a channel.
+func (h *Handler) StreamTyping(req *messagev1.StreamTypingRequest, stream grpc.ServerStreamingServer[messagev1.TypingEvent]) error {
+	userID := middleware.UserIDFromContext(stream.Context())
+	if userID == "" {
+		return status.Error(codes.Unauthenticated, "not authenticated")
+	}
+	if req.GetChannelId() == "" {
+		return status.Error(codes.InvalidArgument, "channel_id is required")
+	}
+
+	subID := userID + ":" + uuid.New().String()
+	ch := h.typingSubs.Subscribe(req.GetChannelId(), subID, 64)
+	defer h.typingSubs.Unsubscribe(req.GetChannelId(), subID)
+
+	for {
+		select {
+		case <-stream.Context().Done():
+			return nil
+		case evt, ok := <-ch:
+			if !ok {
+				return nil
+			}
+			if err := stream.Send(evt); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+// messageToProto converts an internal Message to the proto Message, including reactions.
+func (h *Handler) messageToProto(ctx context.Context, msg *Message, currentUserID string) (*messagev1.Message, error) {
+	var zeroUUID [16]byte
+	pb := &messagev1.Message{
+		Id:        msg.ID.String(),
+		ChannelId: msg.ChannelID.String(),
+		AuthorId:  msg.AuthorID.String(),
+		Content:   msg.Content,
+		Type:      messagev1.MessageType(msg.Type),
+		Pinned:    msg.Pinned,
+		CreatedAt: timestamppb.New(msg.CreatedAt),
+	}
+
+	if msg.ReplyToID != gocql.UUID(zeroUUID) {
+		pb.ReplyToId = msg.ReplyToID.String()
+	}
+	if msg.EditedAt != nil {
+		pb.EditedAt = timestamppb.New(*msg.EditedAt)
+	}
+
+	// Fetch reactions
+	reactions, err := h.svc.GetReactions(ctx, msg.ChannelID.String(), msg.ID.String(), currentUserID)
+	if err == nil && len(reactions) > 0 {
+		pb.Reactions = make([]*messagev1.Reaction, len(reactions))
+		for i, r := range reactions {
+			pb.Reactions[i] = &messagev1.Reaction{
+				Emoji: r.Emoji,
+				Count: r.Count,
+				Me:    r.Me,
+			}
+		}
+	}
+
+	return pb, nil
+}
+
+func (h *Handler) SendDirectMessage(ctx context.Context, req *messagev1.SendDirectMessageRequest) (*messagev1.SendDirectMessageResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if userID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+	if req.RecipientId == "" {
+		return nil, status.Error(codes.InvalidArgument, "recipient_id is required")
+	}
+	if req.Content == "" {
+		return nil, status.Error(codes.InvalidArgument, "content is required")
+	}
+
+	channelID, msg, err := h.svc.SendDirectMessage(ctx, userID, req.RecipientId, req.Content)
+	if err != nil {
+		return nil, mapError(err)
+	}
+
+	pbMsg, err := h.messageToProto(ctx, msg, userID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to build response")
+	}
+
+	return &messagev1.SendDirectMessageResponse{
+		ChannelId: channelID,
+		Message:   pbMsg,
+	}, nil
+}
+
+func (h *Handler) GetUnreadCounts(ctx context.Context, req *messagev1.GetUnreadCountsRequest) (*messagev1.GetUnreadCountsResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if userID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+
+	unreads, total, err := h.svc.GetUnreadCounts(ctx, userID)
+	if err != nil {
+		return nil, mapError(err)
+	}
+
+	channels := make([]*messagev1.UnreadChannel, len(unreads))
+	for i, u := range unreads {
+		channels[i] = &messagev1.UnreadChannel{
+			ChannelId:         u.ChannelID,
+			LastReadMessageId: u.LastReadMsgID,
+			UnreadCount:       u.UnreadCount,
+			LastMessageId:     u.LastMessageID,
+			LastMessageAt:     timestamppb.New(u.LastMessageTime),
+		}
+	}
+
+	return &messagev1.GetUnreadCountsResponse{
+		Channels:     channels,
+		TotalUnread:  total,
+	}, nil
+}
+
+// mapError converts domain errors to gRPC status errors.
+func mapError(err error) error {
+	switch {
+	case errors.Is(err, ErrMessageNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	case errors.Is(err, ErrInvalidUUID),
+		errors.Is(err, ErrChannelRequired),
+		errors.Is(err, ErrContentRequired),
+		errors.Is(err, ErrEmojiRequired),
+		errors.Is(err, ErrMessageRequired):
+		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, ErrUserBlocked):
+		return status.Error(codes.FailedPrecondition, err.Error())
+	case errors.Is(err, ErrNotMessageAuthor),
+		errors.Is(err, ErrInsufficientPermissions):
+		return status.Error(codes.PermissionDenied, err.Error())
+	default:
+		return status.Error(codes.Internal, err.Error())
+	}
+}

@@ -1,0 +1,35 @@
+-- name: CreateFriendship :one
+INSERT INTO friendships (user_id, friend_id, status)
+VALUES ($1, $2, $3)
+RETURNING *;
+
+-- name: UpdateFriendshipStatus :one
+UPDATE friendships SET status = $3
+WHERE user_id = $1 AND friend_id = $2
+RETURNING *;
+
+-- name: DeleteFriendship :exec
+DELETE FROM friendships
+WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1);
+
+-- name: GetFriendship :one
+SELECT * FROM friendships
+WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1);
+
+-- name: ListFriends :many
+SELECT u.* FROM users u
+JOIN friendships f ON (f.friend_id = u.id AND f.user_id = $1) OR (f.user_id = u.id AND f.friend_id = $1)
+WHERE f.status = 'accepted';
+
+-- name: ListPendingIncoming :many
+SELECT * FROM friendships
+WHERE friend_id = $1 AND status = 'pending';
+
+-- name: ListPendingOutgoing :many
+SELECT * FROM friendships
+WHERE user_id = $1 AND status = 'pending';
+
+-- name: ListBlocked :many
+SELECT u.* FROM users u
+JOIN friendships f ON f.friend_id = u.id
+WHERE f.user_id = $1 AND f.status = 'blocked';

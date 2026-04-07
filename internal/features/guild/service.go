@@ -1,0 +1,524 @@
+package guild
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
+
+	"github.com/google/uuid"
+
+	"github.com/ananddub/ndiscord_backend/gen/db"
+	"github.com/ananddub/ndiscord_backend/internal/shared/event"
+	"github.com/ananddub/ndiscord_backend/internal/shared/permissions"
+)
+
+type Service struct {
+	repo     *Repository
+	producer *event.Producer
+}
+
+func NewService(repo *Repository, producer ...*event.Producer) *Service {
+	s := &Service{repo: repo}
+	if len(producer) > 0 {
+		s.producer = producer[0]
+	}
+	return s
+}
+
+func (s *Service) publishGuildEvent(ctx context.Context, guildID pgtype.UUID, action string, extra map[string]string) {
+	gid := uuid.UUID(guildID.Bytes).String()
+	data := map[string]string{"action": action, "guild_id": gid}
+	for k, v := range extra {
+		data[k] = v
+	}
+	_ = event.PublishEvent(ctx, s.producer, event.TopicGuildEvents, gid, gid, "", "", data)
+}
+
+// ComputePermissions resolves a user's effective permissions in a guild.
+// Guild owner gets all permissions. Otherwise, permissions are OR'd across all assigned roles.
+func (s *Service) ComputePermissions(ctx context.Context, userID, guildID pgtype.UUID) (int64, error) {
+	guild, err := s.repo.GetGuildByID(ctx, guildID)
+	if err != nil {
+		return 0, fmt.Errorf("%w: %v", ErrGuildNotFound, err)
+	}
+
+	// Guild owner has all permissions
+	if guild.OwnerID == userID {
+		return permissions.AllPermissions, nil
+	}
+
+	// Check membership
+	_, err = s.repo.GetGuildMember(ctx, db.GetGuildMemberParams{GuildID: guildID, UserID: userID})
+	if err != nil {
+		return 0, ErrNotGuildMember
+	}
+
+	// Get user's roles in this guild
+	roles, err := s.repo.ListUserRoles(ctx, db.ListUserRolesParams{UserID: userID, GuildID: guildID})
+	if err != nil {
+		return permissions.DefaultPermissions, nil // fallback to default if roles fail
+	}
+
+	if len(roles) == 0 {
+		return permissions.DefaultPermissions, nil // no roles = default member permissions
+	}
+
+	// OR all role permissions together
+	var computed int64
+	for _, role := range roles {
+		computed |= role.Permissions
+	}
+
+	return computed, nil
+}
+
+// requirePermission checks if a user has a specific permission in a guild.
+func (s *Service) requirePermission(ctx context.Context, userID, guildID pgtype.UUID, perm int64) error {
+	computed, err := s.ComputePermissions(ctx, userID, guildID)
+	if err != nil {
+		return err
+	}
+	if !permissions.Has(computed, perm) {
+		return ErrInsufficientPermissions
+	}
+	return nil
+}
+
+func (s *Service) CreateGuild(ctx context.Context, ownerID pgtype.UUID, name, description, iconURL string) (db.Guild, error) {
+	guild, err := s.repo.CreateGuild(ctx, db.CreateGuildParams{
+		Name:        name,
+		Description: description,
+		IconUrl:     iconURL,
+		OwnerID:     ownerID,
+	})
+	if err != nil {
+		return db.Guild{}, fmt.Errorf("failed to create guild: %w", err)
+	}
+
+	// Add the owner as a member
+	_, err = s.repo.AddGuildMember(ctx, db.AddGuildMemberParams{
+		GuildID:  guild.ID,
+		UserID:   ownerID,
+		Nickname: "",
+	})
+	if err != nil {
+		return db.Guild{}, fmt.Errorf("failed to add owner as member: %w", err)
+	}
+
+	s.publishGuildEvent(ctx, guild.ID, "member_add", map[string]string{
+		"user_id": uuid.UUID(ownerID.Bytes).String(), "name": name,
+	})
+
+	return guild, nil
+}
+
+func (s *Service) GetGuild(ctx context.Context, guildID pgtype.UUID) (db.Guild, int64, error) {
+	guild, err := s.repo.GetGuildByID(ctx, guildID)
+	if err != nil {
+		return db.Guild{}, 0, fmt.Errorf("%w: %v", ErrGuildNotFound, err)
+	}
+
+	count, err := s.repo.CountGuildMembers(ctx, guildID)
+	if err != nil {
+		return db.Guild{}, 0, fmt.Errorf("failed to count members: %w", err)
+	}
+
+	return guild, count, nil
+}
+
+func (s *Service) UpdateGuild(ctx context.Context, callerID, guildID pgtype.UUID, params db.UpdateGuildParams) (db.Guild, error) {
+	if err := s.requirePermission(ctx, callerID, guildID, permissions.ManageGuild); err != nil {
+		return db.Guild{}, err
+	}
+
+	params.ID = guildID
+	updated, err := s.repo.UpdateGuild(ctx, params)
+	if err != nil {
+		return db.Guild{}, fmt.Errorf("failed to update guild: %w", err)
+	}
+
+	s.publishGuildEvent(ctx, guildID, "update", map[string]string{"name": updated.Name})
+
+	return updated, nil
+}
+
+func (s *Service) DeleteGuild(ctx context.Context, callerID, guildID pgtype.UUID) error {
+	// Only owner can delete guild (not even admins)
+	guild, err := s.repo.GetGuildByID(ctx, guildID)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrGuildNotFound, err)
+	}
+	if guild.OwnerID != callerID {
+		return ErrNotGuildOwner
+	}
+
+	if err := s.repo.DeleteGuild(ctx, guildID); err != nil {
+		return fmt.Errorf("failed to delete guild: %w", err)
+	}
+
+	s.publishGuildEvent(ctx, guildID, "delete", nil)
+
+	return nil
+}
+
+func (s *Service) ListUserGuilds(ctx context.Context, userID pgtype.UUID) ([]db.Guild, error) {
+	guilds, err := s.repo.ListUserGuilds(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list guilds: %w", err)
+	}
+	return guilds, nil
+}
+
+func (s *Service) JoinGuild(ctx context.Context, userID pgtype.UUID, inviteCode string) (db.Guild, error) {
+	invite, err := s.repo.GetInvite(ctx, inviteCode)
+	if err != nil {
+		return db.Guild{}, ErrInviteNotFound
+	}
+
+	// Check expiry
+	if invite.ExpiresAt.Valid && invite.ExpiresAt.Time.Before(time.Now()) {
+		return db.Guild{}, ErrInviteExpired
+	}
+
+	// Check max uses
+	if invite.MaxUses > 0 && invite.Uses >= invite.MaxUses {
+		return db.Guild{}, ErrInviteMaxUses
+	}
+
+	// Check if banned
+	_, err = s.repo.GetBan(ctx, db.GetBanParams{
+		GuildID: invite.GuildID,
+		UserID:  userID,
+	})
+	if err == nil {
+		return db.Guild{}, ErrUserBanned
+	}
+
+	// Check if already a member
+	_, err = s.repo.GetGuildMember(ctx, db.GetGuildMemberParams{
+		GuildID: invite.GuildID,
+		UserID:  userID,
+	})
+	if err == nil {
+		return db.Guild{}, ErrAlreadyMember
+	}
+
+	// Add member
+	_, err = s.repo.AddGuildMember(ctx, db.AddGuildMemberParams{
+		GuildID:  invite.GuildID,
+		UserID:   userID,
+		Nickname: "",
+	})
+	if err != nil {
+		return db.Guild{}, fmt.Errorf("failed to add guild member: %w", err)
+	}
+
+	// Increment invite uses
+	_ = s.repo.IncrementInviteUses(ctx, inviteCode)
+
+	guild, err := s.repo.GetGuildByID(ctx, invite.GuildID)
+	if err != nil {
+		return db.Guild{}, fmt.Errorf("failed to get guild: %w", err)
+	}
+
+	s.publishGuildEvent(ctx, invite.GuildID, "member_add", map[string]string{
+		"user_id": uuid.UUID(userID.Bytes).String(),
+	})
+
+	return guild, nil
+}
+
+func (s *Service) LeaveGuild(ctx context.Context, userID, guildID pgtype.UUID) error {
+	guild, err := s.repo.GetGuildByID(ctx, guildID)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrGuildNotFound, err)
+	}
+	if guild.OwnerID == userID {
+		return ErrOwnerCannotLeave
+	}
+
+	_, err = s.repo.GetGuildMember(ctx, db.GetGuildMemberParams{
+		GuildID: guildID,
+		UserID:  userID,
+	})
+	if err != nil {
+		return ErrNotGuildMember
+	}
+
+	if err = s.repo.RemoveGuildMember(ctx, db.RemoveGuildMemberParams{
+		GuildID: guildID,
+		UserID:  userID,
+	}); err != nil {
+		return err
+	}
+
+	s.publishGuildEvent(ctx, guildID, "member_remove", map[string]string{
+		"user_id": uuid.UUID(userID.Bytes).String(),
+	})
+
+	return nil
+}
+
+func (s *Service) ListMembers(ctx context.Context, guildID pgtype.UUID, limit, offset int32) ([]db.GuildMember, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	return s.repo.ListGuildMembers(ctx, db.ListGuildMembersParams{
+		GuildID: guildID,
+		Limit:   limit,
+		Offset:  offset,
+	})
+}
+
+func (s *Service) KickMember(ctx context.Context, callerID, guildID, targetID pgtype.UUID) error {
+	if err := s.requirePermission(ctx, callerID, guildID, permissions.KickMembers); err != nil {
+		return err
+	}
+	guild, err := s.repo.GetGuildByID(ctx, guildID)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrGuildNotFound, err)
+	}
+	if guild.OwnerID == targetID {
+		return ErrCannotKickOwner
+	}
+
+	_, err = s.repo.GetGuildMember(ctx, db.GetGuildMemberParams{
+		GuildID: guildID,
+		UserID:  targetID,
+	})
+	if err != nil {
+		return ErrMemberNotFound
+	}
+
+	if err = s.repo.RemoveGuildMember(ctx, db.RemoveGuildMemberParams{
+		GuildID: guildID,
+		UserID:  targetID,
+	}); err != nil {
+		return err
+	}
+
+	s.publishGuildEvent(ctx, guildID, "member_remove", map[string]string{
+		"user_id": uuid.UUID(targetID.Bytes).String(),
+	})
+
+	return nil
+}
+
+func (s *Service) BanMember(ctx context.Context, callerID, guildID, targetID pgtype.UUID, reason string) error {
+	if err := s.requirePermission(ctx, callerID, guildID, permissions.BanMembers); err != nil {
+		return err
+	}
+	guild, err := s.repo.GetGuildByID(ctx, guildID)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrGuildNotFound, err)
+	}
+	if guild.OwnerID == targetID {
+		return ErrCannotBanOwner
+	}
+
+	// Remove from guild if member
+	_ = s.repo.RemoveGuildMember(ctx, db.RemoveGuildMemberParams{
+		GuildID: guildID,
+		UserID:  targetID,
+	})
+
+	_, err = s.repo.CreateBan(ctx, db.CreateBanParams{
+		GuildID: guildID,
+		UserID:  targetID,
+		Reason:  reason,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create ban: %w", err)
+	}
+
+	s.publishGuildEvent(ctx, guildID, "member_ban", map[string]string{
+		"user_id": uuid.UUID(targetID.Bytes).String(),
+		"reason":  reason,
+	})
+
+	return nil
+}
+
+func (s *Service) UnbanMember(ctx context.Context, callerID, guildID, targetID pgtype.UUID) error {
+	if err := s.requirePermission(ctx, callerID, guildID, permissions.BanMembers); err != nil {
+		return err
+	}
+
+	_, banErr := s.repo.GetBan(ctx, db.GetBanParams{
+		GuildID: guildID,
+		UserID:  targetID,
+	})
+	if banErr != nil {
+		return ErrUserNotBanned
+	}
+
+	if err := s.repo.DeleteBan(ctx, db.DeleteBanParams{
+		GuildID: guildID,
+		UserID:  targetID,
+	}); err != nil {
+		return err
+	}
+
+	s.publishGuildEvent(ctx, guildID, "member_unban", map[string]string{
+		"user_id": uuid.UUID(targetID.Bytes).String(),
+	})
+
+	return nil
+}
+
+func (s *Service) CreateInvite(ctx context.Context, callerID, guildID, channelID pgtype.UUID, maxUses, maxAgeSeconds int32) (db.Invite, error) {
+	// Verify caller is a member
+	_, err := s.repo.GetGuildMember(ctx, db.GetGuildMemberParams{
+		GuildID: guildID,
+		UserID:  callerID,
+	})
+	if err != nil {
+		return db.Invite{}, ErrNotGuildMember
+	}
+
+	code, err := generateInviteCode()
+	if err != nil {
+		return db.Invite{}, fmt.Errorf("failed to generate invite code: %w", err)
+	}
+
+	var expiresAt pgtype.Timestamptz
+	if maxAgeSeconds > 0 {
+		expiresAt = pgtype.Timestamptz{
+			Time:  time.Now().Add(time.Duration(maxAgeSeconds) * time.Second),
+			Valid: true,
+		}
+	}
+
+	invite, err := s.repo.CreateInvite(ctx, db.CreateInviteParams{
+		Code:      code,
+		GuildID:   guildID,
+		ChannelID: channelID,
+		CreatorID: callerID,
+		MaxUses:   maxUses,
+		ExpiresAt: expiresAt,
+	})
+	if err != nil {
+		return db.Invite{}, fmt.Errorf("failed to create invite: %w", err)
+	}
+
+	return invite, nil
+}
+
+func (s *Service) CreateRole(ctx context.Context, callerID, guildID pgtype.UUID, name, color string, perms int64) (db.Role, error) {
+	if err := s.requirePermission(ctx, callerID, guildID, permissions.ManageRoles); err != nil {
+		return db.Role{}, err
+	}
+
+	// Get current role count for position
+	roles, err := s.repo.ListGuildRoles(ctx, guildID)
+	if err != nil {
+		return db.Role{}, fmt.Errorf("failed to list roles: %w", err)
+	}
+
+	role, err := s.repo.CreateRole(ctx, db.CreateRoleParams{
+		GuildID:     guildID,
+		Name:        name,
+		Color:       color,
+		Position:    int32(len(roles)),
+		Permissions: perms,
+	})
+	if err != nil {
+		return db.Role{}, fmt.Errorf("failed to create role: %w", err)
+	}
+
+	s.publishGuildEvent(ctx, guildID, "role_create", map[string]string{"name": role.Name})
+
+	return role, nil
+}
+
+func (s *Service) UpdateRole(ctx context.Context, callerID, guildID pgtype.UUID, params db.UpdateRoleParams) (db.Role, error) {
+	if err := s.requirePermission(ctx, callerID, guildID, permissions.ManageRoles); err != nil {
+		return db.Role{}, err
+	}
+
+	role, err := s.repo.UpdateRole(ctx, params)
+	if err != nil {
+		return db.Role{}, fmt.Errorf("failed to update role: %w", err)
+	}
+
+	s.publishGuildEvent(ctx, guildID, "role_update", nil)
+
+	return role, nil
+}
+
+func (s *Service) DeleteRole(ctx context.Context, callerID, guildID, roleID pgtype.UUID) error {
+	if err := s.requirePermission(ctx, callerID, guildID, permissions.ManageRoles); err != nil {
+		return err
+	}
+
+	_, roleErr := s.repo.GetRoleByID(ctx, roleID)
+	if roleErr != nil {
+		return ErrRoleNotFound
+	}
+
+	if err := s.repo.DeleteRole(ctx, roleID); err != nil {
+		return err
+	}
+
+	s.publishGuildEvent(ctx, guildID, "role_delete", nil)
+
+	return nil
+}
+
+func (s *Service) AssignRole(ctx context.Context, callerID, guildID, targetID, roleID pgtype.UUID) error {
+	if err := s.requirePermission(ctx, callerID, guildID, permissions.ManageRoles); err != nil {
+		return err
+	}
+
+	// Verify target is a member
+	if _, memErr := s.repo.GetGuildMember(ctx, db.GetGuildMemberParams{GuildID: guildID, UserID: targetID}); memErr != nil {
+		return ErrMemberNotFound
+	}
+
+	// Verify role exists
+	if _, roleErr := s.repo.GetRoleByID(ctx, roleID); roleErr != nil {
+		return ErrRoleNotFound
+	}
+
+	if err := s.repo.AssignRole(ctx, db.AssignRoleParams{RoleID: roleID, UserID: targetID}); err != nil {
+		return err
+	}
+
+	s.publishGuildEvent(ctx, guildID, "role_assign", map[string]string{
+		"user_id": uuid.UUID(targetID.Bytes).String(),
+	})
+
+	return nil
+}
+
+func (s *Service) RemoveRole(ctx context.Context, callerID, guildID, targetID, roleID pgtype.UUID) error {
+	if err := s.requirePermission(ctx, callerID, guildID, permissions.ManageRoles); err != nil {
+		return err
+	}
+
+	if err := s.repo.RemoveRole(ctx, db.RemoveRoleParams{
+		RoleID: roleID,
+		UserID: targetID,
+	}); err != nil {
+		return err
+	}
+
+	s.publishGuildEvent(ctx, guildID, "role_remove", map[string]string{
+		"user_id": uuid.UUID(targetID.Bytes).String(),
+	})
+
+	return nil
+}
+
+// generateInviteCode generates a random 8-character hex invite code.
+func generateInviteCode() (string, error) {
+	b := make([]byte, 4)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}

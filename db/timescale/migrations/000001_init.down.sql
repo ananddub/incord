@@ -1,0 +1,14 @@
+DROP TABLE IF EXISTS media_files;
+DROP TABLE IF EXISTS webhooks;
+DROP TABLE IF EXISTS emojis;
+DROP TABLE IF EXISTS bans;
+DROP TABLE IF EXISTS invites;
+DROP TABLE IF EXISTS dm_channel_members;
+DROP TABLE IF EXISTS channel_permission_overwrites;
+DROP TABLE IF EXISTS channels;
+DROP TABLE IF EXISTS role_members;
+DROP TABLE IF EXISTS roles;
+DROP TABLE IF EXISTS guild_members;
+DROP TABLE IF EXISTS guilds;
+DROP TABLE IF EXISTS friendships;
+DROP TABLE IF EXISTS users;

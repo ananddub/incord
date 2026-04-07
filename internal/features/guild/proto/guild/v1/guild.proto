@@ -1,0 +1,249 @@
+syntax = "proto3";
+
+package guild.v1;
+
+option go_package = "github.com/ananddub/ndiscord_backend/gen/guild/v1;guildv1";
+
+import "google/protobuf/timestamp.proto";
+
+service GuildService {
+  rpc CreateGuild(CreateGuildRequest) returns (CreateGuildResponse);
+  rpc GetGuild(GetGuildRequest) returns (GetGuildResponse);
+  rpc UpdateGuild(UpdateGuildRequest) returns (UpdateGuildResponse);
+  rpc DeleteGuild(DeleteGuildRequest) returns (DeleteGuildResponse);
+  rpc ListUserGuilds(ListUserGuildsRequest) returns (ListUserGuildsResponse);
+  rpc JoinGuild(JoinGuildRequest) returns (JoinGuildResponse);
+  rpc LeaveGuild(LeaveGuildRequest) returns (LeaveGuildResponse);
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
+  rpc KickMember(KickMemberRequest) returns (KickMemberResponse);
+  rpc BanMember(BanMemberRequest) returns (BanMemberResponse);
+  rpc UnbanMember(UnbanMemberRequest) returns (UnbanMemberResponse);
+  rpc CreateInvite(CreateInviteRequest) returns (CreateInviteResponse);
+  rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse);
+  rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
+  rpc DeleteRole(DeleteRoleRequest) returns (DeleteRoleResponse);
+  rpc AssignRole(AssignRoleRequest) returns (AssignRoleResponse);
+  rpc RemoveRole(RemoveRoleRequest) returns (RemoveRoleResponse);
+
+  // Stream: real-time guild events (member join/leave, channel changes, role changes)
+  rpc StreamGuildEvents(StreamGuildEventsRequest) returns (stream GuildEvent);
+}
+
+message Guild {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string icon_url = 4;
+  string owner_id = 5;
+  int32 member_count = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message GuildMember {
+  string user_id = 1;
+  string guild_id = 2;
+  string nickname = 3;
+  repeated string role_ids = 4;
+  google.protobuf.Timestamp joined_at = 5;
+}
+
+message Role {
+  string id = 1;
+  string guild_id = 2;
+  string name = 3;
+  string color = 4;
+  int32 position = 5;
+  int64 permissions = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message Invite {
+  string code = 1;
+  string guild_id = 2;
+  string channel_id = 3;
+  string creator_id = 4;
+  int32 max_uses = 5;
+  int32 uses = 6;
+  google.protobuf.Timestamp expires_at = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message CreateGuildRequest {
+  string name = 1;
+  string description = 2;
+  string icon_url = 3;
+}
+
+message CreateGuildResponse {
+  Guild guild = 1;
+}
+
+message GetGuildRequest {
+  string guild_id = 1;
+}
+
+message GetGuildResponse {
+  Guild guild = 1;
+}
+
+message UpdateGuildRequest {
+  string guild_id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional string icon_url = 4;
+}
+
+message UpdateGuildResponse {
+  Guild guild = 1;
+}
+
+message DeleteGuildRequest {
+  string guild_id = 1;
+}
+
+message DeleteGuildResponse {}
+
+message ListUserGuildsRequest {
+  string user_id = 1;
+}
+
+message ListUserGuildsResponse {
+  repeated Guild guilds = 1;
+}
+
+message JoinGuildRequest {
+  string invite_code = 1;
+}
+
+message JoinGuildResponse {
+  Guild guild = 1;
+}
+
+message LeaveGuildRequest {
+  string guild_id = 1;
+}
+
+message LeaveGuildResponse {}
+
+message ListMembersRequest {
+  string guild_id = 1;
+  int32 limit = 2;
+  string after = 3;
+}
+
+message ListMembersResponse {
+  repeated GuildMember members = 1;
+}
+
+message KickMemberRequest {
+  string guild_id = 1;
+  string user_id = 2;
+}
+
+message KickMemberResponse {}
+
+message BanMemberRequest {
+  string guild_id = 1;
+  string user_id = 2;
+  string reason = 3;
+}
+
+message BanMemberResponse {}
+
+message UnbanMemberRequest {
+  string guild_id = 1;
+  string user_id = 2;
+}
+
+message UnbanMemberResponse {}
+
+message CreateInviteRequest {
+  string guild_id = 1;
+  string channel_id = 2;
+  int32 max_uses = 3;
+  int32 max_age_seconds = 4;
+}
+
+message CreateInviteResponse {
+  Invite invite = 1;
+}
+
+message CreateRoleRequest {
+  string guild_id = 1;
+  string name = 2;
+  string color = 3;
+  int64 permissions = 4;
+}
+
+message CreateRoleResponse {
+  Role role = 1;
+}
+
+message UpdateRoleRequest {
+  string role_id = 1;
+  string guild_id = 2;
+  optional string name = 3;
+  optional string color = 4;
+  optional int64 permissions = 5;
+  optional int32 position = 6;
+}
+
+message UpdateRoleResponse {
+  Role role = 1;
+}
+
+message DeleteRoleRequest {
+  string guild_id = 1;
+  string role_id = 2;
+}
+
+message DeleteRoleResponse {}
+
+message AssignRoleRequest {
+  string guild_id = 1;
+  string user_id = 2;
+  string role_id = 3;
+}
+
+message AssignRoleResponse {}
+
+message RemoveRoleRequest {
+  string guild_id = 1;
+  string user_id = 2;
+  string role_id = 3;
+}
+
+message RemoveRoleResponse {}
+
+// Stream: guild events
+message StreamGuildEventsRequest {
+  string guild_id = 1;
+}
+
+enum GuildEventType {
+  GUILD_EVENT_TYPE_UNSPECIFIED = 0;
+  GUILD_EVENT_TYPE_UPDATED = 1;
+  GUILD_EVENT_TYPE_DELETED = 2;
+  GUILD_EVENT_TYPE_MEMBER_ADD = 3;
+  GUILD_EVENT_TYPE_MEMBER_REMOVE = 4;
+  GUILD_EVENT_TYPE_MEMBER_BAN = 5;
+  GUILD_EVENT_TYPE_MEMBER_UNBAN = 6;
+  GUILD_EVENT_TYPE_ROLE_CREATE = 7;
+  GUILD_EVENT_TYPE_ROLE_UPDATE = 8;
+  GUILD_EVENT_TYPE_ROLE_DELETE = 9;
+  GUILD_EVENT_TYPE_CHANNEL_CREATE = 10;
+  GUILD_EVENT_TYPE_CHANNEL_UPDATE = 11;
+  GUILD_EVENT_TYPE_CHANNEL_DELETE = 12;
+}
+
+message GuildEvent {
+  GuildEventType type = 1;
+  string guild_id = 2;
+  string user_id = 3;
+  string channel_id = 4;
+  string role_id = 5;
+  Guild guild = 6;
+  GuildMember member = 7;
+  Role role = 8;
+  google.protobuf.Timestamp timestamp = 9;
+}

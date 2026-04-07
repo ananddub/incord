@@ -1,0 +1,146 @@
+package auth
+
+import (
+	"context"
+	"errors"
+	"strings"
+
+	authv1 "github.com/ananddub/ndiscord_backend/gen/auth/v1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
+type Handler struct {
+	authv1.UnimplementedAuthServiceServer
+	svc *Service
+}
+
+func NewHandler(svc *Service) *Handler {
+	return &Handler{svc: svc}
+}
+
+func (h *Handler) Register(ctx context.Context, req *authv1.RegisterRequest) (*authv1.RegisterResponse, error) {
+	if req.Username == "" || req.Email == "" || req.Password == "" {
+		return nil, status.Error(codes.InvalidArgument, "username, email, and password are required")
+	}
+
+	userID, err := h.svc.Register(ctx, req.Username, req.Email, req.Password)
+	if err != nil {
+		if errors.Is(err, ErrUserExists) {
+			return nil, status.Error(codes.AlreadyExists, "user already exists")
+		}
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "duplicate key") || strings.Contains(errMsg, "unique") || strings.Contains(errMsg, "23505") {
+			return nil, status.Error(codes.AlreadyExists, "user already exists")
+		}
+		return nil, status.Error(codes.Internal, "failed to register")
+	}
+
+	return &authv1.RegisterResponse{
+		UserId:  userID,
+		Message: "OTP sent to " + req.Email + ". Please verify to complete registration.",
+	}, nil
+}
+
+func (h *Handler) VerifyOTP(ctx context.Context, req *authv1.VerifyOTPRequest) (*authv1.VerifyOTPResponse, error) {
+	if req.Email == "" || req.Otp == "" {
+		return nil, status.Error(codes.InvalidArgument, "email and otp are required")
+	}
+
+	userID, tokens, err := h.svc.VerifyOTP(ctx, req.Email, req.Otp)
+	if err != nil {
+		if errors.Is(err, ErrInvalidOTP) {
+			return nil, status.Error(codes.InvalidArgument, "invalid or expired OTP")
+		}
+		return nil, status.Error(codes.Internal, "failed to verify OTP")
+	}
+
+	return &authv1.VerifyOTPResponse{
+		UserId:       userID,
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+	}, nil
+}
+
+func (h *Handler) ResendOTP(ctx context.Context, req *authv1.ResendOTPRequest) (*authv1.ResendOTPResponse, error) {
+	if req.Email == "" {
+		return nil, status.Error(codes.InvalidArgument, "email is required")
+	}
+
+	if err := h.svc.ResendOTP(ctx, req.Email); err != nil {
+		if errors.Is(err, ErrInvalidCredentials) {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to resend OTP")
+	}
+
+	return &authv1.ResendOTPResponse{
+		Message: "OTP sent to " + req.Email,
+	}, nil
+}
+
+func (h *Handler) Login(ctx context.Context, req *authv1.LoginRequest) (*authv1.LoginResponse, error) {
+	if req.Email == "" || req.Password == "" {
+		return nil, status.Error(codes.InvalidArgument, "email and password are required")
+	}
+
+	userID, tokens, err := h.svc.Login(ctx, req.Email, req.Password)
+	if err != nil {
+		if errors.Is(err, ErrInvalidCredentials) {
+			return nil, status.Error(codes.Unauthenticated, "invalid credentials")
+		}
+		if errors.Is(err, ErrNotVerified) {
+			return nil, status.Error(codes.FailedPrecondition, "email not verified. Please verify OTP first.")
+		}
+		return nil, status.Error(codes.Internal, "failed to login")
+	}
+
+	return &authv1.LoginResponse{
+		UserId:       userID,
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+	}, nil
+}
+
+func (h *Handler) RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.RefreshTokenResponse, error) {
+	if req.RefreshToken == "" {
+		return nil, status.Error(codes.InvalidArgument, "refresh token is required")
+	}
+
+	tokens, err := h.svc.RefreshToken(ctx, req.RefreshToken)
+	if err != nil {
+		if errors.Is(err, ErrInvalidToken) {
+			return nil, status.Error(codes.Unauthenticated, "invalid refresh token")
+		}
+		return nil, status.Error(codes.Internal, "failed to refresh token")
+	}
+
+	return &authv1.RefreshTokenResponse{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+	}, nil
+}
+
+func (h *Handler) Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error) {
+	if req.RefreshToken == "" {
+		return nil, status.Error(codes.InvalidArgument, "refresh token is required")
+	}
+
+	if err := h.svc.Logout(ctx, req.RefreshToken); err != nil {
+		return nil, status.Error(codes.Internal, "failed to logout")
+	}
+
+	return &authv1.LogoutResponse{}, nil
+}
+
+func (h *Handler) ValidateToken(ctx context.Context, req *authv1.ValidateTokenRequest) (*authv1.ValidateTokenResponse, error) {
+	userID, valid, err := h.svc.ValidateToken(ctx, req.AccessToken)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to validate token")
+	}
+
+	return &authv1.ValidateTokenResponse{
+		UserId: userID,
+		Valid:  valid,
+	}, nil
+}

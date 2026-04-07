@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package presence.v1;
+
+option go_package = "github.com/ananddub/ndiscord_backend/gen/presence/v1;presencev1";
+
+import "google/protobuf/timestamp.proto";
+
+service PresenceService {
+  rpc UpdatePresence(UpdatePresenceRequest) returns (UpdatePresenceResponse);
+  rpc GetPresence(GetPresenceRequest) returns (GetPresenceResponse);
+  rpc GetBulkPresence(GetBulkPresenceRequest) returns (GetBulkPresenceResponse);
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_ONLINE = 1;
+  STATUS_IDLE = 2;
+  STATUS_DND = 3;
+  STATUS_OFFLINE = 4;
+}
+
+message Presence {
+  string user_id = 1;
+  Status status = 2;
+  string custom_status = 3;
+  google.protobuf.Timestamp last_seen = 4;
+}
+
+message UpdatePresenceRequest {
+  Status status = 1;
+  string custom_status = 2;
+}
+
+message UpdatePresenceResponse {
+  Presence presence = 1;
+}
+
+message GetPresenceRequest {
+  string user_id = 1;
+}
+
+message GetPresenceResponse {
+  Presence presence = 1;
+}
+
+message GetBulkPresenceRequest {
+  repeated string user_ids = 1;
+}
+
+message GetBulkPresenceResponse {
+  repeated Presence presences = 1;
+}

@@ -1,0 +1,17 @@
+version: v2
+modules:
+  - path: internal/features/auth/proto
+  - path: internal/features/user/proto
+  - path: internal/features/guild/proto
+  - path: internal/features/channel/proto
+  - path: internal/features/message/proto
+  - path: internal/features/gateway/proto
+  - path: internal/features/presence/proto
+  - path: internal/features/media/proto
+  - path: internal/features/voice/proto
+lint:
+  use:
+    - STANDARD
+breaking:
+  use:
+    - FILE

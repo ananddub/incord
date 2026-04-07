@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package media.v1;
+
+option go_package = "github.com/ananddub/ndiscord_backend/gen/media/v1;mediav1";
+
+import "google/protobuf/timestamp.proto";
+
+service MediaService {
+  rpc RequestUpload(RequestUploadRequest) returns (RequestUploadResponse);
+  rpc ConfirmUpload(ConfirmUploadRequest) returns (ConfirmUploadResponse);
+  rpc GetDownloadURL(GetDownloadURLRequest) returns (GetDownloadURLResponse);
+  rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
+}
+
+message RequestUploadRequest {
+  string filename = 1;
+  string content_type = 2;
+  int64 size = 3;
+}
+
+message RequestUploadResponse {
+  string upload_id = 1;
+  string upload_url = 2;
+}
+
+message ConfirmUploadRequest {
+  string upload_id = 1;
+}
+
+message ConfirmUploadResponse {
+  string file_id = 1;
+  string url = 2;
+}
+
+message GetDownloadURLRequest {
+  string file_id = 1;
+}
+
+message GetDownloadURLResponse {
+  string url = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+message DeleteFileRequest {
+  string file_id = 1;
+}
+
+message DeleteFileResponse {}

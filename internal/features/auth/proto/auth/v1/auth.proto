@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package auth.v1;
+
+option go_package = "github.com/ananddub/ndiscord_backend/gen/auth/v1;authv1";
+
+import "google/protobuf/timestamp.proto";
+
+service AuthService {
+  // Register sends OTP to email. Account is NOT active until VerifyOTP.
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  // VerifyOTP activates account and returns tokens.
+  rpc VerifyOTP(VerifyOTPRequest) returns (VerifyOTPResponse);
+  // ResendOTP sends a new OTP to the registered email.
+  rpc ResendOTP(ResendOTPRequest) returns (ResendOTPResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+}
+
+message RegisterRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+}
+
+// Register now returns user_id + message. NO tokens until OTP verified.
+message RegisterResponse {
+  string user_id = 1;
+  string message = 2;
+}
+
+message VerifyOTPRequest {
+  string email = 1;
+  string otp = 2;
+}
+
+message VerifyOTPResponse {
+  string user_id = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+}
+
+message ResendOTPRequest {
+  string email = 1;
+}
+
+message ResendOTPResponse {
+  string message = 1;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string user_id = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+message LogoutRequest {
+  string refresh_token = 1;
+}
+
+message LogoutResponse {}
+
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+message ValidateTokenResponse {
+  string user_id = 1;
+  bool valid = 2;
+}
