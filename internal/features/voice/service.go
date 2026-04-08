@@ -13,10 +13,10 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	voicev1 "github.com/ananddub/ndiscord_backend/gen/voice/v1"
+	"github.com/ananddub/ndiscord_backend/internal/shared/authz"
 	"github.com/ananddub/ndiscord_backend/internal/shared/config"
 	"github.com/ananddub/ndiscord_backend/internal/shared/event"
 	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
-	"github.com/ananddub/ndiscord_backend/internal/shared/permissions"
 )
 
 const (
@@ -31,34 +31,23 @@ var (
 
 // Service contains the business logic for the voice feature.
 type Service struct {
-	redis       *redis.Client
-	producer    *event.Producer
-	voiceCfg    config.VoiceConfig
-	permChecker permissions.Checker
+	redis    *redis.Client
+	producer *event.Producer
+	voiceCfg config.VoiceConfig
+	authz    *authz.Client
 }
 
 // NewService creates a new voice Service.
-func NewService(rdb *redis.Client, producer *event.Producer, voiceCfg config.VoiceConfig, permChecker ...permissions.Checker) *Service {
+func NewService(rdb *redis.Client, producer *event.Producer, voiceCfg config.VoiceConfig, authzClient ...*authz.Client) *Service {
 	s := &Service{
 		redis:    rdb,
 		producer: producer,
 		voiceCfg: voiceCfg,
 	}
-	if len(permChecker) > 0 {
-		s.permChecker = permChecker[0]
+	if len(authzClient) > 0 {
+		s.authz = authzClient[0]
 	}
 	return s
-}
-
-// checkPermission returns an error if the user lacks the given permission in the guild.
-// Skipped when permChecker is nil or guildID is empty.
-func (s *Service) checkPermission(ctx context.Context, userID, guildID string, perm int64) error {
-	if s.permChecker != nil && guildID != "" {
-		if !s.permChecker.HasPermission(ctx, userID, guildID, perm) {
-			return ErrInsufficientPermissions
-		}
-	}
-	return nil
 }
 
 // JoinChannelResult holds the data returned when a user joins a voice channel.
@@ -72,8 +61,9 @@ type JoinChannelResult struct {
 
 // JoinChannel adds a user as a participant in a voice channel.
 func (s *Service) JoinChannel(ctx context.Context, userID, guildID, channelID string) (*JoinChannelResult, error) {
-	if err := s.checkPermission(ctx, userID, guildID, permissions.Connect); err != nil {
-		return nil, err
+	// Use CanViewChannel as proxy for voice connect permission
+	if guildID != "" && !s.authz.CanViewChannel(ctx, userID, channelID) {
+		return nil, ErrInsufficientPermissions
 	}
 
 	sessionID := uuid.New().String()

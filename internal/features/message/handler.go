@@ -16,11 +16,17 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// ChannelGuildResolver resolves which guild a channel belongs to.
+type ChannelGuildResolver interface {
+	GetChannelGuildID(ctx context.Context, channelID string) string
+}
+
 type Handler struct {
 	messagev1.UnimplementedMessageServiceServer
-	svc        *Service
-	msgSubs    *event.SubscriptionManager[*messagev1.MessageEvent]
-	typingSubs *event.SubscriptionManager[*messagev1.TypingEvent]
+	svc           *Service
+	msgSubs       *event.SubscriptionManager[*messagev1.MessageEvent]
+	typingSubs    *event.SubscriptionManager[*messagev1.TypingEvent]
+	guildResolver ChannelGuildResolver
 }
 
 func NewHandler(
@@ -33,6 +39,17 @@ func NewHandler(
 		msgSubs:    msgSubs,
 		typingSubs: typingSubs,
 	}
+}
+
+// SetGuildResolver sets the channel-to-guild resolver.
+func (h *Handler) SetGuildResolver(r ChannelGuildResolver) { h.guildResolver = r }
+
+// resolveGuildID looks up which guild a channel belongs to. Returns "" for DMs or if no resolver set.
+func (h *Handler) resolveGuildID(ctx context.Context, channelID string) string {
+	if h.guildResolver != nil {
+		return h.guildResolver.GetChannelGuildID(ctx, channelID)
+	}
+	return ""
 }
 
 func (h *Handler) SendMessage(ctx context.Context, req *messagev1.SendMessageRequest) (*messagev1.SendMessageResponse, error) {
@@ -48,8 +65,9 @@ func (h *Handler) SendMessage(ctx context.Context, req *messagev1.SendMessageReq
 		return nil, status.Error(codes.InvalidArgument, "content is required")
 	}
 
-	// TODO: resolve guildID from channel lookup for proper event routing
-	msg, err := h.svc.SendMessage(ctx, userID, req.ChannelId, "", req.Content, int32(req.Type), req.ReplyToId)
+	guildID := h.resolveGuildID(ctx, req.ChannelId)
+
+	msg, err := h.svc.SendMessage(ctx, userID, req.ChannelId, guildID, req.Content, int32(req.Type), req.ReplyToId)
 	if err != nil {
 		return nil, mapError(err)
 	}
@@ -99,7 +117,7 @@ func (h *Handler) EditMessage(ctx context.Context, req *messagev1.EditMessageReq
 		return nil, status.Error(codes.InvalidArgument, "content is required")
 	}
 
-	msg, err := h.svc.EditMessage(ctx, userID, req.ChannelId, "", req.MessageId, req.Content)
+	msg, err := h.svc.EditMessage(ctx, userID, req.ChannelId, h.resolveGuildID(ctx, req.ChannelId), req.MessageId, req.Content)
 	if err != nil {
 		return nil, mapError(err)
 	}
@@ -124,7 +142,7 @@ func (h *Handler) DeleteMessage(ctx context.Context, req *messagev1.DeleteMessag
 		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
 	}
 
-	if err := h.svc.DeleteMessage(ctx, userID, req.ChannelId, "", req.MessageId); err != nil {
+	if err := h.svc.DeleteMessage(ctx, userID, req.ChannelId, h.resolveGuildID(ctx, req.ChannelId), req.MessageId); err != nil {
 		return nil, mapError(err)
 	}
 
@@ -163,7 +181,7 @@ func (h *Handler) PinMessage(ctx context.Context, req *messagev1.PinMessageReque
 		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
 	}
 
-	if err := h.svc.PinMessage(ctx, userID, req.ChannelId, "", req.MessageId); err != nil {
+	if err := h.svc.PinMessage(ctx, userID, req.ChannelId, h.resolveGuildID(ctx, req.ChannelId), req.MessageId); err != nil {
 		return nil, mapError(err)
 	}
 
@@ -176,7 +194,7 @@ func (h *Handler) UnpinMessage(ctx context.Context, req *messagev1.UnpinMessageR
 		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
 	}
 
-	if err := h.svc.UnpinMessage(ctx, userID, req.ChannelId, "", req.MessageId); err != nil {
+	if err := h.svc.UnpinMessage(ctx, userID, req.ChannelId, h.resolveGuildID(ctx, req.ChannelId), req.MessageId); err != nil {
 		return nil, mapError(err)
 	}
 
@@ -196,7 +214,7 @@ func (h *Handler) AddReaction(ctx context.Context, req *messagev1.AddReactionReq
 		return nil, status.Error(codes.InvalidArgument, "emoji is required")
 	}
 
-	if err := h.svc.AddReaction(ctx, userID, req.ChannelId, "", req.MessageId, req.Emoji); err != nil {
+	if err := h.svc.AddReaction(ctx, userID, req.ChannelId, h.resolveGuildID(ctx, req.ChannelId), req.MessageId, req.Emoji); err != nil {
 		return nil, mapError(err)
 	}
 
@@ -405,6 +423,46 @@ func (h *Handler) GetUnreadCounts(ctx context.Context, req *messagev1.GetUnreadC
 		Channels:     channels,
 		TotalUnread:  total,
 	}, nil
+}
+
+func (h *Handler) SearchMessages(ctx context.Context, req *messagev1.SearchMessagesRequest) (*messagev1.SearchMessagesResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if userID == "" { return nil, status.Error(codes.Unauthenticated, "not authenticated") }
+	msgs, err := h.svc.SearchMessages(ctx, req.ChannelId, req.Query, req.Limit)
+	if err != nil { return nil, mapError(err) }
+	var pb []*messagev1.Message
+	for _, m := range msgs { p, _ := h.messageToProto(ctx, m, userID); pb = append(pb, p) }
+	return &messagev1.SearchMessagesResponse{Messages: pb, Total: int32(len(pb))}, nil
+}
+
+func (h *Handler) GetThreadMessages(ctx context.Context, req *messagev1.GetThreadMessagesRequest) (*messagev1.GetThreadMessagesResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if userID == "" { return nil, status.Error(codes.Unauthenticated, "not authenticated") }
+	msgs, err := h.svc.GetThreadMessages(ctx, req.ChannelId, req.ParentMessageId, req.Limit)
+	if err != nil { return nil, mapError(err) }
+	var pb []*messagev1.Message
+	for _, m := range msgs { p, _ := h.messageToProto(ctx, m, userID); pb = append(pb, p) }
+	return &messagev1.GetThreadMessagesResponse{Messages: pb}, nil
+}
+
+func (h *Handler) BulkDeleteMessages(ctx context.Context, req *messagev1.BulkDeleteMessagesRequest) (*messagev1.BulkDeleteMessagesResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if userID == "" { return nil, status.Error(codes.Unauthenticated, "not authenticated") }
+	count, err := h.svc.BulkDeleteMessages(ctx, userID, req.ChannelId, "", req.MessageIds)
+	if err != nil { return nil, mapError(err) }
+	return &messagev1.BulkDeleteMessagesResponse{DeletedCount: int32(count)}, nil
+}
+
+func (h *Handler) GetEditHistory(ctx context.Context, req *messagev1.GetEditHistoryRequest) (*messagev1.GetEditHistoryResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if userID == "" { return nil, status.Error(codes.Unauthenticated, "not authenticated") }
+	edits, err := h.svc.GetEditHistory(ctx, req.ChannelId, req.MessageId)
+	if err != nil { return nil, mapError(err) }
+	var pb []*messagev1.MessageEdit
+	for _, e := range edits {
+		pb = append(pb, &messagev1.MessageEdit{Content: e.OldContent, EditedAt: timestamppb.New(e.EditedAt)})
+	}
+	return &messagev1.GetEditHistoryResponse{Edits: pb}, nil
 }
 
 // mapError converts domain errors to gRPC status errors.

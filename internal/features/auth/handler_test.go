@@ -2,6 +2,7 @@ package auth_test
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -48,7 +49,7 @@ func setupAuthGRPCServer(t *testing.T) (authv1.AuthServiceClient, *testutil.Test
 	return client, infra
 }
 
-// registerTestUser is a helper that registers a user and returns the response.
+// registerTestUser is a helper that registers a user and returns the RegisterResponse (user_id + message only).
 func registerTestUser(t *testing.T, client authv1.AuthServiceClient, username, email, password string) *authv1.RegisterResponse {
 	t.Helper()
 	resp, err := client.Register(context.Background(), &authv1.RegisterRequest{
@@ -60,8 +61,26 @@ func registerTestUser(t *testing.T, client authv1.AuthServiceClient, username, e
 	return resp
 }
 
+// registerAndVerifyTestUser registers a user, fetches OTP from Redis, verifies, and returns the VerifyOTPResponse (with tokens).
+func registerAndVerifyTestUser(t *testing.T, client authv1.AuthServiceClient, infra *testutil.TestInfra, username, email, password string) *authv1.VerifyOTPResponse {
+	t.Helper()
+	ctx := context.Background()
+
+	registerTestUser(t, client, username, email, password)
+
+	otp, err := infra.Redis.Get(ctx, fmt.Sprintf("otp:%s", email)).Result()
+	require.NoError(t, err)
+
+	verifyResp, err := client.VerifyOTP(ctx, &authv1.VerifyOTPRequest{
+		Email: email,
+		Otp:   otp,
+	})
+	require.NoError(t, err)
+	return verifyResp
+}
+
 func TestAuthGRPC_FullFlow(t *testing.T) {
-	client, _ := setupAuthGRPCServer(t)
+	client, infra := setupAuthGRPCServer(t)
 	ctx := context.Background()
 
 	// 1. Register
@@ -72,8 +91,19 @@ func TestAuthGRPC_FullFlow(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.NotEmpty(t, regResp.GetUserId())
-	assert.NotEmpty(t, regResp.GetAccessToken())
-	assert.NotEmpty(t, regResp.GetRefreshToken())
+	assert.NotEmpty(t, regResp.GetMessage())
+
+	// 1b. Verify OTP to activate account and get tokens
+	otp, err := infra.Redis.Get(ctx, "otp:alice@example.com").Result()
+	require.NoError(t, err)
+
+	verifyResp, err := client.VerifyOTP(ctx, &authv1.VerifyOTPRequest{
+		Email: "alice@example.com",
+		Otp:   otp,
+	})
+	require.NoError(t, err)
+	assert.NotEmpty(t, verifyResp.GetAccessToken())
+	assert.NotEmpty(t, verifyResp.GetRefreshToken())
 
 	// 2. Login with the same credentials
 	loginResp, err := client.Login(ctx, &authv1.LoginRequest{
@@ -195,10 +225,10 @@ func TestAuthGRPC_Register_EmptyFields(t *testing.T) {
 }
 
 func TestAuthGRPC_Login_WrongPassword(t *testing.T) {
-	client, _ := setupAuthGRPCServer(t)
+	client, infra := setupAuthGRPCServer(t)
 	ctx := context.Background()
 
-	registerTestUser(t, client, "dave", "dave@example.com", "correctpass")
+	registerAndVerifyTestUser(t, client, infra, "dave", "dave@example.com", "correctpass")
 
 	_, err := client.Login(ctx, &authv1.LoginRequest{
 		Email:    "dave@example.com",
@@ -274,20 +304,20 @@ func TestAuthGRPC_RefreshToken_Empty(t *testing.T) {
 }
 
 func TestAuthGRPC_RefreshToken_UsedTwice(t *testing.T) {
-	client, _ := setupAuthGRPCServer(t)
+	client, infra := setupAuthGRPCServer(t)
 	ctx := context.Background()
 
-	reg := registerTestUser(t, client, "eve", "eve@example.com", "password123")
+	verifyResp := registerAndVerifyTestUser(t, client, infra, "eve", "eve@example.com", "password123")
 
 	// First refresh succeeds
 	_, err := client.RefreshToken(ctx, &authv1.RefreshTokenRequest{
-		RefreshToken: reg.GetRefreshToken(),
+		RefreshToken: verifyResp.GetRefreshToken(),
 	})
 	require.NoError(t, err)
 
 	// Second use of the same refresh token should fail (token rotation)
 	_, err = client.RefreshToken(ctx, &authv1.RefreshTokenRequest{
-		RefreshToken: reg.GetRefreshToken(),
+		RefreshToken: verifyResp.GetRefreshToken(),
 	})
 	require.Error(t, err)
 	assert.Equal(t, codes.Unauthenticated, status.Code(err))

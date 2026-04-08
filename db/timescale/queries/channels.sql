@@ -40,3 +40,11 @@ SELECT c.* FROM channels c
 JOIN dm_channel_members dm1 ON dm1.channel_id = c.id AND dm1.user_id = $1
 JOIN dm_channel_members dm2 ON dm2.channel_id = c.id AND dm2.user_id = $2
 WHERE c.type = 5;
+
+-- name: RemoveDMChannelMember :exec
+DELETE FROM dm_channel_members WHERE channel_id = $1 AND user_id = $2;
+
+-- name: IsDMChannelMember :one
+SELECT EXISTS(
+    SELECT 1 FROM dm_channel_members WHERE channel_id = $1 AND user_id = $2
+) AS is_member;

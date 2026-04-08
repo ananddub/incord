@@ -2,6 +2,7 @@ package media
 
 import (
 	"context"
+	"errors"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -35,6 +36,9 @@ func (h *Handler) RequestUpload(ctx context.Context, req *mediav1.RequestUploadR
 
 	result, err := h.service.RequestUpload(ctx, userID, req.GetFilename(), req.GetContentType(), req.GetSize())
 	if err != nil {
+		if errors.Is(err, ErrFileTooLarge) || errors.Is(err, ErrInvalidContentType) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
 		return nil, status.Errorf(codes.Internal, "failed to request upload: %v", err)
 	}
 

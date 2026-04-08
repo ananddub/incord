@@ -1,6 +1,6 @@
 -- name: CreateRole :one
-INSERT INTO roles (guild_id, name, color, position, permissions)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO roles (guild_id, name, color, position)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetRoleByID :one
@@ -10,7 +10,6 @@ SELECT * FROM roles WHERE id = $1;
 UPDATE roles SET
     name = COALESCE(sqlc.narg('name'), name),
     color = COALESCE(sqlc.narg('color'), color),
-    permissions = COALESCE(sqlc.narg('permissions'), permissions),
     position = COALESCE(sqlc.narg('position'), position)
 WHERE id = $1
 RETURNING *;

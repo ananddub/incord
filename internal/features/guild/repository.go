@@ -131,3 +131,7 @@ func (r *Repository) RemoveRole(ctx context.Context, params db.RemoveRoleParams)
 func (r *Repository) ListUserRoles(ctx context.Context, params db.ListUserRolesParams) ([]db.Role, error) {
 	return r.queries.ListUserRoles(ctx, params)
 }
+
+func (r *Repository) TransferGuildOwnership(ctx context.Context, params db.TransferGuildOwnershipParams) (db.Guild, error) {
+	return r.queries.TransferGuildOwnership(ctx, params)
+}

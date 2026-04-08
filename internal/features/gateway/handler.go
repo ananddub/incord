@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"context"
 	"errors"
 	"io"
 
@@ -12,18 +13,27 @@ import (
 	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
 )
 
+// PresenceUpdater sets a user's presence to offline.
+type PresenceUpdater interface {
+	SetOffline(ctx context.Context, userID string) error
+}
+
 var errSessionNotFound = errors.New("session not found")
 
 // Handler implements the GatewayServiceServer gRPC interface.
 type Handler struct {
 	gatewayv1.UnimplementedGatewayServiceServer
-	service *Service
+	service         *Service
+	presenceUpdater PresenceUpdater
 }
 
 // NewHandler creates a new gateway Handler.
 func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
+
+// SetPresenceUpdater sets the presence updater (avoids circular deps in constructor).
+func (h *Handler) SetPresenceUpdater(p PresenceUpdater) { h.presenceUpdater = p }
 
 // Connect implements the bidirectional streaming RPC.
 func (h *Handler) Connect(stream grpc.BidiStreamingServer[gatewayv1.ClientMessage, gatewayv1.ServerEvent]) error {
@@ -127,24 +137,36 @@ func (h *Handler) Connect(stream grpc.BidiStreamingServer[gatewayv1.ClientMessag
 		select {
 		case evt, ok := <-session.Send:
 			if !ok {
-				h.service.Disconnect(session.ID)
+				h.disconnect(stream.Context(), session)
 				return nil
 			}
 			if err := stream.Send(evt); err != nil {
-				h.service.Disconnect(session.ID)
+				h.disconnect(stream.Context(), session)
 				return err
 			}
 
 		case err := <-errCh:
-			h.service.Disconnect(session.ID)
+			h.disconnect(stream.Context(), session)
 			if err != nil {
 				return err
 			}
 			return nil
 
 		case <-stream.Context().Done():
-			h.service.Disconnect(session.ID)
+			h.disconnect(stream.Context(), session)
 			return stream.Context().Err()
+		}
+	}
+}
+
+// disconnect removes the session and sets the user's presence to offline.
+func (h *Handler) disconnect(ctx context.Context, session *Session) {
+	h.service.Disconnect(session.ID)
+	if h.presenceUpdater != nil {
+		// Use a background context in case the stream context is already cancelled.
+		bgCtx := context.Background()
+		if err := h.presenceUpdater.SetOffline(bgCtx, session.UserID); err != nil {
+			logger.Log.Warn().Err(err).Str("user_id", session.UserID).Msg("failed to set offline on disconnect")
 		}
 	}
 }

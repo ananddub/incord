@@ -1,0 +1,107 @@
+{
+  "schema_version": "1.1",
+  "type_definitions": [
+    {
+      "type": "user",
+      "relations": {}
+    },
+    {
+      "type": "guild",
+      "relations": {
+        "owner": { "this": {} },
+        "admin": { "this": {} },
+        "member": { "this": {} },
+        "can_manage_guild": {
+          "union": {
+            "child": [
+              { "computedUserset": { "relation": "owner" } },
+              { "computedUserset": { "relation": "admin" } }
+            ]
+          }
+        },
+        "can_kick": {
+          "union": {
+            "child": [
+              { "computedUserset": { "relation": "owner" } },
+              { "computedUserset": { "relation": "admin" } }
+            ]
+          }
+        },
+        "can_ban": {
+          "union": {
+            "child": [
+              { "computedUserset": { "relation": "owner" } },
+              { "computedUserset": { "relation": "admin" } }
+            ]
+          }
+        },
+        "can_manage_roles": {
+          "union": {
+            "child": [
+              { "computedUserset": { "relation": "owner" } },
+              { "computedUserset": { "relation": "admin" } }
+            ]
+          }
+        },
+        "can_manage_channels": {
+          "union": {
+            "child": [
+              { "computedUserset": { "relation": "owner" } },
+              { "computedUserset": { "relation": "admin" } }
+            ]
+          }
+        }
+      },
+      "metadata": {
+        "relations": {
+          "owner": { "directly_related_user_types": [{ "type": "user" }] },
+          "admin": { "directly_related_user_types": [{ "type": "user" }] },
+          "member": { "directly_related_user_types": [{ "type": "user" }] },
+          "can_manage_guild": {},
+          "can_kick": {},
+          "can_ban": {},
+          "can_manage_roles": {},
+          "can_manage_channels": {}
+        }
+      }
+    },
+    {
+      "type": "channel",
+      "relations": {
+        "guild": { "this": {} },
+        "viewer": {
+          "union": {
+            "child": [
+              { "this": {} },
+              { "tupleToUserset": { "tupleset": { "relation": "guild" }, "computedUserset": { "relation": "member" } } }
+            ]
+          }
+        },
+        "sender": {
+          "union": {
+            "child": [
+              { "this": {} },
+              { "tupleToUserset": { "tupleset": { "relation": "guild" }, "computedUserset": { "relation": "member" } } }
+            ]
+          }
+        },
+        "manager": {
+          "union": {
+            "child": [
+              { "this": {} },
+              { "tupleToUserset": { "tupleset": { "relation": "guild" }, "computedUserset": { "relation": "can_manage_channels" } } }
+            ]
+          }
+        }
+      },
+      "metadata": {
+        "relations": {
+          "guild": { "directly_related_user_types": [{ "type": "guild" }] },
+          "viewer": { "directly_related_user_types": [{ "type": "user" }] },
+          "sender": { "directly_related_user_types": [{ "type": "user" }] },
+          "manager": { "directly_related_user_types": [{ "type": "user" }] }
+        }
+      }
+    }
+  ]
+}

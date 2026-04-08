@@ -46,7 +46,7 @@ func setupGuildServer(t *testing.T, infra *testutil.TestInfra) guildv1.GuildServ
 	t.Helper()
 
 	repo := guild.NewRepository(infra.Pool, infra.Redis)
-	svc := guild.NewService(repo)
+	svc := guild.NewService(repo, nil)
 	guildSubs := event.NewSubscriptionManager[*guildv1.GuildEvent]()
 	handler := guild.NewHandler(svc, guildSubs)
 
@@ -242,16 +242,14 @@ func TestGuildHandler_FullFlow(t *testing.T) {
 
 	// CreateRole
 	roleResp, err := client.CreateRole(ownerCtx, &guildv1.CreateRoleRequest{
-		GuildId:     guildID,
-		Name:        "Moderator",
-		Color:       "#FF0000",
-		Permissions: 42,
+		GuildId: guildID,
+		Name:    "Moderator",
+		Color:   "#FF0000",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, roleResp.GetRole())
 	assert.Equal(t, "Moderator", roleResp.GetRole().GetName())
 	assert.Equal(t, "#FF0000", roleResp.GetRole().GetColor())
-	assert.Equal(t, int64(42), roleResp.GetRole().GetPermissions())
 	roleID := roleResp.GetRole().GetId()
 
 	// AssignRole

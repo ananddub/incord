@@ -27,17 +27,16 @@ func (q *Queries) AssignRole(ctx context.Context, arg AssignRoleParams) error {
 }
 
 const createRole = `-- name: CreateRole :one
-INSERT INTO roles (guild_id, name, color, position, permissions)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, guild_id, name, color, position, permissions, created_at
+INSERT INTO roles (guild_id, name, color, position)
+VALUES ($1, $2, $3, $4)
+RETURNING id, guild_id, name, color, position, created_at
 `
 
 type CreateRoleParams struct {
-	GuildID     pgtype.UUID `json:"guild_id"`
-	Name        string      `json:"name"`
-	Color       string      `json:"color"`
-	Position    int32       `json:"position"`
-	Permissions int64       `json:"permissions"`
+	GuildID  pgtype.UUID `json:"guild_id"`
+	Name     string      `json:"name"`
+	Color    string      `json:"color"`
+	Position int32       `json:"position"`
 }
 
 func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error) {
@@ -46,7 +45,6 @@ func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) (Role, e
 		arg.Name,
 		arg.Color,
 		arg.Position,
-		arg.Permissions,
 	)
 	var i Role
 	err := row.Scan(
@@ -55,7 +53,6 @@ func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) (Role, e
 		&i.Name,
 		&i.Color,
 		&i.Position,
-		&i.Permissions,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -71,7 +68,7 @@ func (q *Queries) DeleteRole(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getRoleByID = `-- name: GetRoleByID :one
-SELECT id, guild_id, name, color, position, permissions, created_at FROM roles WHERE id = $1
+SELECT id, guild_id, name, color, position, created_at FROM roles WHERE id = $1
 `
 
 func (q *Queries) GetRoleByID(ctx context.Context, id pgtype.UUID) (Role, error) {
@@ -83,14 +80,13 @@ func (q *Queries) GetRoleByID(ctx context.Context, id pgtype.UUID) (Role, error)
 		&i.Name,
 		&i.Color,
 		&i.Position,
-		&i.Permissions,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const listGuildRoles = `-- name: ListGuildRoles :many
-SELECT id, guild_id, name, color, position, permissions, created_at FROM roles WHERE guild_id = $1 ORDER BY position
+SELECT id, guild_id, name, color, position, created_at FROM roles WHERE guild_id = $1 ORDER BY position
 `
 
 func (q *Queries) ListGuildRoles(ctx context.Context, guildID pgtype.UUID) ([]Role, error) {
@@ -108,7 +104,6 @@ func (q *Queries) ListGuildRoles(ctx context.Context, guildID pgtype.UUID) ([]Ro
 			&i.Name,
 			&i.Color,
 			&i.Position,
-			&i.Permissions,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -122,7 +117,7 @@ func (q *Queries) ListGuildRoles(ctx context.Context, guildID pgtype.UUID) ([]Ro
 }
 
 const listUserRoles = `-- name: ListUserRoles :many
-SELECT r.id, r.guild_id, r.name, r.color, r.position, r.permissions, r.created_at FROM roles r
+SELECT r.id, r.guild_id, r.name, r.color, r.position, r.created_at FROM roles r
 JOIN role_members rm ON rm.role_id = r.id
 WHERE rm.user_id = $1 AND r.guild_id = $2
 `
@@ -147,7 +142,6 @@ func (q *Queries) ListUserRoles(ctx context.Context, arg ListUserRolesParams) ([
 			&i.Name,
 			&i.Color,
 			&i.Position,
-			&i.Permissions,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -178,18 +172,16 @@ const updateRole = `-- name: UpdateRole :one
 UPDATE roles SET
     name = COALESCE($2, name),
     color = COALESCE($3, color),
-    permissions = COALESCE($4, permissions),
-    position = COALESCE($5, position)
+    position = COALESCE($4, position)
 WHERE id = $1
-RETURNING id, guild_id, name, color, position, permissions, created_at
+RETURNING id, guild_id, name, color, position, created_at
 `
 
 type UpdateRoleParams struct {
-	ID          pgtype.UUID `json:"id"`
-	Name        *string     `json:"name"`
-	Color       *string     `json:"color"`
-	Permissions *int64      `json:"permissions"`
-	Position    *int32      `json:"position"`
+	ID       pgtype.UUID `json:"id"`
+	Name     *string     `json:"name"`
+	Color    *string     `json:"color"`
+	Position *int32      `json:"position"`
 }
 
 func (q *Queries) UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, error) {
@@ -197,7 +189,6 @@ func (q *Queries) UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, e
 		arg.ID,
 		arg.Name,
 		arg.Color,
-		arg.Permissions,
 		arg.Position,
 	)
 	var i Role
@@ -207,7 +198,6 @@ func (q *Queries) UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, e
 		&i.Name,
 		&i.Color,
 		&i.Position,
-		&i.Permissions,
 		&i.CreatedAt,
 	)
 	return i, err

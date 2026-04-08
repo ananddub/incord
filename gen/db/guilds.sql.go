@@ -346,6 +346,30 @@ func (q *Queries) RemoveGuildMember(ctx context.Context, arg RemoveGuildMemberPa
 	return err
 }
 
+const transferGuildOwnership = `-- name: TransferGuildOwnership :one
+UPDATE guilds SET owner_id = $2 WHERE id = $1
+RETURNING id, name, description, icon_url, owner_id, created_at
+`
+
+type TransferGuildOwnershipParams struct {
+	ID      pgtype.UUID `json:"id"`
+	OwnerID pgtype.UUID `json:"owner_id"`
+}
+
+func (q *Queries) TransferGuildOwnership(ctx context.Context, arg TransferGuildOwnershipParams) (Guild, error) {
+	row := q.db.QueryRow(ctx, transferGuildOwnership, arg.ID, arg.OwnerID)
+	var i Guild
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.IconUrl,
+		&i.OwnerID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const updateGuild = `-- name: UpdateGuild :one
 UPDATE guilds SET
     name = COALESCE($2, name),

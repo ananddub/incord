@@ -3,6 +3,7 @@ package message
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gocql/gocql"
@@ -199,4 +200,95 @@ func (r *Repository) CountUnreadMessages(ctx context.Context, channelID, afterMs
 		return 0, gocql.UUID{}, time.Time{}, err
 	}
 	return count, lastID, lastTime, nil
+}
+
+// SaveEditHistory stores old content before an edit.
+func (r *Repository) SaveEditHistory(ctx context.Context, channelID, messageID gocql.UUID, oldContent string, editedAt time.Time) error {
+	query := `INSERT INTO message_edit_history (channel_id, message_id, old_content, edited_at) VALUES (?, ?, ?, ?)`
+	return r.session.Query(query, channelID, messageID, oldContent, editedAt).WithContext(ctx).Exec()
+}
+
+// GetEditHistory returns all previous versions of a message.
+func (r *Repository) GetEditHistory(ctx context.Context, channelID, messageID gocql.UUID) ([]EditHistory, error) {
+	query := `SELECT channel_id, message_id, old_content, edited_at FROM message_edit_history WHERE channel_id = ? AND message_id = ? ORDER BY edited_at DESC`
+	iter := r.session.Query(query, channelID, messageID).WithContext(ctx).Iter()
+
+	var edits []EditHistory
+	var e EditHistory
+	for iter.Scan(&e.ChannelID, &e.MessageID, &e.OldContent, &e.EditedAt) {
+		edits = append(edits, e)
+	}
+	if err := iter.Close(); err != nil {
+		return nil, err
+	}
+	return edits, nil
+}
+
+// SearchMessages searches messages by content (ALLOW FILTERING - not ideal for production, use search index).
+func (r *Repository) SearchMessages(ctx context.Context, channelID gocql.UUID, query string, limit int) ([]*Message, error) {
+	// ScyllaDB doesn't support LIKE, so fetch recent and filter in Go
+	cql := `SELECT channel_id, id, author_id, content, type, reply_to_id, pinned, edited_at, created_at FROM messages WHERE channel_id = ? ORDER BY id DESC LIMIT ?`
+	if limit <= 0 || limit > 200 {
+		limit = 200
+	}
+	iter := r.session.Query(cql, channelID, limit*5).WithContext(ctx).Iter() // fetch more to filter
+
+	var results []*Message
+	var m Message
+	var editedAt *time.Time
+	for iter.Scan(&m.ChannelID, &m.ID, &m.AuthorID, &m.Content, &m.Type, &m.ReplyToID, &m.Pinned, &editedAt, &m.CreatedAt) {
+		if editedAt != nil {
+			t := *editedAt
+			m.EditedAt = &t
+		}
+		if strings.Contains(strings.ToLower(m.Content), strings.ToLower(query)) {
+			msg := m
+			results = append(results, &msg)
+			if len(results) >= limit {
+				break
+			}
+		}
+	}
+	iter.Close()
+	return results, nil
+}
+
+// GetThreadMessages returns all replies to a parent message.
+func (r *Repository) GetThreadMessages(ctx context.Context, channelID, parentID gocql.UUID, limit int) ([]*Message, error) {
+	// ScyllaDB: fetch recent messages and filter by reply_to_id
+	if limit <= 0 || limit > 100 {
+		limit = 100
+	}
+	cql := `SELECT channel_id, id, author_id, content, type, reply_to_id, pinned, edited_at, created_at FROM messages WHERE channel_id = ? ORDER BY id DESC LIMIT ?`
+	iter := r.session.Query(cql, channelID, limit*10).WithContext(ctx).Iter()
+
+	var results []*Message
+	var m Message
+	var editedAt *time.Time
+	for iter.Scan(&m.ChannelID, &m.ID, &m.AuthorID, &m.Content, &m.Type, &m.ReplyToID, &m.Pinned, &editedAt, &m.CreatedAt) {
+		if editedAt != nil {
+			t := *editedAt
+			m.EditedAt = &t
+		}
+		if m.ReplyToID == parentID {
+			msg := m
+			results = append(results, &msg)
+			if len(results) >= limit {
+				break
+			}
+		}
+	}
+	iter.Close()
+	return results, nil
+}
+
+// BulkDeleteMessages deletes multiple messages.
+func (r *Repository) BulkDeleteMessages(ctx context.Context, channelID gocql.UUID, messageIDs []gocql.UUID) (int, error) {
+	deleted := 0
+	for _, msgID := range messageIDs {
+		if err := r.DeleteMessage(ctx, channelID, msgID); err == nil {
+			deleted++
+		}
+	}
+	return deleted, nil
 }

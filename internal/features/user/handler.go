@@ -18,13 +18,17 @@ import (
 
 type Handler struct {
 	userv1.UnimplementedUserServiceServer
-	svc        *Service
-	friendSubs *event.SubscriptionManager[*userv1.FriendActivityEvent]
+	svc          *Service
+	friendSubs   *event.SubscriptionManager[*userv1.FriendActivityEvent]
+	blockChecker *BlockChecker
 }
 
 func NewHandler(svc *Service, friendSubs *event.SubscriptionManager[*userv1.FriendActivityEvent]) *Handler {
 	return &Handler{svc: svc, friendSubs: friendSubs}
 }
+
+// SetBlockChecker sets the block checker used to hide profiles from blocked callers.
+func (h *Handler) SetBlockChecker(b *BlockChecker) { h.blockChecker = b }
 
 func (h *Handler) GetUser(ctx context.Context, req *userv1.GetUserRequest) (*userv1.GetUserResponse, error) {
 	if req.GetUserId() == "" {
@@ -34,6 +38,13 @@ func (h *Handler) GetUser(ctx context.Context, req *userv1.GetUserRequest) (*use
 	pgID, err := parseUUID(req.GetUserId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid user_id")
+	}
+
+	// If the target user has blocked the caller, pretend the user doesn't exist.
+	if callerID := middleware.UserIDFromContext(ctx); callerID != "" && callerID != req.GetUserId() {
+		if h.blockChecker != nil && h.blockChecker.IsBlocked(ctx, req.GetUserId(), callerID) {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
 	}
 
 	user, err := h.svc.GetUser(ctx, pgID)
@@ -107,6 +118,14 @@ func (h *Handler) GetUserByUsername(ctx context.Context, req *userv1.GetUserByUs
 			return nil, status.Error(codes.NotFound, "user not found")
 		}
 		return nil, status.Error(codes.Internal, "failed to get user")
+	}
+
+	// If the target user has blocked the caller, pretend the user doesn't exist.
+	targetID := user.ID.String()
+	if callerID := middleware.UserIDFromContext(ctx); callerID != "" && callerID != targetID {
+		if h.blockChecker != nil && h.blockChecker.IsBlocked(ctx, targetID, callerID) {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
 	}
 
 	return &userv1.GetUserByUsernameResponse{

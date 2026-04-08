@@ -23,6 +23,7 @@ import (
 
 	gendb "github.com/ananddub/ndiscord_backend/gen/db"
 	"github.com/ananddub/ndiscord_backend/internal/features/auth"
+	"github.com/ananddub/ndiscord_backend/internal/shared/authz"
 	"github.com/ananddub/ndiscord_backend/internal/shared/mail"
 	"github.com/ananddub/ndiscord_backend/internal/features/channel"
 	"github.com/ananddub/ndiscord_backend/internal/features/gateway"
@@ -116,15 +117,21 @@ func main() {
 	}
 	defer consumer.Close()
 
-	// User + Guild repos needed for dispatcher (friend lookup + permission checker)
+	// Create OpenFGA authz client (nil-safe: if it fails, services allow all)
+	authzClient, err := authz.NewClient(cfg.OpenFGA)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to create OpenFGA client, running without authorization")
+		authzClient = nil
+	}
+
+	// User + Guild repos needed for dispatcher (friend lookup + authz)
 	userRepo := user.NewRepository(pool, rdb)
 	friendLookup := user.NewFriendLookup(userRepo)
 
 	guildRepo := guild.NewRepository(pool, rdb)
-	guildSvc := guild.NewService(guildRepo, producer)
-	permChecker := guild.NewPermissionChecker(guildSvc)
+	guildSvc := guild.NewService(guildRepo, producer, authzClient)
 
-	dispatcher := gateway.NewDispatcher(sessionMgr, consumer, friendLookup, permChecker)
+	dispatcher := gateway.NewDispatcher(sessionMgr, consumer, friendLookup, authzClient)
 	go func() {
 		if err := dispatcher.Start(ctx); err != nil {
 			log.Error().Err(err).Msg("event dispatcher stopped")
@@ -134,25 +141,31 @@ func main() {
 	// User
 	userSvc := user.NewService(userRepo, producer)
 	userHandler := user.NewHandler(userSvc, dispatcher.FriendSubs)
+	userHandler.SetBlockChecker(user.NewBlockChecker(userRepo))
 
 	// Guild - uses dispatcher.GuildSubs
 	guildHandler := guild.NewHandler(guildSvc, dispatcher.GuildSubs)
 
 	// Channel
 	channelRepo := channel.NewRepository(pool)
-	channelSvc := channel.NewService(channelRepo, producer, permChecker)
+	channelSvc := channel.NewService(channelRepo, producer, authzClient)
 	channelHandler := channel.NewHandler(channelSvc)
 
 	// Message - uses dispatcher.MsgSubs and dispatcher.TypingSubs
 	messageRepo := message.NewRepository(scylla)
-	messageSvc := message.NewService(messageRepo, producer, rdb, permChecker)
+	messageSvc := message.NewService(messageRepo, producer, rdb, authzClient)
 	messageSvc.SetDMResolver(channel.NewDMResolver(channelSvc))
 	messageSvc.SetBlockChecker(user.NewBlockChecker(userRepo))
 	messageHandler := message.NewHandler(messageSvc, dispatcher.MsgSubs, dispatcher.TypingSubs)
+	messageHandler.SetGuildResolver(channel.NewGuildResolver(channelSvc))
 
 	// Presence
 	presenceSvc := presence.NewService(rdb, producer)
 	presenceHandler := presence.NewHandler(presenceSvc)
+
+	// Wire presence updater for logout/disconnect -> offline
+	authHandler.SetPresenceUpdater(presenceSvc)
+	gatewayHandler.SetPresenceUpdater(presenceSvc)
 
 	// Media
 	queries := gendb.New(pool)
@@ -161,14 +174,16 @@ func main() {
 	mediaHandler := media.NewHandler(mediaSvc)
 
 	// Voice - uses dispatcher.VoiceSubs
-	voiceSvc := voice.NewService(rdb, producer, cfg.Voice, permChecker)
+	voiceSvc := voice.NewService(rdb, producer, cfg.Voice, authzClient)
 	voiceHandler := voice.NewHandler(voiceSvc, dispatcher.VoiceSubs)
 
 	// gRPC server with middleware
 	srv := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			middleware.LoggingInterceptor(),
+			middleware.RateLimitInterceptor(rdb),
 			middleware.AuthInterceptor(cfg.JWT.Secret),
+			middleware.ValidationInterceptor(),
 		),
 		grpc.ChainStreamInterceptor(
 			middleware.StreamLoggingInterceptor(),

@@ -15,12 +15,15 @@ services:
       SCYLLA_HOST: scylladb:9042
       SCYLLA_KEYSPACE: ndiscord
       REDPANDA_BROKER: redpanda:9092
+      OPENFGA_API_URL: http://openfga:8080
     depends_on:
       timescaledb:
         condition: service_healthy
       scylladb:
         condition: service_healthy
       redpanda:
+        condition: service_started
+      openfga:
         condition: service_started
     restart: "no"
 

@@ -11,4 +11,7 @@ var (
 	ErrRecipientRequired  = errors.New("at least one recipient is required for DM channel")
 	ErrInvalidUUID             = errors.New("invalid UUID format")
 	ErrInsufficientPermissions = errors.New("insufficient permissions")
+	ErrNotGroupDM              = errors.New("channel is not a group DM")
+	ErrNotDMChannelMember      = errors.New("user is not a member of this DM channel")
+	ErrAlreadyDMChannelMember  = errors.New("user is already a member of this DM channel")
 )

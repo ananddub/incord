@@ -19,24 +19,28 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	GuildService_CreateGuild_FullMethodName       = "/guild.v1.GuildService/CreateGuild"
-	GuildService_GetGuild_FullMethodName          = "/guild.v1.GuildService/GetGuild"
-	GuildService_UpdateGuild_FullMethodName       = "/guild.v1.GuildService/UpdateGuild"
-	GuildService_DeleteGuild_FullMethodName       = "/guild.v1.GuildService/DeleteGuild"
-	GuildService_ListUserGuilds_FullMethodName    = "/guild.v1.GuildService/ListUserGuilds"
-	GuildService_JoinGuild_FullMethodName         = "/guild.v1.GuildService/JoinGuild"
-	GuildService_LeaveGuild_FullMethodName        = "/guild.v1.GuildService/LeaveGuild"
-	GuildService_ListMembers_FullMethodName       = "/guild.v1.GuildService/ListMembers"
-	GuildService_KickMember_FullMethodName        = "/guild.v1.GuildService/KickMember"
-	GuildService_BanMember_FullMethodName         = "/guild.v1.GuildService/BanMember"
-	GuildService_UnbanMember_FullMethodName       = "/guild.v1.GuildService/UnbanMember"
-	GuildService_CreateInvite_FullMethodName      = "/guild.v1.GuildService/CreateInvite"
-	GuildService_CreateRole_FullMethodName        = "/guild.v1.GuildService/CreateRole"
-	GuildService_UpdateRole_FullMethodName        = "/guild.v1.GuildService/UpdateRole"
-	GuildService_DeleteRole_FullMethodName        = "/guild.v1.GuildService/DeleteRole"
-	GuildService_AssignRole_FullMethodName        = "/guild.v1.GuildService/AssignRole"
-	GuildService_RemoveRole_FullMethodName        = "/guild.v1.GuildService/RemoveRole"
-	GuildService_StreamGuildEvents_FullMethodName = "/guild.v1.GuildService/StreamGuildEvents"
+	GuildService_CreateGuild_FullMethodName        = "/guild.v1.GuildService/CreateGuild"
+	GuildService_GetGuild_FullMethodName           = "/guild.v1.GuildService/GetGuild"
+	GuildService_UpdateGuild_FullMethodName        = "/guild.v1.GuildService/UpdateGuild"
+	GuildService_DeleteGuild_FullMethodName        = "/guild.v1.GuildService/DeleteGuild"
+	GuildService_ListUserGuilds_FullMethodName     = "/guild.v1.GuildService/ListUserGuilds"
+	GuildService_JoinGuild_FullMethodName          = "/guild.v1.GuildService/JoinGuild"
+	GuildService_LeaveGuild_FullMethodName         = "/guild.v1.GuildService/LeaveGuild"
+	GuildService_ListMembers_FullMethodName        = "/guild.v1.GuildService/ListMembers"
+	GuildService_KickMember_FullMethodName         = "/guild.v1.GuildService/KickMember"
+	GuildService_BanMember_FullMethodName          = "/guild.v1.GuildService/BanMember"
+	GuildService_UnbanMember_FullMethodName        = "/guild.v1.GuildService/UnbanMember"
+	GuildService_CreateInvite_FullMethodName       = "/guild.v1.GuildService/CreateInvite"
+	GuildService_CreateRole_FullMethodName         = "/guild.v1.GuildService/CreateRole"
+	GuildService_UpdateRole_FullMethodName         = "/guild.v1.GuildService/UpdateRole"
+	GuildService_DeleteRole_FullMethodName         = "/guild.v1.GuildService/DeleteRole"
+	GuildService_AssignRole_FullMethodName         = "/guild.v1.GuildService/AssignRole"
+	GuildService_RemoveRole_FullMethodName         = "/guild.v1.GuildService/RemoveRole"
+	GuildService_TransferOwnership_FullMethodName  = "/guild.v1.GuildService/TransferOwnership"
+	GuildService_GrantPermission_FullMethodName    = "/guild.v1.GuildService/GrantPermission"
+	GuildService_RevokePermission_FullMethodName   = "/guild.v1.GuildService/RevokePermission"
+	GuildService_GetUserPermissions_FullMethodName = "/guild.v1.GuildService/GetUserPermissions"
+	GuildService_StreamGuildEvents_FullMethodName  = "/guild.v1.GuildService/StreamGuildEvents"
 )
 
 // GuildServiceClient is the client API for GuildService service.
@@ -60,7 +64,13 @@ type GuildServiceClient interface {
 	DeleteRole(ctx context.Context, in *DeleteRoleRequest, opts ...grpc.CallOption) (*DeleteRoleResponse, error)
 	AssignRole(ctx context.Context, in *AssignRoleRequest, opts ...grpc.CallOption) (*AssignRoleResponse, error)
 	RemoveRole(ctx context.Context, in *RemoveRoleRequest, opts ...grpc.CallOption) (*RemoveRoleResponse, error)
-	// Stream: real-time guild events (member join/leave, channel changes, role changes)
+	// Ownership
+	TransferOwnership(ctx context.Context, in *TransferOwnershipRequest, opts ...grpc.CallOption) (*TransferOwnershipResponse, error)
+	// Permissions (managed via OpenFGA)
+	GrantPermission(ctx context.Context, in *GrantPermissionRequest, opts ...grpc.CallOption) (*GrantPermissionResponse, error)
+	RevokePermission(ctx context.Context, in *RevokePermissionRequest, opts ...grpc.CallOption) (*RevokePermissionResponse, error)
+	GetUserPermissions(ctx context.Context, in *GetUserPermissionsRequest, opts ...grpc.CallOption) (*GetUserPermissionsResponse, error)
+	// Stream
 	StreamGuildEvents(ctx context.Context, in *StreamGuildEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GuildEvent], error)
 }
 
@@ -242,6 +252,46 @@ func (c *guildServiceClient) RemoveRole(ctx context.Context, in *RemoveRoleReque
 	return out, nil
 }
 
+func (c *guildServiceClient) TransferOwnership(ctx context.Context, in *TransferOwnershipRequest, opts ...grpc.CallOption) (*TransferOwnershipResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TransferOwnershipResponse)
+	err := c.cc.Invoke(ctx, GuildService_TransferOwnership_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *guildServiceClient) GrantPermission(ctx context.Context, in *GrantPermissionRequest, opts ...grpc.CallOption) (*GrantPermissionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GrantPermissionResponse)
+	err := c.cc.Invoke(ctx, GuildService_GrantPermission_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *guildServiceClient) RevokePermission(ctx context.Context, in *RevokePermissionRequest, opts ...grpc.CallOption) (*RevokePermissionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokePermissionResponse)
+	err := c.cc.Invoke(ctx, GuildService_RevokePermission_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *guildServiceClient) GetUserPermissions(ctx context.Context, in *GetUserPermissionsRequest, opts ...grpc.CallOption) (*GetUserPermissionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUserPermissionsResponse)
+	err := c.cc.Invoke(ctx, GuildService_GetUserPermissions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *guildServiceClient) StreamGuildEvents(ctx context.Context, in *StreamGuildEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GuildEvent], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &GuildService_ServiceDesc.Streams[0], GuildService_StreamGuildEvents_FullMethodName, cOpts...)
@@ -282,7 +332,13 @@ type GuildServiceServer interface {
 	DeleteRole(context.Context, *DeleteRoleRequest) (*DeleteRoleResponse, error)
 	AssignRole(context.Context, *AssignRoleRequest) (*AssignRoleResponse, error)
 	RemoveRole(context.Context, *RemoveRoleRequest) (*RemoveRoleResponse, error)
-	// Stream: real-time guild events (member join/leave, channel changes, role changes)
+	// Ownership
+	TransferOwnership(context.Context, *TransferOwnershipRequest) (*TransferOwnershipResponse, error)
+	// Permissions (managed via OpenFGA)
+	GrantPermission(context.Context, *GrantPermissionRequest) (*GrantPermissionResponse, error)
+	RevokePermission(context.Context, *RevokePermissionRequest) (*RevokePermissionResponse, error)
+	GetUserPermissions(context.Context, *GetUserPermissionsRequest) (*GetUserPermissionsResponse, error)
+	// Stream
 	StreamGuildEvents(*StreamGuildEventsRequest, grpc.ServerStreamingServer[GuildEvent]) error
 	mustEmbedUnimplementedGuildServiceServer()
 }
@@ -344,6 +400,18 @@ func (UnimplementedGuildServiceServer) AssignRole(context.Context, *AssignRoleRe
 }
 func (UnimplementedGuildServiceServer) RemoveRole(context.Context, *RemoveRoleRequest) (*RemoveRoleResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveRole not implemented")
+}
+func (UnimplementedGuildServiceServer) TransferOwnership(context.Context, *TransferOwnershipRequest) (*TransferOwnershipResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TransferOwnership not implemented")
+}
+func (UnimplementedGuildServiceServer) GrantPermission(context.Context, *GrantPermissionRequest) (*GrantPermissionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GrantPermission not implemented")
+}
+func (UnimplementedGuildServiceServer) RevokePermission(context.Context, *RevokePermissionRequest) (*RevokePermissionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokePermission not implemented")
+}
+func (UnimplementedGuildServiceServer) GetUserPermissions(context.Context, *GetUserPermissionsRequest) (*GetUserPermissionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetUserPermissions not implemented")
 }
 func (UnimplementedGuildServiceServer) StreamGuildEvents(*StreamGuildEventsRequest, grpc.ServerStreamingServer[GuildEvent]) error {
 	return status.Error(codes.Unimplemented, "method StreamGuildEvents not implemented")
@@ -675,6 +743,78 @@ func _GuildService_RemoveRole_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GuildService_TransferOwnership_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TransferOwnershipRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuildServiceServer).TransferOwnership(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GuildService_TransferOwnership_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuildServiceServer).TransferOwnership(ctx, req.(*TransferOwnershipRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GuildService_GrantPermission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GrantPermissionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuildServiceServer).GrantPermission(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GuildService_GrantPermission_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuildServiceServer).GrantPermission(ctx, req.(*GrantPermissionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GuildService_RevokePermission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokePermissionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuildServiceServer).RevokePermission(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GuildService_RevokePermission_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuildServiceServer).RevokePermission(ctx, req.(*RevokePermissionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GuildService_GetUserPermissions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserPermissionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuildServiceServer).GetUserPermissions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GuildService_GetUserPermissions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuildServiceServer).GetUserPermissions(ctx, req.(*GetUserPermissionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _GuildService_StreamGuildEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(StreamGuildEventsRequest)
 	if err := stream.RecvMsg(m); err != nil {
@@ -760,6 +900,22 @@ var GuildService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RemoveRole",
 			Handler:    _GuildService_RemoveRole_Handler,
+		},
+		{
+			MethodName: "TransferOwnership",
+			Handler:    _GuildService_TransferOwnership_Handler,
+		},
+		{
+			MethodName: "GrantPermission",
+			Handler:    _GuildService_GrantPermission_Handler,
+		},
+		{
+			MethodName: "RevokePermission",
+			Handler:    _GuildService_RevokePermission_Handler,
+		},
+		{
+			MethodName: "GetUserPermissions",
+			Handler:    _GuildService_GetUserPermissions_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

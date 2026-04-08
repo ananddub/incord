@@ -23,8 +23,8 @@ func makeFriends(t *testing.T, prefix, ts string) (alice, bob *testUser) {
 	auth := authv1.NewAuthServiceClient(conn)
 	users := userv1.NewUserServiceClient(conn)
 
-	alice = registerAndVerify(t, auth, prefix+"_a_"+ts, prefix+"_a_"+ts+"@t.com", "p")
-	bob = registerAndVerify(t, auth, prefix+"_b_"+ts, prefix+"_b_"+ts+"@t.com", "p")
+	alice = registerAndVerify(t, auth, prefix+"_a_"+ts, prefix+"_a_"+ts+"@t.com", "password123")
+	bob = registerAndVerify(t, auth, prefix+"_b_"+ts, prefix+"_b_"+ts+"@t.com", "password123")
 
 	_, err := users.SendFriendRequest(alice.ctx(), &userv1.SendFriendRequestRequest{TargetUserId: bob.ID})
 	require.NoError(t, err)

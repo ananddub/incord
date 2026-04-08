@@ -7,33 +7,22 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/ananddub/ndiscord_backend/gen/db"
+	"github.com/ananddub/ndiscord_backend/internal/shared/authz"
 	"github.com/ananddub/ndiscord_backend/internal/shared/event"
-	"github.com/ananddub/ndiscord_backend/internal/shared/permissions"
 )
 
 type Service struct {
-	repo        *Repository
-	producer    *event.Producer
-	permChecker permissions.Checker
+	repo     *Repository
+	producer *event.Producer
+	authz    *authz.Client
 }
 
-func NewService(repo *Repository, producer *event.Producer, permChecker ...permissions.Checker) *Service {
+func NewService(repo *Repository, producer *event.Producer, authzClient ...*authz.Client) *Service {
 	s := &Service{repo: repo, producer: producer}
-	if len(permChecker) > 0 {
-		s.permChecker = permChecker[0]
+	if len(authzClient) > 0 {
+		s.authz = authzClient[0]
 	}
 	return s
-}
-
-// checkPermission returns an error if the user lacks the given permission in the guild.
-// Skipped when permChecker is nil or guildID is empty.
-func (s *Service) checkPermission(ctx context.Context, userID, guildID string, perm int64) error {
-	if s.permChecker != nil && guildID != "" {
-		if !s.permChecker.HasPermission(ctx, userID, guildID, perm) {
-			return ErrInsufficientPermissions
-		}
-	}
-	return nil
 }
 
 func (s *Service) CreateChannel(ctx context.Context, userID string, guildID, name string, channelType int32, topic, parentID string) (db.Channel, error) {
@@ -60,8 +49,8 @@ func (s *Service) CreateChannel(ctx context.Context, userID string, guildID, nam
 		return db.Channel{}, ErrNotGuildMember
 	}
 
-	if err := s.checkPermission(ctx, userID, guildID, permissions.ManageChannels); err != nil {
-		return db.Channel{}, err
+	if !s.authz.CanManageChannels(ctx, userID, guildID) {
+		return db.Channel{}, ErrInsufficientPermissions
 	}
 
 	params := db.CreateChannelParams{
@@ -83,6 +72,9 @@ func (s *Service) CreateChannel(ctx context.Context, userID string, guildID, nam
 	if err != nil {
 		return db.Channel{}, fmt.Errorf("failed to create channel: %w", err)
 	}
+
+	// Write authz tuple: channel belongs to guild
+	_ = s.authz.SetChannelGuild(ctx, ch.ID.String(), guildID)
 
 	_ = event.PublishEvent(ctx, s.producer, event.TopicChannelEvents, guildID, guildID, ch.ID.String(), "", map[string]any{
 		"action":     "create",
@@ -118,8 +110,8 @@ func (s *Service) UpdateChannel(ctx context.Context, userID, channelID string, n
 		return db.Channel{}, fmt.Errorf("%w: %v", ErrChannelNotFound, err)
 	}
 	if existing.GuildID.Valid {
-		if err := s.checkPermission(ctx, userID, uuidToString(existing.GuildID), permissions.ManageChannels); err != nil {
-			return db.Channel{}, err
+		if !s.authz.CanManageChannels(ctx, userID, uuidToString(existing.GuildID)) {
+			return db.Channel{}, ErrInsufficientPermissions
 		}
 	}
 
@@ -170,8 +162,8 @@ func (s *Service) DeleteChannel(ctx context.Context, userID, channelID string) e
 	}
 
 	if ch.GuildID.Valid {
-		if err := s.checkPermission(ctx, userID, uuidToString(ch.GuildID), permissions.ManageChannels); err != nil {
-			return err
+		if !s.authz.CanManageChannels(ctx, userID, uuidToString(ch.GuildID)) {
+			return ErrInsufficientPermissions
 		}
 	}
 
@@ -279,6 +271,108 @@ func (s *Service) ListDMChannels(ctx context.Context, userID string) ([]db.Chann
 		return nil, fmt.Errorf("failed to list DM channels: %w", err)
 	}
 	return channels, nil
+}
+
+func (s *Service) AddDMGroupMember(ctx context.Context, callerID, channelID, userID string) error {
+	chUUID, err := parseUUID(channelID)
+	if err != nil {
+		return ErrInvalidUUID
+	}
+
+	// Verify channel exists and is a group DM (type=6)
+	ch, err := s.repo.GetChannelByID(ctx, chUUID)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrChannelNotFound, err)
+	}
+	if ch.Type != 6 {
+		return ErrNotGroupDM
+	}
+
+	// Caller must be a member
+	callerUUID, err := parseUUID(callerID)
+	if err != nil {
+		return ErrInvalidUUID
+	}
+	isMember, err := s.repo.IsDMChannelMember(ctx, db.IsDMChannelMemberParams{
+		ChannelID: chUUID,
+		UserID:    callerUUID,
+	})
+	if err != nil || !isMember {
+		return ErrNotDMChannelMember
+	}
+
+	// Check target is not already a member
+	targetUUID, err := parseUUID(userID)
+	if err != nil {
+		return ErrInvalidUUID
+	}
+	alreadyMember, err := s.repo.IsDMChannelMember(ctx, db.IsDMChannelMemberParams{
+		ChannelID: chUUID,
+		UserID:    targetUUID,
+	})
+	if err == nil && alreadyMember {
+		return ErrAlreadyDMChannelMember
+	}
+
+	if err := s.repo.AddDMChannelMember(ctx, db.AddDMChannelMemberParams{
+		ChannelID: chUUID,
+		UserID:    targetUUID,
+	}); err != nil {
+		return fmt.Errorf("failed to add member to group DM: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Service) RemoveDMGroupMember(ctx context.Context, callerID, channelID, userID string) error {
+	chUUID, err := parseUUID(channelID)
+	if err != nil {
+		return ErrInvalidUUID
+	}
+
+	// Verify channel exists and is a group DM (type=6)
+	ch, err := s.repo.GetChannelByID(ctx, chUUID)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrChannelNotFound, err)
+	}
+	if ch.Type != 6 {
+		return ErrNotGroupDM
+	}
+
+	// Caller must be a member
+	callerUUID, err := parseUUID(callerID)
+	if err != nil {
+		return ErrInvalidUUID
+	}
+	isMember, err := s.repo.IsDMChannelMember(ctx, db.IsDMChannelMemberParams{
+		ChannelID: chUUID,
+		UserID:    callerUUID,
+	})
+	if err != nil || !isMember {
+		return ErrNotDMChannelMember
+	}
+
+	// Verify target is a member
+	targetUUID, err := parseUUID(userID)
+	if err != nil {
+		return ErrInvalidUUID
+	}
+	targetIsMember, err := s.repo.IsDMChannelMember(ctx, db.IsDMChannelMemberParams{
+		ChannelID: chUUID,
+		UserID:    targetUUID,
+	})
+	if err != nil || !targetIsMember {
+		return ErrNotDMChannelMember
+	}
+
+	if err := s.repo.RemoveDMChannelMember(ctx, db.RemoveDMChannelMemberParams{
+		ChannelID: chUUID,
+		UserID:    targetUUID,
+	}); err != nil {
+		return fmt.Errorf("failed to remove member from group DM: %w", err)
+	}
+
+	return nil
 }
 
 // parseUUID converts a string UUID to a pgtype.UUID.

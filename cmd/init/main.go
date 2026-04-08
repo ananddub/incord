@@ -1,8 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/ananddub/ndiscord_backend/internal/shared/config"
@@ -21,35 +29,43 @@ func main() {
 
 	log.Info().Msg("=== ndiscord init ===")
 
-	// [1/3] TimescaleDB
-	log.Info().Msg("[1/3] Running TimescaleDB migrations...")
+	// [1/4] TimescaleDB
+	log.Info().Msg("[1/4] Running TimescaleDB migrations...")
 	if err := migratePG(ctx, cfg.Database); err != nil {
 		log.Fatal().Err(err).Msg("TimescaleDB migration failed")
 	}
 	log.Info().Msg("  TimescaleDB: done")
 
-	// [2/3] ScyllaDB
-	log.Info().Msg("[2/3] Setting up ScyllaDB...")
+	// [2/4] ScyllaDB
+	log.Info().Msg("[2/4] Setting up ScyllaDB...")
 	if err := migrateScylla(cfg.ScyllaDB); err != nil {
 		log.Fatal().Err(err).Msg("ScyllaDB setup failed")
 	}
 	log.Info().Msg("  ScyllaDB: done")
 
-	// [3/3] Redpanda topics
-	log.Info().Msg("[3/3] Creating Redpanda topics...")
+	// [3/4] Redpanda topics
+	log.Info().Msg("[3/4] Creating Redpanda topics...")
 	if err := createTopics(cfg.Redpanda); err != nil {
 		log.Warn().Err(err).Msg("Redpanda topic creation had errors (may already exist)")
 	}
 	log.Info().Msg("  Redpanda: done")
 
+	// [4/4] OpenFGA
+	log.Info().Msg("[4/4] Setting up OpenFGA...")
+	if err := setupOpenFGA(cfg.OpenFGA); err != nil {
+		log.Warn().Err(err).Msg("OpenFGA setup failed (auth will be permissive)")
+	} else {
+		log.Info().Msg("  OpenFGA: done")
+	}
+
 	log.Info().Msg("=== Init complete! ===")
 }
 
+// migratePG reads all .up.sql files from db/timescale/migrations/ and executes them.
 func migratePG(ctx context.Context, cfg config.DatabaseConfig) error {
-	// Wait for PG
 	var pool *pgxpool.Pool
 	var err error
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		pool, err = pgxpool.New(ctx, cfg.DSN())
 		if err == nil {
 			if err = pool.Ping(ctx); err == nil {
@@ -63,166 +79,46 @@ func migratePG(ctx context.Context, cfg config.DatabaseConfig) error {
 	}
 	defer pool.Close()
 
-	migrations := []string{
-		// 000001_init
-		`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`,
-
-		`CREATE TABLE IF NOT EXISTS users (
-			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			username VARCHAR(32) UNIQUE NOT NULL,
-			email VARCHAR(255) UNIQUE NOT NULL,
-			password_hash TEXT NOT NULL,
-			avatar_url TEXT NOT NULL DEFAULT '',
-			bio TEXT NOT NULL DEFAULT '',
-			status VARCHAR(20) NOT NULL DEFAULT 'offline',
-			verified BOOLEAN NOT NULL DEFAULT FALSE,
-			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-		)`,
-
-		`CREATE TABLE IF NOT EXISTS friendships (
-			user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-			friend_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-			status VARCHAR(20) NOT NULL DEFAULT 'pending',
-			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-			PRIMARY KEY (user_id, friend_id)
-		)`,
-
-		`CREATE TABLE IF NOT EXISTS guilds (
-			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			name VARCHAR(100) NOT NULL,
-			description TEXT NOT NULL DEFAULT '',
-			icon_url TEXT NOT NULL DEFAULT '',
-			owner_id UUID NOT NULL REFERENCES users(id),
-			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-		)`,
-
-		`CREATE TABLE IF NOT EXISTS guild_members (
-			guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
-			user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-			nickname VARCHAR(32) NOT NULL DEFAULT '',
-			joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-			PRIMARY KEY (guild_id, user_id)
-		)`,
-
-		`CREATE TABLE IF NOT EXISTS roles (
-			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
-			name VARCHAR(100) NOT NULL,
-			color VARCHAR(7) NOT NULL DEFAULT '#99AAB5',
-			position INT NOT NULL DEFAULT 0,
-			permissions BIGINT NOT NULL DEFAULT 0,
-			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-		)`,
-
-		`CREATE TABLE IF NOT EXISTS role_members (
-			role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-			user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-			PRIMARY KEY (role_id, user_id)
-		)`,
-
-		`CREATE TABLE IF NOT EXISTS channels (
-			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			guild_id UUID REFERENCES guilds(id) ON DELETE CASCADE,
-			name VARCHAR(100) NOT NULL,
-			type INT NOT NULL DEFAULT 1,
-			topic TEXT NOT NULL DEFAULT '',
-			position INT NOT NULL DEFAULT 0,
-			parent_id UUID REFERENCES channels(id) ON DELETE SET NULL,
-			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-		)`,
-
-		`CREATE TABLE IF NOT EXISTS channel_permission_overwrites (
-			channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
-			target_id UUID NOT NULL,
-			target_type VARCHAR(10) NOT NULL,
-			allow_bits BIGINT NOT NULL DEFAULT 0,
-			deny_bits BIGINT NOT NULL DEFAULT 0,
-			PRIMARY KEY (channel_id, target_id)
-		)`,
-
-		`CREATE TABLE IF NOT EXISTS dm_channel_members (
-			channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
-			user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-			PRIMARY KEY (channel_id, user_id)
-		)`,
-
-		`CREATE TABLE IF NOT EXISTS invites (
-			code VARCHAR(10) PRIMARY KEY,
-			guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
-			channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
-			creator_id UUID NOT NULL REFERENCES users(id),
-			max_uses INT NOT NULL DEFAULT 0,
-			uses INT NOT NULL DEFAULT 0,
-			expires_at TIMESTAMPTZ,
-			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-		)`,
-
-		`CREATE TABLE IF NOT EXISTS bans (
-			guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
-			user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-			reason TEXT NOT NULL DEFAULT '',
-			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-			PRIMARY KEY (guild_id, user_id)
-		)`,
-
-		`CREATE TABLE IF NOT EXISTS emojis (
-			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
-			name VARCHAR(32) NOT NULL,
-			image_url TEXT NOT NULL,
-			creator_id UUID NOT NULL REFERENCES users(id),
-			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-		)`,
-
-		`CREATE TABLE IF NOT EXISTS webhooks (
-			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
-			guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
-			name VARCHAR(80) NOT NULL,
-			avatar_url TEXT NOT NULL DEFAULT '',
-			token TEXT NOT NULL,
-			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-		)`,
-
-		`CREATE TABLE IF NOT EXISTS media_files (
-			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			uploader_id UUID NOT NULL REFERENCES users(id),
-			filename TEXT NOT NULL,
-			content_type VARCHAR(255) NOT NULL,
-			size BIGINT NOT NULL,
-			bucket_key TEXT NOT NULL,
-			confirmed BOOLEAN NOT NULL DEFAULT FALSE,
-			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-		)`,
-
-		// Indexes (IF NOT EXISTS not supported for indexes, so use DO block)
-		`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`,
-		`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`,
-		`CREATE INDEX IF NOT EXISTS idx_friendships_friend ON friendships(friend_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_guild_members_user ON guild_members(user_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_roles_guild ON roles(guild_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_channels_guild ON channels(guild_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_dm_members_user ON dm_channel_members(user_id)`,
+	// Read migration files from disk
+	files, err := filepath.Glob("db/timescale/migrations/*.up.sql")
+	if err != nil || len(files) == 0 {
+		return fmt.Errorf("no migration files found in db/timescale/migrations/")
 	}
+	sort.Strings(files) // ensure order: 000001, 000002, etc.
 
-	for _, m := range migrations {
-		if _, err := pool.Exec(ctx, m); err != nil {
-			// Ignore "already exists" errors
-			logger.Log.Debug().Err(err).Msg("migration statement (may already exist)")
+	for _, f := range files {
+		data, err := os.ReadFile(f)
+		if err != nil {
+			return fmt.Errorf("failed to read %s: %w", f, err)
 		}
+
+		// Split by semicolons and execute each statement
+		stmts := strings.Split(string(data), ";")
+		for _, stmt := range stmts {
+			stmt = strings.TrimSpace(stmt)
+			if stmt == "" {
+				continue
+			}
+			if _, err := pool.Exec(ctx, stmt); err != nil {
+				// Ignore "already exists" errors
+				if !strings.Contains(err.Error(), "already exists") &&
+					!strings.Contains(err.Error(), "duplicate") {
+					logger.Log.Debug().Err(err).Str("file", filepath.Base(f)).Msg("pg migration statement")
+				}
+			}
+		}
+		logger.Log.Info().Str("file", filepath.Base(f)).Msg("  applied")
 	}
 
 	return nil
 }
 
+// migrateScylla reads CQL files and creates keyspace + tables.
 func migrateScylla(cfg config.ScyllaDBConfig) error {
-	// Wait for ScyllaDB
 	var session *gocql.Session
 	var err error
 
-	// First connect without keyspace to create it
-	for i := 0; i < 60; i++ {
+	for range 60 {
 		cluster := gocql.NewCluster(cfg.Hosts...)
 		cluster.Timeout = 10 * time.Second
 		cluster.ConnectTimeout = 10 * time.Second
@@ -238,7 +134,7 @@ func migrateScylla(cfg config.ScyllaDBConfig) error {
 
 	// Create keyspace
 	if err := session.Query(`
-		CREATE KEYSPACE IF NOT EXISTS ndiscord
+		CREATE KEYSPACE IF NOT EXISTS ` + cfg.Keyspace + `
 		WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1}
 	`).Exec(); err != nil {
 		session.Close()
@@ -256,40 +152,31 @@ func migrateScylla(cfg config.ScyllaDBConfig) error {
 	}
 	defer session.Close()
 
-	tables := []string{
-		`CREATE TABLE IF NOT EXISTS messages (
-			channel_id UUID, id TIMEUUID, author_id UUID, content TEXT, type INT,
-			reply_to_id UUID, pinned BOOLEAN, edited_at TIMESTAMP, created_at TIMESTAMP,
-			PRIMARY KEY (channel_id, id)
-		) WITH CLUSTERING ORDER BY (id DESC)`,
-
-		`CREATE TABLE IF NOT EXISTS message_attachments (
-			channel_id UUID, message_id TIMEUUID, id UUID, filename TEXT, url TEXT,
-			content_type TEXT, size BIGINT,
-			PRIMARY KEY ((channel_id, message_id), id)
-		)`,
-
-		`CREATE TABLE IF NOT EXISTS message_reactions (
-			channel_id UUID, message_id TIMEUUID, emoji TEXT, user_id UUID,
-			PRIMARY KEY ((channel_id, message_id), emoji, user_id)
-		)`,
-
-		`CREATE TABLE IF NOT EXISTS read_states (
-			user_id UUID, channel_id UUID, last_read_message_id TIMEUUID, mention_count INT,
-			PRIMARY KEY (user_id, channel_id)
-		)`,
-
-		`CREATE TABLE IF NOT EXISTS audit_log (
-			guild_id UUID, id TIMEUUID, action_type INT, user_id UUID, target_id UUID,
-			changes TEXT, created_at TIMESTAMP,
-			PRIMARY KEY (guild_id, id)
-		) WITH CLUSTERING ORDER BY (id DESC)`,
+	// Read CQL migration files
+	files, err := filepath.Glob("db/scylla/migrations/*.cql")
+	if err != nil || len(files) == 0 {
+		logger.Log.Warn().Msg("no scylla migration files found, skipping")
+		return nil
 	}
+	sort.Strings(files)
 
-	for _, t := range tables {
-		if err := session.Query(t).Exec(); err != nil {
-			logger.Log.Debug().Err(err).Msg("scylla table (may already exist)")
+	for _, f := range files {
+		data, err := os.ReadFile(f)
+		if err != nil {
+			return fmt.Errorf("failed to read %s: %w", f, err)
 		}
+
+		stmts := strings.Split(string(data), ";")
+		for _, stmt := range stmts {
+			stmt = strings.TrimSpace(stmt)
+			if stmt == "" || strings.HasPrefix(stmt, "--") || strings.HasPrefix(strings.ToUpper(stmt), "USE ") || strings.HasPrefix(strings.ToUpper(stmt), "CREATE KEYSPACE") {
+				continue
+			}
+			if err := session.Query(stmt).Exec(); err != nil {
+				logger.Log.Debug().Err(err).Str("file", filepath.Base(f)).Msg("cql statement")
+			}
+		}
+		logger.Log.Info().Str("file", filepath.Base(f)).Msg("  applied")
 	}
 
 	return nil
@@ -318,4 +205,90 @@ func createTopics(cfg config.RedpandaConfig) error {
 	}
 
 	return nil
+}
+
+func setupOpenFGA(cfg config.OpenFGAConfig) error {
+	apiURL := cfg.APIUrl
+	if apiURL == "" {
+		apiURL = "http://localhost:8090"
+	}
+
+	for range 15 {
+		resp, err := http.Get(apiURL + "/healthz")
+		if err == nil {
+			resp.Body.Close()
+			break
+		}
+		time.Sleep(time.Second)
+	}
+
+	resp, err := http.Get(apiURL + "/healthz")
+	if err != nil {
+		return fmt.Errorf("openfga not reachable: %w", err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if !bytes.Contains(body, []byte("SERVING")) {
+		return fmt.Errorf("openfga not serving: %s", string(body))
+	}
+
+	// Check if store exists
+	storesResp, err := http.Get(apiURL + "/stores")
+	if err != nil {
+		return fmt.Errorf("failed to list stores: %w", err)
+	}
+	defer storesResp.Body.Close()
+	var storesBody struct {
+		Stores []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"stores"`
+	}
+	json.NewDecoder(storesResp.Body).Decode(&storesBody)
+
+	var storeID string
+	for _, s := range storesBody.Stores {
+		if s.Name == "ndiscord" {
+			storeID = s.ID
+			break
+		}
+	}
+
+	if storeID == "" {
+		payload, _ := json.Marshal(map[string]string{"name": "ndiscord"})
+		cr, err := http.Post(apiURL+"/stores", "application/json", bytes.NewReader(payload))
+		if err != nil {
+			return fmt.Errorf("create store: %w", err)
+		}
+		defer cr.Body.Close()
+		var created struct{ ID string `json:"id"` }
+		json.NewDecoder(cr.Body).Decode(&created)
+		storeID = created.ID
+		logger.Log.Info().Str("store_id", storeID).Msg("  OpenFGA store created")
+	} else {
+		logger.Log.Info().Str("store_id", storeID).Msg("  OpenFGA store exists")
+	}
+
+	// Read model from file if exists, otherwise use default
+	model := getOpenFGAModel()
+
+	mr, err := http.Post(apiURL+"/stores/"+storeID+"/authorization-models", "application/json", bytes.NewReader([]byte(model)))
+	if err != nil {
+		return fmt.Errorf("create model: %w", err)
+	}
+	defer mr.Body.Close()
+	var modelResult struct{ AuthorizationModelID string `json:"authorization_model_id"` }
+	json.NewDecoder(mr.Body).Decode(&modelResult)
+	logger.Log.Info().Str("model_id", modelResult.AuthorizationModelID).Msg("  OpenFGA auth model set")
+
+	return nil
+}
+
+func getOpenFGAModel() string {
+	// Try reading from file first
+	if data, err := os.ReadFile("openfga/model.json"); err == nil {
+		return string(data)
+	}
+	// Fallback to embedded default
+	return `{"schema_version":"1.1","type_definitions":[{"type":"user","relations":{}},{"type":"guild","relations":{"owner":{"this":{}},"admin":{"this":{}},"member":{"this":{}},"can_manage_guild":{"union":{"child":[{"computedUserset":{"relation":"owner"}},{"computedUserset":{"relation":"admin"}}]}},"can_kick":{"union":{"child":[{"computedUserset":{"relation":"owner"}},{"computedUserset":{"relation":"admin"}}]}},"can_ban":{"union":{"child":[{"computedUserset":{"relation":"owner"}},{"computedUserset":{"relation":"admin"}}]}},"can_manage_roles":{"union":{"child":[{"computedUserset":{"relation":"owner"}},{"computedUserset":{"relation":"admin"}}]}},"can_manage_channels":{"union":{"child":[{"computedUserset":{"relation":"owner"}},{"computedUserset":{"relation":"admin"}}]}}},"metadata":{"relations":{"owner":{"directly_related_user_types":[{"type":"user"}]},"admin":{"directly_related_user_types":[{"type":"user"}]},"member":{"directly_related_user_types":[{"type":"user"}]},"can_manage_guild":{},"can_kick":{},"can_ban":{},"can_manage_roles":{},"can_manage_channels":{}}}},{"type":"channel","relations":{"guild":{"this":{}},"viewer":{"union":{"child":[{"this":{}},{"tupleToUserset":{"tupleset":{"relation":"guild"},"computedUserset":{"relation":"member"}}}]}},"sender":{"union":{"child":[{"this":{}},{"tupleToUserset":{"tupleset":{"relation":"guild"},"computedUserset":{"relation":"member"}}}]}},"manager":{"union":{"child":[{"this":{}},{"tupleToUserset":{"tupleset":{"relation":"guild"},"computedUserset":{"relation":"can_manage_channels"}}}]}}},"metadata":{"relations":{"guild":{"directly_related_user_types":[{"type":"guild"}]},"viewer":{"directly_related_user_types":[{"type":"user"}]},"sender":{"directly_related_user_types":[{"type":"user"}]},"manager":{"directly_related_user_types":[{"type":"user"}]}}}}]}`
 }

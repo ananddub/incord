@@ -73,9 +73,9 @@ func TestFullDiscordFlow(t *testing.T) {
 	})
 
 	// Register users for remaining tests
-	alice := registerAndVerify(t, c.auth, "a_"+ts, "a_"+ts+"@test.com", "pass")
-	bob := registerAndVerify(t, c.auth, "b_"+ts, "b_"+ts+"@test.com", "pass")
-	charlie := registerAndVerify(t, c.auth, "c_"+ts, "c_"+ts+"@test.com", "pass")
+	alice := registerAndVerify(t, c.auth, "a_"+ts, "a_"+ts+"@test.com", "password123")
+	bob := registerAndVerify(t, c.auth, "b_"+ts, "b_"+ts+"@test.com", "password123")
+	charlie := registerAndVerify(t, c.auth, "c_"+ts, "c_"+ts+"@test.com", "password123")
 
 	// ──────────────────────────────────────
 	// 2. AUTH: Login + Token flow
@@ -83,7 +83,7 @@ func TestFullDiscordFlow(t *testing.T) {
 	t.Run("02_Login_And_Tokens", func(t *testing.T) {
 		// Login
 		loginResp, err := c.auth.Login(context.Background(), &authv1.LoginRequest{
-			Email: "a_" + ts + "@test.com", Password: "pass",
+			Email: "a_" + ts + "@test.com", Password: "password123",
 		})
 		require.NoError(t, err)
 		assert.Equal(t, alice.ID, loginResp.UserId)
@@ -247,7 +247,7 @@ func TestFullDiscordFlow(t *testing.T) {
 	t.Run("08_Roles", func(t *testing.T) {
 		// Create moderator role
 		roleResp, err := c.guild.CreateRole(alice.ctx(), &guildv1.CreateRoleRequest{
-			GuildId: guildID, Name: "Moderator", Color: "#FF5733", Permissions: 0x8,
+			GuildId: guildID, Name: "Moderator", Color: "#FF5733",
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "Moderator", roleResp.Role.Name)

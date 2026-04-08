@@ -6,6 +6,29 @@ option go_package = "github.com/ananddub/ndiscord_backend/gen/guild/v1;guildv1";
 
 import "google/protobuf/timestamp.proto";
 
+enum Permission {
+  PERMISSION_UNSPECIFIED = 0;
+  PERMISSION_VIEW_CHANNELS = 1;
+  PERMISSION_SEND_MESSAGES = 2;
+  PERMISSION_MANAGE_MESSAGES = 3;
+  PERMISSION_MANAGE_CHANNELS = 4;
+  PERMISSION_MANAGE_GUILD = 5;
+  PERMISSION_KICK_MEMBERS = 6;
+  PERMISSION_BAN_MEMBERS = 7;
+  PERMISSION_MANAGE_ROLES = 8;
+  PERMISSION_MANAGE_INVITES = 9;
+  PERMISSION_ADD_REACTIONS = 10;
+  PERMISSION_CONNECT = 11;
+  PERMISSION_SPEAK = 12;
+  PERMISSION_STREAM = 13;
+  PERMISSION_MUTE_MEMBERS = 14;
+  PERMISSION_DEAFEN_MEMBERS = 15;
+  PERMISSION_MENTION_EVERYONE = 16;
+  PERMISSION_MANAGE_EMOJIS = 17;
+  PERMISSION_MANAGE_WEBHOOKS = 18;
+  PERMISSION_ADMINISTRATOR = 19;
+}
+
 service GuildService {
   rpc CreateGuild(CreateGuildRequest) returns (CreateGuildResponse);
   rpc GetGuild(GetGuildRequest) returns (GetGuildResponse);
@@ -25,7 +48,15 @@ service GuildService {
   rpc AssignRole(AssignRoleRequest) returns (AssignRoleResponse);
   rpc RemoveRole(RemoveRoleRequest) returns (RemoveRoleResponse);
 
-  // Stream: real-time guild events (member join/leave, channel changes, role changes)
+  // Ownership
+  rpc TransferOwnership(TransferOwnershipRequest) returns (TransferOwnershipResponse);
+
+  // Permissions (managed via OpenFGA)
+  rpc GrantPermission(GrantPermissionRequest) returns (GrantPermissionResponse);
+  rpc RevokePermission(RevokePermissionRequest) returns (RevokePermissionResponse);
+  rpc GetUserPermissions(GetUserPermissionsRequest) returns (GetUserPermissionsResponse);
+
+  // Stream
   rpc StreamGuildEvents(StreamGuildEventsRequest) returns (stream GuildEvent);
 }
 
@@ -53,8 +84,7 @@ message Role {
   string name = 3;
   string color = 4;
   int32 position = 5;
-  int64 permissions = 6;
-  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp created_at = 6;
 }
 
 message Invite {
@@ -172,7 +202,6 @@ message CreateRoleRequest {
   string guild_id = 1;
   string name = 2;
   string color = 3;
-  int64 permissions = 4;
 }
 
 message CreateRoleResponse {
@@ -184,8 +213,7 @@ message UpdateRoleRequest {
   string guild_id = 2;
   optional string name = 3;
   optional string color = 4;
-  optional int64 permissions = 5;
-  optional int32 position = 6;
+  optional int32 position = 5;
 }
 
 message UpdateRoleResponse {
@@ -246,4 +274,41 @@ message GuildEvent {
   GuildMember member = 7;
   Role role = 8;
   google.protobuf.Timestamp timestamp = 9;
+}
+
+// Grant a permission to a user in a guild (writes OpenFGA tuple)
+message GrantPermissionRequest {
+  string guild_id = 1;
+  string user_id = 2;
+  Permission permission = 3;
+}
+
+message GrantPermissionResponse {}
+
+// Revoke a permission from a user in a guild
+message RevokePermissionRequest {
+  string guild_id = 1;
+  string user_id = 2;
+  Permission permission = 3;
+}
+
+message RevokePermissionResponse {}
+
+// Get all permissions a user has in a guild
+message GetUserPermissionsRequest {
+  string guild_id = 1;
+  string user_id = 2;
+}
+
+message GetUserPermissionsResponse {
+  repeated Permission permissions = 1;
+}
+
+message TransferOwnershipRequest {
+  string guild_id = 1;
+  string new_owner_id = 2;
+}
+
+message TransferOwnershipResponse {
+  Guild guild = 1;
 }

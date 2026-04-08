@@ -458,7 +458,7 @@ func (h *Handler) CreateRole(ctx context.Context, req *guildv1.CreateRoleRequest
 		return nil, status.Error(codes.InvalidArgument, "invalid guild_id")
 	}
 
-	role, err := h.svc.CreateRole(ctx, callerPgID, guildPgID, req.GetName(), req.GetColor(), req.GetPermissions())
+	role, err := h.svc.CreateRole(ctx, callerPgID, guildPgID, req.GetName(), req.GetColor())
 	if err != nil {
 		if errors.Is(err, ErrNotGuildOwner) {
 			return nil, status.Error(codes.PermissionDenied, "only the guild owner can create roles")
@@ -494,12 +494,12 @@ func (h *Handler) UpdateRole(ctx context.Context, req *guildv1.UpdateRoleRequest
 	}
 
 	params := db.UpdateRoleParams{
-		ID:          rolePgID,
-		Name:        req.Name,
-		Color:       req.Color,
-		Permissions: req.Permissions,
-		Position:    req.Position,
+		ID:       rolePgID,
+		Name:     req.Name,
+		Color:    req.Color,
+		Position: req.Position,
 	}
+	// Permissions are managed via OpenFGA, not stored in DB
 
 	role, err := h.svc.UpdateRole(ctx, callerPgID, guildPgID, params)
 	if err != nil {
@@ -628,6 +628,48 @@ func (h *Handler) RemoveRole(ctx context.Context, req *guildv1.RemoveRoleRequest
 	return &guildv1.RemoveRoleResponse{}, nil
 }
 
+func (h *Handler) TransferOwnership(ctx context.Context, req *guildv1.TransferOwnershipRequest) (*guildv1.TransferOwnershipResponse, error) {
+	callerID := middleware.UserIDFromContext(ctx)
+	if callerID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+	if req.GetGuildId() == "" || req.GetNewOwnerId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "guild_id and new_owner_id are required")
+	}
+
+	callerPgID, err := parseUUID(callerID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "invalid caller id")
+	}
+	guildPgID, err := parseUUID(req.GetGuildId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid guild_id")
+	}
+	newOwnerPgID, err := parseUUID(req.GetNewOwnerId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid new_owner_id")
+	}
+
+	guild, err := h.svc.TransferOwnership(ctx, callerPgID, guildPgID, newOwnerPgID)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrGuildNotFound):
+			return nil, status.Error(codes.NotFound, "guild not found")
+		case errors.Is(err, ErrNotGuildOwner):
+			return nil, status.Error(codes.PermissionDenied, "only the guild owner can transfer ownership")
+		case errors.Is(err, ErrMemberNotFound):
+			return nil, status.Error(codes.NotFound, "new owner must be a member of the guild")
+		default:
+			return nil, status.Error(codes.Internal, "failed to transfer ownership")
+		}
+	}
+
+	count, _ := h.svc.repo.CountGuildMembers(ctx, guildPgID)
+	return &guildv1.TransferOwnershipResponse{
+		Guild: dbGuildToProto(guild, int32(count)),
+	}, nil
+}
+
 // StreamGuildEvents opens a server-streaming RPC that pushes guild events for a guild.
 func (h *Handler) StreamGuildEvents(req *guildv1.StreamGuildEventsRequest, stream grpc.ServerStreamingServer[guildv1.GuildEvent]) error {
 	userID := middleware.UserIDFromContext(stream.Context())
@@ -701,7 +743,7 @@ func dbRoleToProto(r db.Role) *guildv1.Role {
 		Name:        r.Name,
 		Color:       r.Color,
 		Position:    r.Position,
-		Permissions: r.Permissions,
+		// Permissions managed via OpenFGA, not in DB
 	}
 	if r.CreatedAt.Valid {
 		pr.CreatedAt = timestamppb.New(r.CreatedAt.Time)
@@ -725,4 +767,71 @@ func dbInviteToProto(inv db.Invite) *guildv1.Invite {
 		pi.CreatedAt = timestamppb.New(inv.CreatedAt.Time)
 	}
 	return pi
+}
+
+// Permission enum → OpenFGA relation mapping
+var permToRelation = map[guildv1.Permission]string{
+	guildv1.Permission_PERMISSION_MANAGE_GUILD:    "can_manage_guild",
+	guildv1.Permission_PERMISSION_KICK_MEMBERS:    "can_kick",
+	guildv1.Permission_PERMISSION_BAN_MEMBERS:     "can_ban",
+	guildv1.Permission_PERMISSION_MANAGE_ROLES:    "can_manage_roles",
+	guildv1.Permission_PERMISSION_MANAGE_CHANNELS: "can_manage_channels",
+	guildv1.Permission_PERMISSION_ADMINISTRATOR:   "admin",
+}
+
+func (h *Handler) GrantPermission(ctx context.Context, req *guildv1.GrantPermissionRequest) (*guildv1.GrantPermissionResponse, error) {
+	callerID := middleware.UserIDFromContext(ctx)
+	if callerID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+	if !h.svc.authz.CanManageRoles(ctx, callerID, req.GuildId) {
+		return nil, status.Error(codes.PermissionDenied, "insufficient permissions")
+	}
+
+	relation, ok := permToRelation[req.Permission]
+	if !ok {
+		// For non-guild-level permissions (view, send, connect etc), grant as admin
+		relation = "admin"
+	}
+
+	if err := h.svc.authz.WriteTuple(ctx, "user:"+req.UserId, relation, "guild:"+req.GuildId); err != nil {
+		return nil, status.Error(codes.Internal, "failed to grant permission")
+	}
+	return &guildv1.GrantPermissionResponse{}, nil
+}
+
+func (h *Handler) RevokePermission(ctx context.Context, req *guildv1.RevokePermissionRequest) (*guildv1.RevokePermissionResponse, error) {
+	callerID := middleware.UserIDFromContext(ctx)
+	if callerID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+	if !h.svc.authz.CanManageRoles(ctx, callerID, req.GuildId) {
+		return nil, status.Error(codes.PermissionDenied, "insufficient permissions")
+	}
+
+	relation, ok := permToRelation[req.Permission]
+	if !ok {
+		relation = "admin"
+	}
+
+	if err := h.svc.authz.DeleteTuple(ctx, "user:"+req.UserId, relation, "guild:"+req.GuildId); err != nil {
+		return nil, status.Error(codes.Internal, "failed to revoke permission")
+	}
+	return &guildv1.RevokePermissionResponse{}, nil
+}
+
+func (h *Handler) GetUserPermissions(ctx context.Context, req *guildv1.GetUserPermissionsRequest) (*guildv1.GetUserPermissionsResponse, error) {
+	callerID := middleware.UserIDFromContext(ctx)
+	if callerID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+
+	var perms []guildv1.Permission
+	for perm, relation := range permToRelation {
+		if h.svc.authz.Check(ctx, "user:"+req.UserId, relation, "guild:"+req.GuildId) {
+			perms = append(perms, perm)
+		}
+	}
+
+	return &guildv1.GetUserPermissionsResponse{Permissions: perms}, nil
 }

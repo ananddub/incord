@@ -58,3 +58,11 @@ func (r *Repository) GetDMChannelBetweenUsers(ctx context.Context, params db.Get
 func (r *Repository) GetGuildMember(ctx context.Context, params db.GetGuildMemberParams) (db.GuildMember, error) {
 	return r.queries.GetGuildMember(ctx, params)
 }
+
+func (r *Repository) RemoveDMChannelMember(ctx context.Context, params db.RemoveDMChannelMemberParams) error {
+	return r.queries.RemoveDMChannelMember(ctx, params)
+}
+
+func (r *Repository) IsDMChannelMember(ctx context.Context, params db.IsDMChannelMemberParams) (bool, error) {
+	return r.queries.IsDMChannelMember(ctx, params)
+}

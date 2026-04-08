@@ -33,8 +33,8 @@ func TestRealtimeGroupChat(t *testing.T) {
 	ts := fmt.Sprintf("%d", time.Now().UnixNano())
 
 	// ── Register Alice and Bob ──
-	alice := registerAndVerify(t, authClient, "rt_alice_"+ts, "rt_alice_"+ts+"@test.com", "pass")
-	bob := registerAndVerify(t, authClient, "rt_bob_"+ts, "rt_bob_"+ts+"@test.com", "pass")
+	alice := registerAndVerify(t, authClient, "rt_alice_"+ts, "rt_alice_"+ts+"@test.com", "password123")
+	bob := registerAndVerify(t, authClient, "rt_bob_"+ts, "rt_bob_"+ts+"@test.com", "password123")
 
 	aliceCtx := alice.ctx()
 	bobCtx := bob.ctx()
@@ -158,8 +158,8 @@ func TestRealtimeTyping(t *testing.T) {
 	ts := fmt.Sprintf("%d", time.Now().UnixNano())
 
 	// Setup users + guild + channel
-	alice := registerAndVerify(t, authClient, "typ_a_"+ts, "typ_a_"+ts+"@t.com", "p")
-	bob := registerAndVerify(t, authClient, "typ_b_"+ts, "typ_b_"+ts+"@t.com", "p")
+	alice := registerAndVerify(t, authClient, "typ_a_"+ts, "typ_a_"+ts+"@t.com", "password123")
+	bob := registerAndVerify(t, authClient, "typ_b_"+ts, "typ_b_"+ts+"@t.com", "password123")
 
 	aliceCtx := alice.ctx()
 	bobCtx := bob.ctx()

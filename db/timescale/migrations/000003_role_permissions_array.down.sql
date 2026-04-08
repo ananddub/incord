@@ -1,0 +1,3 @@
+ALTER TABLE roles ADD COLUMN IF NOT EXISTS permissions_old BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE roles DROP COLUMN IF EXISTS permissions;
+ALTER TABLE roles RENAME COLUMN permissions_old TO permissions;

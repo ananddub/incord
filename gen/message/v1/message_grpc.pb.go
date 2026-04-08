@@ -19,21 +19,25 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	MessageService_SendMessage_FullMethodName       = "/message.v1.MessageService/SendMessage"
-	MessageService_GetMessage_FullMethodName        = "/message.v1.MessageService/GetMessage"
-	MessageService_EditMessage_FullMethodName       = "/message.v1.MessageService/EditMessage"
-	MessageService_DeleteMessage_FullMethodName     = "/message.v1.MessageService/DeleteMessage"
-	MessageService_ListMessages_FullMethodName      = "/message.v1.MessageService/ListMessages"
-	MessageService_PinMessage_FullMethodName        = "/message.v1.MessageService/PinMessage"
-	MessageService_UnpinMessage_FullMethodName      = "/message.v1.MessageService/UnpinMessage"
-	MessageService_AddReaction_FullMethodName       = "/message.v1.MessageService/AddReaction"
-	MessageService_RemoveReaction_FullMethodName    = "/message.v1.MessageService/RemoveReaction"
-	MessageService_AckMessage_FullMethodName        = "/message.v1.MessageService/AckMessage"
-	MessageService_StartTyping_FullMethodName       = "/message.v1.MessageService/StartTyping"
-	MessageService_SendDirectMessage_FullMethodName = "/message.v1.MessageService/SendDirectMessage"
-	MessageService_GetUnreadCounts_FullMethodName   = "/message.v1.MessageService/GetUnreadCounts"
-	MessageService_StreamMessages_FullMethodName    = "/message.v1.MessageService/StreamMessages"
-	MessageService_StreamTyping_FullMethodName      = "/message.v1.MessageService/StreamTyping"
+	MessageService_SendMessage_FullMethodName        = "/message.v1.MessageService/SendMessage"
+	MessageService_GetMessage_FullMethodName         = "/message.v1.MessageService/GetMessage"
+	MessageService_EditMessage_FullMethodName        = "/message.v1.MessageService/EditMessage"
+	MessageService_DeleteMessage_FullMethodName      = "/message.v1.MessageService/DeleteMessage"
+	MessageService_ListMessages_FullMethodName       = "/message.v1.MessageService/ListMessages"
+	MessageService_PinMessage_FullMethodName         = "/message.v1.MessageService/PinMessage"
+	MessageService_UnpinMessage_FullMethodName       = "/message.v1.MessageService/UnpinMessage"
+	MessageService_AddReaction_FullMethodName        = "/message.v1.MessageService/AddReaction"
+	MessageService_RemoveReaction_FullMethodName     = "/message.v1.MessageService/RemoveReaction"
+	MessageService_AckMessage_FullMethodName         = "/message.v1.MessageService/AckMessage"
+	MessageService_StartTyping_FullMethodName        = "/message.v1.MessageService/StartTyping"
+	MessageService_SendDirectMessage_FullMethodName  = "/message.v1.MessageService/SendDirectMessage"
+	MessageService_GetUnreadCounts_FullMethodName    = "/message.v1.MessageService/GetUnreadCounts"
+	MessageService_SearchMessages_FullMethodName     = "/message.v1.MessageService/SearchMessages"
+	MessageService_GetThreadMessages_FullMethodName  = "/message.v1.MessageService/GetThreadMessages"
+	MessageService_BulkDeleteMessages_FullMethodName = "/message.v1.MessageService/BulkDeleteMessages"
+	MessageService_GetEditHistory_FullMethodName     = "/message.v1.MessageService/GetEditHistory"
+	MessageService_StreamMessages_FullMethodName     = "/message.v1.MessageService/StreamMessages"
+	MessageService_StreamTyping_FullMethodName       = "/message.v1.MessageService/StreamTyping"
 )
 
 // MessageServiceClient is the client API for MessageService service.
@@ -53,8 +57,16 @@ type MessageServiceClient interface {
 	StartTyping(ctx context.Context, in *StartTypingRequest, opts ...grpc.CallOption) (*StartTypingResponse, error)
 	// DM: send message directly to a user (auto-creates DM channel)
 	SendDirectMessage(ctx context.Context, in *SendDirectMessageRequest, opts ...grpc.CallOption) (*SendDirectMessageResponse, error)
-	// Unread: get pending messages across channels
+	// Unread
 	GetUnreadCounts(ctx context.Context, in *GetUnreadCountsRequest, opts ...grpc.CallOption) (*GetUnreadCountsResponse, error)
+	// Search
+	SearchMessages(ctx context.Context, in *SearchMessagesRequest, opts ...grpc.CallOption) (*SearchMessagesResponse, error)
+	// Threads
+	GetThreadMessages(ctx context.Context, in *GetThreadMessagesRequest, opts ...grpc.CallOption) (*GetThreadMessagesResponse, error)
+	// Bulk operations
+	BulkDeleteMessages(ctx context.Context, in *BulkDeleteMessagesRequest, opts ...grpc.CallOption) (*BulkDeleteMessagesResponse, error)
+	// Edit history
+	GetEditHistory(ctx context.Context, in *GetEditHistoryRequest, opts ...grpc.CallOption) (*GetEditHistoryResponse, error)
 	// Streams
 	StreamMessages(ctx context.Context, in *StreamMessagesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[MessageEvent], error)
 	StreamTyping(ctx context.Context, in *StreamTypingRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TypingEvent], error)
@@ -198,6 +210,46 @@ func (c *messageServiceClient) GetUnreadCounts(ctx context.Context, in *GetUnrea
 	return out, nil
 }
 
+func (c *messageServiceClient) SearchMessages(ctx context.Context, in *SearchMessagesRequest, opts ...grpc.CallOption) (*SearchMessagesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SearchMessagesResponse)
+	err := c.cc.Invoke(ctx, MessageService_SearchMessages_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messageServiceClient) GetThreadMessages(ctx context.Context, in *GetThreadMessagesRequest, opts ...grpc.CallOption) (*GetThreadMessagesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetThreadMessagesResponse)
+	err := c.cc.Invoke(ctx, MessageService_GetThreadMessages_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messageServiceClient) BulkDeleteMessages(ctx context.Context, in *BulkDeleteMessagesRequest, opts ...grpc.CallOption) (*BulkDeleteMessagesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BulkDeleteMessagesResponse)
+	err := c.cc.Invoke(ctx, MessageService_BulkDeleteMessages_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messageServiceClient) GetEditHistory(ctx context.Context, in *GetEditHistoryRequest, opts ...grpc.CallOption) (*GetEditHistoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetEditHistoryResponse)
+	err := c.cc.Invoke(ctx, MessageService_GetEditHistory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *messageServiceClient) StreamMessages(ctx context.Context, in *StreamMessagesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[MessageEvent], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &MessageService_ServiceDesc.Streams[0], MessageService_StreamMessages_FullMethodName, cOpts...)
@@ -253,8 +305,16 @@ type MessageServiceServer interface {
 	StartTyping(context.Context, *StartTypingRequest) (*StartTypingResponse, error)
 	// DM: send message directly to a user (auto-creates DM channel)
 	SendDirectMessage(context.Context, *SendDirectMessageRequest) (*SendDirectMessageResponse, error)
-	// Unread: get pending messages across channels
+	// Unread
 	GetUnreadCounts(context.Context, *GetUnreadCountsRequest) (*GetUnreadCountsResponse, error)
+	// Search
+	SearchMessages(context.Context, *SearchMessagesRequest) (*SearchMessagesResponse, error)
+	// Threads
+	GetThreadMessages(context.Context, *GetThreadMessagesRequest) (*GetThreadMessagesResponse, error)
+	// Bulk operations
+	BulkDeleteMessages(context.Context, *BulkDeleteMessagesRequest) (*BulkDeleteMessagesResponse, error)
+	// Edit history
+	GetEditHistory(context.Context, *GetEditHistoryRequest) (*GetEditHistoryResponse, error)
 	// Streams
 	StreamMessages(*StreamMessagesRequest, grpc.ServerStreamingServer[MessageEvent]) error
 	StreamTyping(*StreamTypingRequest, grpc.ServerStreamingServer[TypingEvent]) error
@@ -306,6 +366,18 @@ func (UnimplementedMessageServiceServer) SendDirectMessage(context.Context, *Sen
 }
 func (UnimplementedMessageServiceServer) GetUnreadCounts(context.Context, *GetUnreadCountsRequest) (*GetUnreadCountsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUnreadCounts not implemented")
+}
+func (UnimplementedMessageServiceServer) SearchMessages(context.Context, *SearchMessagesRequest) (*SearchMessagesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SearchMessages not implemented")
+}
+func (UnimplementedMessageServiceServer) GetThreadMessages(context.Context, *GetThreadMessagesRequest) (*GetThreadMessagesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetThreadMessages not implemented")
+}
+func (UnimplementedMessageServiceServer) BulkDeleteMessages(context.Context, *BulkDeleteMessagesRequest) (*BulkDeleteMessagesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BulkDeleteMessages not implemented")
+}
+func (UnimplementedMessageServiceServer) GetEditHistory(context.Context, *GetEditHistoryRequest) (*GetEditHistoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetEditHistory not implemented")
 }
 func (UnimplementedMessageServiceServer) StreamMessages(*StreamMessagesRequest, grpc.ServerStreamingServer[MessageEvent]) error {
 	return status.Error(codes.Unimplemented, "method StreamMessages not implemented")
@@ -568,6 +640,78 @@ func _MessageService_GetUnreadCounts_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MessageService_SearchMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SearchMessagesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessageServiceServer).SearchMessages(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MessageService_SearchMessages_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessageServiceServer).SearchMessages(ctx, req.(*SearchMessagesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MessageService_GetThreadMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetThreadMessagesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessageServiceServer).GetThreadMessages(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MessageService_GetThreadMessages_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessageServiceServer).GetThreadMessages(ctx, req.(*GetThreadMessagesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MessageService_BulkDeleteMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BulkDeleteMessagesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessageServiceServer).BulkDeleteMessages(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MessageService_BulkDeleteMessages_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessageServiceServer).BulkDeleteMessages(ctx, req.(*BulkDeleteMessagesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MessageService_GetEditHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetEditHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessageServiceServer).GetEditHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MessageService_GetEditHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessageServiceServer).GetEditHistory(ctx, req.(*GetEditHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _MessageService_StreamMessages_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(StreamMessagesRequest)
 	if err := stream.RecvMsg(m); err != nil {
@@ -648,6 +792,22 @@ var MessageService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUnreadCounts",
 			Handler:    _MessageService_GetUnreadCounts_Handler,
+		},
+		{
+			MethodName: "SearchMessages",
+			Handler:    _MessageService_SearchMessages_Handler,
+		},
+		{
+			MethodName: "GetThreadMessages",
+			Handler:    _MessageService_GetThreadMessages_Handler,
+		},
+		{
+			MethodName: "BulkDeleteMessages",
+			Handler:    _MessageService_BulkDeleteMessages_Handler,
+		},
+		{
+			MethodName: "GetEditHistory",
+			Handler:    _MessageService_GetEditHistory_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

@@ -146,6 +146,38 @@ func (h *Handler) ListDMChannels(ctx context.Context, _ *channelv1.ListDMChannel
 	}, nil
 }
 
+func (h *Handler) AddDMGroupMember(ctx context.Context, req *channelv1.AddDMGroupMemberRequest) (*channelv1.AddDMGroupMemberResponse, error) {
+	callerID := middleware.UserIDFromContext(ctx)
+	if callerID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+	if req.GetChannelId() == "" || req.GetUserId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "channel_id and user_id are required")
+	}
+
+	if err := h.svc.AddDMGroupMember(ctx, callerID, req.GetChannelId(), req.GetUserId()); err != nil {
+		return nil, mapError(err)
+	}
+
+	return &channelv1.AddDMGroupMemberResponse{}, nil
+}
+
+func (h *Handler) RemoveDMGroupMember(ctx context.Context, req *channelv1.RemoveDMGroupMemberRequest) (*channelv1.RemoveDMGroupMemberResponse, error) {
+	callerID := middleware.UserIDFromContext(ctx)
+	if callerID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+	if req.GetChannelId() == "" || req.GetUserId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "channel_id and user_id are required")
+	}
+
+	if err := h.svc.RemoveDMGroupMember(ctx, callerID, req.GetChannelId(), req.GetUserId()); err != nil {
+		return nil, mapError(err)
+	}
+
+	return &channelv1.RemoveDMGroupMemberResponse{}, nil
+}
+
 // channelToProto converts a db.Channel to the proto Channel message.
 func channelToProto(ch db.Channel) *channelv1.Channel {
 	pb := &channelv1.Channel{
@@ -180,9 +212,14 @@ func mapError(err error) error {
 		errors.Is(err, ErrRecipientRequired),
 		errors.Is(err, ErrInvalidUUID):
 		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, ErrNotGroupDM):
+		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, ErrNotGuildMember),
-		errors.Is(err, ErrInsufficientPermissions):
+		errors.Is(err, ErrInsufficientPermissions),
+		errors.Is(err, ErrNotDMChannelMember):
 		return status.Error(codes.PermissionDenied, err.Error())
+	case errors.Is(err, ErrAlreadyDMChannelMember):
+		return status.Error(codes.AlreadyExists, err.Error())
 	default:
 		return status.Error(codes.Internal, err.Error())
 	}
