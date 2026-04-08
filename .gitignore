@@ -1,4 +1,5 @@
-server
-voice
-tmp
+bin/
+tmp/
 .claude
+coverage.out
+coverage.html

@@ -55,6 +55,7 @@ lint:
 # Docker
 docker-up:
 	docker compose up -d
+	@echo "Init container will auto-setup databases and topics"
 
 docker-down:
 	docker compose down
