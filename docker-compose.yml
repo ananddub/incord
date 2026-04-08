@@ -1,4 +1,28 @@
 services:
+  # Auto-init: PG migrations + ScyllaDB tables + Redpanda topics (Go binary)
+  init:
+    build:
+      context: .
+      dockerfile: Dockerfile.init
+    container_name: ndiscord-init
+    environment:
+      DB_HOST: timescaledb
+      DB_PORT: "5432"
+      DB_USER: ndiscord
+      DB_PASSWORD: ndiscord
+      DB_NAME: ndiscord
+      DB_SSLMODE: disable
+      SCYLLA_HOST: scylladb:9042
+      SCYLLA_KEYSPACE: ndiscord
+      REDPANDA_BROKER: redpanda:9092
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      scylladb:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+    restart: "no"
 
   server:
     build:

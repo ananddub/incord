@@ -3,7 +3,7 @@ tmp_dir = "tmp"
 
 [build]
   pre_cmd = ["go mod download"]
-  cmd = "go build -o ./tmp/server ./cmd/server"
+  cmd = "go build -buildvcs=false -o ./tmp/server ./cmd/server"
   full_bin = "./tmp/server"
   bin = "./tmp/server"
   delay = 1000
