@@ -3,13 +3,16 @@
 all: generate build
 
 # Build
-build: build-server build-voice
+build: build-server build-voice build-init
 
 build-server:
 	go build -o bin/server ./cmd/server
 
 build-voice:
 	go build -o bin/voice ./cmd/voice
+
+build-init:
+	go build -o bin/init ./cmd/init
 
 # Run
 run: build-server
