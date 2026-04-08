@@ -14,6 +14,8 @@ service ChannelService {
   rpc ListGuildChannels(ListGuildChannelsRequest) returns (ListGuildChannelsResponse);
   rpc CreateDMChannel(CreateDMChannelRequest) returns (CreateDMChannelResponse);
   rpc ListDMChannels(ListDMChannelsRequest) returns (ListDMChannelsResponse);
+  rpc AddDMGroupMember(AddDMGroupMemberRequest) returns (AddDMGroupMemberResponse);
+  rpc RemoveDMGroupMember(RemoveDMGroupMemberRequest) returns (RemoveDMGroupMemberResponse);
 }
 
 enum ChannelType {
@@ -96,3 +98,17 @@ message ListDMChannelsRequest {}
 message ListDMChannelsResponse {
   repeated Channel channels = 1;
 }
+
+message AddDMGroupMemberRequest {
+  string channel_id = 1;
+  string user_id = 2;
+}
+
+message AddDMGroupMemberResponse {}
+
+message RemoveDMGroupMemberRequest {
+  string channel_id = 1;
+  string user_id = 2;
+}
+
+message RemoveDMGroupMemberResponse {}

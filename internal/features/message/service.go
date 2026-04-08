@@ -8,8 +8,8 @@ import (
 	"github.com/gocql/gocql"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/ananddub/ndiscord_backend/internal/shared/authz"
 	"github.com/ananddub/ndiscord_backend/internal/shared/event"
-	"github.com/ananddub/ndiscord_backend/internal/shared/permissions"
 )
 
 // DMChannelResolver creates/finds DM channels. Implemented by channel service.
@@ -23,18 +23,18 @@ type BlockChecker interface {
 }
 
 type Service struct {
-	repo        *Repository
-	producer    *event.Producer
-	redis       *redis.Client
-	permChecker  permissions.Checker
+	repo         *Repository
+	producer     *event.Producer
+	redis        *redis.Client
+	authz        *authz.Client
 	dmResolver   DMChannelResolver
 	blockChecker BlockChecker
 }
 
-func NewService(repo *Repository, producer *event.Producer, redis *redis.Client, permChecker ...permissions.Checker) *Service {
+func NewService(repo *Repository, producer *event.Producer, redis *redis.Client, authzClient ...*authz.Client) *Service {
 	s := &Service{repo: repo, producer: producer, redis: redis}
-	if len(permChecker) > 0 {
-		s.permChecker = permChecker[0]
+	if len(authzClient) > 0 {
+		s.authz = authzClient[0]
 	}
 	return s
 }
@@ -45,17 +45,6 @@ func (s *Service) SetDMResolver(r DMChannelResolver) { s.dmResolver = r }
 // SetBlockChecker sets the block checker.
 func (s *Service) SetBlockChecker(b BlockChecker) { s.blockChecker = b }
 
-// checkPermission returns an error if the user lacks the given permission in the guild.
-// Skipped when permChecker is nil or guildID is empty (e.g. DMs).
-func (s *Service) checkPermission(ctx context.Context, userID, guildID string, perm int64) error {
-	if s.permChecker != nil && guildID != "" {
-		if !s.permChecker.HasPermission(ctx, userID, guildID, perm) {
-			return ErrInsufficientPermissions
-		}
-	}
-	return nil
-}
-
 func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, content string, msgType int32, replyToID string) (*Message, error) {
 	if channelID == "" {
 		return nil, ErrChannelRequired
@@ -64,8 +53,9 @@ func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, c
 		return nil, ErrContentRequired
 	}
 
-	if err := s.checkPermission(ctx, userID, guildID, permissions.SendMessages); err != nil {
-		return nil, err
+	// For guild channels, check send permission via authz
+	if guildID != "" && !s.authz.CanSendInChannel(ctx, userID, channelID) {
+		return nil, ErrInsufficientPermissions
 	}
 
 	chUUID, err := gocqlParseUUID(channelID)
@@ -141,13 +131,13 @@ func (s *Service) EditMessage(ctx context.Context, userID, channelID, guildID, m
 		return nil, ErrInvalidUUID
 	}
 
-	// Verify author or ManageMessages permission
+	// Verify author or ManageChannel permission
 	existing, err := s.repo.GetMessage(ctx, chUUID, msgUUID)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrMessageNotFound, err)
 	}
 	if existing.AuthorID != authorUUID {
-		if err := s.checkPermission(ctx, userID, guildID, permissions.ManageMessages); err != nil {
+		if guildID == "" || !s.authz.CanManageChannel(ctx, userID, channelID) {
 			return nil, ErrNotMessageAuthor
 		}
 	}
@@ -156,6 +146,9 @@ func (s *Service) EditMessage(ctx context.Context, userID, channelID, guildID, m
 	if err := s.repo.UpdateMessageContent(ctx, chUUID, msgUUID, content, now); err != nil {
 		return nil, fmt.Errorf("failed to edit message: %w", err)
 	}
+
+	// Save edit history before overwriting
+	_ = s.repo.SaveEditHistory(ctx, chUUID, msgUUID, existing.Content, now)
 
 	existing.Content = content
 	existing.EditedAt = &now
@@ -188,7 +181,7 @@ func (s *Service) DeleteMessage(ctx context.Context, userID, channelID, guildID,
 		return fmt.Errorf("%w: %v", ErrMessageNotFound, err)
 	}
 	if existing.AuthorID != authorUUID {
-		if err := s.checkPermission(ctx, userID, guildID, permissions.ManageMessages); err != nil {
+		if guildID == "" || !s.authz.CanManageChannel(ctx, userID, channelID) {
 			return ErrNotMessageAuthor
 		}
 	}
@@ -236,8 +229,8 @@ func (s *Service) ListMessages(ctx context.Context, userID, channelID, before, a
 }
 
 func (s *Service) PinMessage(ctx context.Context, userID, channelID, guildID, messageID string) error {
-	if err := s.checkPermission(ctx, userID, guildID, permissions.ManageMessages); err != nil {
-		return err
+	if guildID != "" && !s.authz.CanManageChannel(ctx, userID, channelID) {
+		return ErrInsufficientPermissions
 	}
 
 	chUUID, err := gocqlParseUUID(channelID)
@@ -253,8 +246,8 @@ func (s *Service) PinMessage(ctx context.Context, userID, channelID, guildID, me
 }
 
 func (s *Service) UnpinMessage(ctx context.Context, userID, channelID, guildID, messageID string) error {
-	if err := s.checkPermission(ctx, userID, guildID, permissions.ManageMessages); err != nil {
-		return err
+	if guildID != "" && !s.authz.CanManageChannel(ctx, userID, channelID) {
+		return ErrInsufficientPermissions
 	}
 
 	chUUID, err := gocqlParseUUID(channelID)
@@ -274,8 +267,9 @@ func (s *Service) AddReaction(ctx context.Context, userID, channelID, guildID, m
 		return ErrEmojiRequired
 	}
 
-	if err := s.checkPermission(ctx, userID, guildID, permissions.AddReactions); err != nil {
-		return err
+	// For guild channels, check view permission as proxy for reaction permission
+	if guildID != "" && !s.authz.CanViewChannel(ctx, userID, channelID) {
+		return ErrInsufficientPermissions
 	}
 
 	chUUID, err := gocqlParseUUID(channelID)
@@ -448,6 +442,57 @@ func (s *Service) GetUnreadCounts(ctx context.Context, userID string) ([]UnreadI
 	}
 
 	return results, totalUnread, nil
+}
+
+func (s *Service) SearchMessages(ctx context.Context, channelID, query string, limit int32) ([]*Message, error) {
+	chUUID, err := gocqlParseUUID(channelID)
+	if err != nil {
+		return nil, ErrInvalidUUID
+	}
+	return s.repo.SearchMessages(ctx, chUUID, query, int(limit))
+}
+
+func (s *Service) GetThreadMessages(ctx context.Context, channelID, parentMsgID string, limit int32) ([]*Message, error) {
+	chUUID, err := gocqlParseUUID(channelID)
+	if err != nil {
+		return nil, ErrInvalidUUID
+	}
+	parentUUID, err := gocqlParseUUID(parentMsgID)
+	if err != nil {
+		return nil, ErrInvalidUUID
+	}
+	return s.repo.GetThreadMessages(ctx, chUUID, parentUUID, int(limit))
+}
+
+func (s *Service) BulkDeleteMessages(ctx context.Context, userID, channelID, guildID string, messageIDs []string) (int, error) {
+	if guildID != "" && s.authz != nil && !s.authz.CanManageChannel(ctx, userID, channelID) {
+		return 0, ErrInsufficientPermissions
+	}
+	chUUID, err := gocqlParseUUID(channelID)
+	if err != nil {
+		return 0, ErrInvalidUUID
+	}
+	var uuids []gocql.UUID
+	for _, id := range messageIDs {
+		u, err := gocqlParseUUID(id)
+		if err != nil {
+			continue
+		}
+		uuids = append(uuids, u)
+	}
+	return s.repo.BulkDeleteMessages(ctx, chUUID, uuids)
+}
+
+func (s *Service) GetEditHistory(ctx context.Context, channelID, messageID string) ([]EditHistory, error) {
+	chUUID, err := gocqlParseUUID(channelID)
+	if err != nil {
+		return nil, ErrInvalidUUID
+	}
+	msgUUID, err := gocqlParseUUID(messageID)
+	if err != nil {
+		return nil, ErrInvalidUUID
+	}
+	return s.repo.GetEditHistory(ctx, chUUID, msgUUID)
 }
 
 // gocqlParseUUID parses a string into a gocql.UUID.

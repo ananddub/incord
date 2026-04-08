@@ -6,18 +6,29 @@ import (
 	"strings"
 
 	authv1 "github.com/ananddub/ndiscord_backend/gen/auth/v1"
+	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
+	"github.com/ananddub/ndiscord_backend/internal/shared/middleware"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
+// PresenceUpdater sets a user's presence to offline.
+type PresenceUpdater interface {
+	SetOffline(ctx context.Context, userID string) error
+}
+
 type Handler struct {
 	authv1.UnimplementedAuthServiceServer
-	svc *Service
+	svc             *Service
+	presenceUpdater PresenceUpdater
 }
 
 func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
+
+// SetPresenceUpdater sets the presence updater (avoids circular deps in constructor).
+func (h *Handler) SetPresenceUpdater(p PresenceUpdater) { h.presenceUpdater = p }
 
 func (h *Handler) Register(ctx context.Context, req *authv1.RegisterRequest) (*authv1.RegisterResponse, error) {
 	if req.Username == "" || req.Email == "" || req.Password == "" {
@@ -128,6 +139,15 @@ func (h *Handler) Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv
 
 	if err := h.svc.Logout(ctx, req.RefreshToken); err != nil {
 		return nil, status.Error(codes.Internal, "failed to logout")
+	}
+
+	// Set presence to offline
+	if h.presenceUpdater != nil {
+		if userID := middleware.UserIDFromContext(ctx); userID != "" {
+			if err := h.presenceUpdater.SetOffline(ctx, userID); err != nil {
+				logger.Log.Warn().Err(err).Str("user_id", userID).Msg("failed to set offline on logout")
+			}
+		}
 	}
 
 	return &authv1.LogoutResponse{}, nil

@@ -148,6 +148,24 @@ func (q *Queries) GetDMChannelBetweenUsers(ctx context.Context, arg GetDMChannel
 	return i, err
 }
 
+const isDMChannelMember = `-- name: IsDMChannelMember :one
+SELECT EXISTS(
+    SELECT 1 FROM dm_channel_members WHERE channel_id = $1 AND user_id = $2
+) AS is_member
+`
+
+type IsDMChannelMemberParams struct {
+	ChannelID pgtype.UUID `json:"channel_id"`
+	UserID    pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) IsDMChannelMember(ctx context.Context, arg IsDMChannelMemberParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isDMChannelMember, arg.ChannelID, arg.UserID)
+	var is_member bool
+	err := row.Scan(&is_member)
+	return is_member, err
+}
+
 const listDMChannels = `-- name: ListDMChannels :many
 SELECT c.id, c.guild_id, c.name, c.type, c.topic, c.position, c.parent_id, c.created_at FROM channels c
 JOIN dm_channel_members dm ON dm.channel_id = c.id
@@ -214,6 +232,20 @@ func (q *Queries) ListGuildChannels(ctx context.Context, guildID pgtype.UUID) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const removeDMChannelMember = `-- name: RemoveDMChannelMember :exec
+DELETE FROM dm_channel_members WHERE channel_id = $1 AND user_id = $2
+`
+
+type RemoveDMChannelMemberParams struct {
+	ChannelID pgtype.UUID `json:"channel_id"`
+	UserID    pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) RemoveDMChannelMember(ctx context.Context, arg RemoveDMChannelMemberParams) error {
+	_, err := q.db.Exec(ctx, removeDMChannelMember, arg.ChannelID, arg.UserID)
+	return err
 }
 
 const updateChannel = `-- name: UpdateChannel :one

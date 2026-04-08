@@ -2,6 +2,7 @@ package user_test
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -74,16 +75,29 @@ func setupUserGRPCServer(t *testing.T) *testClients {
 	}
 }
 
-// createUser registers a user via the auth service and returns (userID, accessToken).
+// createUser registers a user via the auth service, verifies via OTP, and returns (userID, accessToken).
 func createUser(t *testing.T, c *testClients, username, email, password string) (string, string) {
 	t.Helper()
-	resp, err := c.auth.Register(context.Background(), &authv1.RegisterRequest{
+	ctx := context.Background()
+
+	regResp, err := c.auth.Register(ctx, &authv1.RegisterRequest{
 		Username: username,
 		Email:    email,
 		Password: password,
 	})
 	require.NoError(t, err)
-	return resp.GetUserId(), resp.GetAccessToken()
+
+	// Fetch OTP from Redis and verify to get tokens
+	otp, err := c.infra.Redis.Get(ctx, fmt.Sprintf("otp:%s", email)).Result()
+	require.NoError(t, err)
+
+	verifyResp, err := c.auth.VerifyOTP(ctx, &authv1.VerifyOTPRequest{
+		Email: email,
+		Otp:   otp,
+	})
+	require.NoError(t, err)
+
+	return regResp.GetUserId(), verifyResp.GetAccessToken()
 }
 
 // authedCtx creates a context with the given access token in metadata.

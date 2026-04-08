@@ -12,80 +12,36 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ananddub/ndiscord_backend/gen/db"
+	"github.com/ananddub/ndiscord_backend/internal/shared/authz"
 	"github.com/ananddub/ndiscord_backend/internal/shared/event"
-	"github.com/ananddub/ndiscord_backend/internal/shared/permissions"
 )
 
 type Service struct {
 	repo     *Repository
 	producer *event.Producer
+	authz    *authz.Client
 }
 
-func NewService(repo *Repository, producer ...*event.Producer) *Service {
-	s := &Service{repo: repo}
-	if len(producer) > 0 {
-		s.producer = producer[0]
+func NewService(repo *Repository, producer *event.Producer, authzClient ...*authz.Client) *Service {
+	s := &Service{repo: repo, producer: producer}
+	if len(authzClient) > 0 {
+		s.authz = authzClient[0]
 	}
 	return s
 }
 
+// pgToStr converts a pgtype.UUID to its string representation for authz calls.
+func pgToStr(id pgtype.UUID) string {
+	return uuid.UUID(id.Bytes).String()
+}
+
 func (s *Service) publishGuildEvent(ctx context.Context, guildID pgtype.UUID, action string, extra map[string]string) {
-	gid := uuid.UUID(guildID.Bytes).String()
+	gid := pgToStr(guildID)
 	data := map[string]string{"action": action, "guild_id": gid}
 	for k, v := range extra {
 		data[k] = v
 	}
 	_ = event.PublishEvent(ctx, s.producer, event.TopicGuildEvents, gid, gid, "", "", data)
-}
-
-// ComputePermissions resolves a user's effective permissions in a guild.
-// Guild owner gets all permissions. Otherwise, permissions are OR'd across all assigned roles.
-func (s *Service) ComputePermissions(ctx context.Context, userID, guildID pgtype.UUID) (int64, error) {
-	guild, err := s.repo.GetGuildByID(ctx, guildID)
-	if err != nil {
-		return 0, fmt.Errorf("%w: %v", ErrGuildNotFound, err)
-	}
-
-	// Guild owner has all permissions
-	if guild.OwnerID == userID {
-		return permissions.AllPermissions, nil
-	}
-
-	// Check membership
-	_, err = s.repo.GetGuildMember(ctx, db.GetGuildMemberParams{GuildID: guildID, UserID: userID})
-	if err != nil {
-		return 0, ErrNotGuildMember
-	}
-
-	// Get user's roles in this guild
-	roles, err := s.repo.ListUserRoles(ctx, db.ListUserRolesParams{UserID: userID, GuildID: guildID})
-	if err != nil {
-		return permissions.DefaultPermissions, nil // fallback to default if roles fail
-	}
-
-	if len(roles) == 0 {
-		return permissions.DefaultPermissions, nil // no roles = default member permissions
-	}
-
-	// OR all role permissions together
-	var computed int64
-	for _, role := range roles {
-		computed |= role.Permissions
-	}
-
-	return computed, nil
-}
-
-// requirePermission checks if a user has a specific permission in a guild.
-func (s *Service) requirePermission(ctx context.Context, userID, guildID pgtype.UUID, perm int64) error {
-	computed, err := s.ComputePermissions(ctx, userID, guildID)
-	if err != nil {
-		return err
-	}
-	if !permissions.Has(computed, perm) {
-		return ErrInsufficientPermissions
-	}
-	return nil
 }
 
 func (s *Service) CreateGuild(ctx context.Context, ownerID pgtype.UUID, name, description, iconURL string) (db.Guild, error) {
@@ -109,8 +65,14 @@ func (s *Service) CreateGuild(ctx context.Context, ownerID pgtype.UUID, name, de
 		return db.Guild{}, fmt.Errorf("failed to add owner as member: %w", err)
 	}
 
+	// Write authz tuples
+	ownerStr := pgToStr(ownerID)
+	guildStr := pgToStr(guild.ID)
+	_ = s.authz.AddGuildOwner(ctx, ownerStr, guildStr)
+	_ = s.authz.AddGuildMember(ctx, ownerStr, guildStr)
+
 	s.publishGuildEvent(ctx, guild.ID, "member_add", map[string]string{
-		"user_id": uuid.UUID(ownerID.Bytes).String(), "name": name,
+		"user_id": ownerStr, "name": name,
 	})
 
 	return guild, nil
@@ -131,8 +93,8 @@ func (s *Service) GetGuild(ctx context.Context, guildID pgtype.UUID) (db.Guild, 
 }
 
 func (s *Service) UpdateGuild(ctx context.Context, callerID, guildID pgtype.UUID, params db.UpdateGuildParams) (db.Guild, error) {
-	if err := s.requirePermission(ctx, callerID, guildID, permissions.ManageGuild); err != nil {
-		return db.Guild{}, err
+	if !s.authz.CanManageGuild(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return db.Guild{}, ErrInsufficientPermissions
 	}
 
 	params.ID = guildID
@@ -225,8 +187,13 @@ func (s *Service) JoinGuild(ctx context.Context, userID pgtype.UUID, inviteCode 
 		return db.Guild{}, fmt.Errorf("failed to get guild: %w", err)
 	}
 
+	// Write authz tuple
+	userStr := pgToStr(userID)
+	guildStr := pgToStr(invite.GuildID)
+	_ = s.authz.AddGuildMember(ctx, userStr, guildStr)
+
 	s.publishGuildEvent(ctx, invite.GuildID, "member_add", map[string]string{
-		"user_id": uuid.UUID(userID.Bytes).String(),
+		"user_id": userStr,
 	})
 
 	return guild, nil
@@ -256,8 +223,13 @@ func (s *Service) LeaveGuild(ctx context.Context, userID, guildID pgtype.UUID) e
 		return err
 	}
 
+	// Remove authz tuple
+	userStr := pgToStr(userID)
+	guildStr := pgToStr(guildID)
+	_ = s.authz.RemoveGuildMember(ctx, userStr, guildStr)
+
 	s.publishGuildEvent(ctx, guildID, "member_remove", map[string]string{
-		"user_id": uuid.UUID(userID.Bytes).String(),
+		"user_id": userStr,
 	})
 
 	return nil
@@ -275,8 +247,8 @@ func (s *Service) ListMembers(ctx context.Context, guildID pgtype.UUID, limit, o
 }
 
 func (s *Service) KickMember(ctx context.Context, callerID, guildID, targetID pgtype.UUID) error {
-	if err := s.requirePermission(ctx, callerID, guildID, permissions.KickMembers); err != nil {
-		return err
+	if !s.authz.CanKick(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return ErrInsufficientPermissions
 	}
 	guild, err := s.repo.GetGuildByID(ctx, guildID)
 	if err != nil {
@@ -301,16 +273,21 @@ func (s *Service) KickMember(ctx context.Context, callerID, guildID, targetID pg
 		return err
 	}
 
+	// Remove authz tuple
+	targetStr := pgToStr(targetID)
+	guildStr := pgToStr(guildID)
+	_ = s.authz.RemoveGuildMember(ctx, targetStr, guildStr)
+
 	s.publishGuildEvent(ctx, guildID, "member_remove", map[string]string{
-		"user_id": uuid.UUID(targetID.Bytes).String(),
+		"user_id": targetStr,
 	})
 
 	return nil
 }
 
 func (s *Service) BanMember(ctx context.Context, callerID, guildID, targetID pgtype.UUID, reason string) error {
-	if err := s.requirePermission(ctx, callerID, guildID, permissions.BanMembers); err != nil {
-		return err
+	if !s.authz.CanBan(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return ErrInsufficientPermissions
 	}
 	guild, err := s.repo.GetGuildByID(ctx, guildID)
 	if err != nil {
@@ -335,8 +312,13 @@ func (s *Service) BanMember(ctx context.Context, callerID, guildID, targetID pgt
 		return fmt.Errorf("failed to create ban: %w", err)
 	}
 
+	// Remove authz tuple
+	targetStr := pgToStr(targetID)
+	guildStr := pgToStr(guildID)
+	_ = s.authz.RemoveGuildMember(ctx, targetStr, guildStr)
+
 	s.publishGuildEvent(ctx, guildID, "member_ban", map[string]string{
-		"user_id": uuid.UUID(targetID.Bytes).String(),
+		"user_id": targetStr,
 		"reason":  reason,
 	})
 
@@ -344,8 +326,8 @@ func (s *Service) BanMember(ctx context.Context, callerID, guildID, targetID pgt
 }
 
 func (s *Service) UnbanMember(ctx context.Context, callerID, guildID, targetID pgtype.UUID) error {
-	if err := s.requirePermission(ctx, callerID, guildID, permissions.BanMembers); err != nil {
-		return err
+	if !s.authz.CanBan(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return ErrInsufficientPermissions
 	}
 
 	_, banErr := s.repo.GetBan(ctx, db.GetBanParams{
@@ -364,7 +346,7 @@ func (s *Service) UnbanMember(ctx context.Context, callerID, guildID, targetID p
 	}
 
 	s.publishGuildEvent(ctx, guildID, "member_unban", map[string]string{
-		"user_id": uuid.UUID(targetID.Bytes).String(),
+		"user_id": pgToStr(targetID),
 	})
 
 	return nil
@@ -408,9 +390,9 @@ func (s *Service) CreateInvite(ctx context.Context, callerID, guildID, channelID
 	return invite, nil
 }
 
-func (s *Service) CreateRole(ctx context.Context, callerID, guildID pgtype.UUID, name, color string, perms int64) (db.Role, error) {
-	if err := s.requirePermission(ctx, callerID, guildID, permissions.ManageRoles); err != nil {
-		return db.Role{}, err
+func (s *Service) CreateRole(ctx context.Context, callerID, guildID pgtype.UUID, name, color string) (db.Role, error) {
+	if !s.authz.CanManageRoles(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return db.Role{}, ErrInsufficientPermissions
 	}
 
 	// Get current role count for position
@@ -420,11 +402,10 @@ func (s *Service) CreateRole(ctx context.Context, callerID, guildID pgtype.UUID,
 	}
 
 	role, err := s.repo.CreateRole(ctx, db.CreateRoleParams{
-		GuildID:     guildID,
-		Name:        name,
-		Color:       color,
-		Position:    int32(len(roles)),
-		Permissions: perms,
+		GuildID:  guildID,
+		Name:     name,
+		Color:    color,
+		Position: int32(len(roles)),
 	})
 	if err != nil {
 		return db.Role{}, fmt.Errorf("failed to create role: %w", err)
@@ -436,8 +417,8 @@ func (s *Service) CreateRole(ctx context.Context, callerID, guildID pgtype.UUID,
 }
 
 func (s *Service) UpdateRole(ctx context.Context, callerID, guildID pgtype.UUID, params db.UpdateRoleParams) (db.Role, error) {
-	if err := s.requirePermission(ctx, callerID, guildID, permissions.ManageRoles); err != nil {
-		return db.Role{}, err
+	if !s.authz.CanManageRoles(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return db.Role{}, ErrInsufficientPermissions
 	}
 
 	role, err := s.repo.UpdateRole(ctx, params)
@@ -451,8 +432,8 @@ func (s *Service) UpdateRole(ctx context.Context, callerID, guildID pgtype.UUID,
 }
 
 func (s *Service) DeleteRole(ctx context.Context, callerID, guildID, roleID pgtype.UUID) error {
-	if err := s.requirePermission(ctx, callerID, guildID, permissions.ManageRoles); err != nil {
-		return err
+	if !s.authz.CanManageRoles(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return ErrInsufficientPermissions
 	}
 
 	_, roleErr := s.repo.GetRoleByID(ctx, roleID)
@@ -470,8 +451,8 @@ func (s *Service) DeleteRole(ctx context.Context, callerID, guildID, roleID pgty
 }
 
 func (s *Service) AssignRole(ctx context.Context, callerID, guildID, targetID, roleID pgtype.UUID) error {
-	if err := s.requirePermission(ctx, callerID, guildID, permissions.ManageRoles); err != nil {
-		return err
+	if !s.authz.CanManageRoles(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return ErrInsufficientPermissions
 	}
 
 	// Verify target is a member
@@ -489,15 +470,15 @@ func (s *Service) AssignRole(ctx context.Context, callerID, guildID, targetID, r
 	}
 
 	s.publishGuildEvent(ctx, guildID, "role_assign", map[string]string{
-		"user_id": uuid.UUID(targetID.Bytes).String(),
+		"user_id": pgToStr(targetID),
 	})
 
 	return nil
 }
 
 func (s *Service) RemoveRole(ctx context.Context, callerID, guildID, targetID, roleID pgtype.UUID) error {
-	if err := s.requirePermission(ctx, callerID, guildID, permissions.ManageRoles); err != nil {
-		return err
+	if !s.authz.CanManageRoles(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return ErrInsufficientPermissions
 	}
 
 	if err := s.repo.RemoveRole(ctx, db.RemoveRoleParams{
@@ -508,10 +489,53 @@ func (s *Service) RemoveRole(ctx context.Context, callerID, guildID, targetID, r
 	}
 
 	s.publishGuildEvent(ctx, guildID, "role_remove", map[string]string{
-		"user_id": uuid.UUID(targetID.Bytes).String(),
+		"user_id": pgToStr(targetID),
 	})
 
 	return nil
+}
+
+func (s *Service) TransferOwnership(ctx context.Context, callerID, guildID, newOwnerID pgtype.UUID) (db.Guild, error) {
+	// Only the current owner can transfer ownership
+	guild, err := s.repo.GetGuildByID(ctx, guildID)
+	if err != nil {
+		return db.Guild{}, fmt.Errorf("%w: %v", ErrGuildNotFound, err)
+	}
+	if guild.OwnerID != callerID {
+		return db.Guild{}, ErrNotGuildOwner
+	}
+
+	// New owner must be a member of the guild
+	_, err = s.repo.GetGuildMember(ctx, db.GetGuildMemberParams{
+		GuildID: guildID,
+		UserID:  newOwnerID,
+	})
+	if err != nil {
+		return db.Guild{}, ErrMemberNotFound
+	}
+
+	// Update DB
+	updated, err := s.repo.TransferGuildOwnership(ctx, db.TransferGuildOwnershipParams{
+		ID:      guildID,
+		OwnerID: newOwnerID,
+	})
+	if err != nil {
+		return db.Guild{}, fmt.Errorf("failed to transfer ownership: %w", err)
+	}
+
+	callerStr := pgToStr(callerID)
+	newOwnerStr := pgToStr(newOwnerID)
+	guildStr := pgToStr(guildID)
+
+	// Update OpenFGA tuples: remove old owner, add new owner
+	_ = s.authz.DeleteTuple(ctx, authz.UserKey(callerStr), "owner", authz.GuildKey(guildStr))
+	_ = s.authz.AddGuildOwner(ctx, newOwnerStr, guildStr)
+
+	s.publishGuildEvent(ctx, guildID, "update", map[string]string{
+		"transferred_to": newOwnerStr,
+	})
+
+	return updated, nil
 }
 
 // generateInviteCode generates a random 8-character hex invite code.

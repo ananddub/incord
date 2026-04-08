@@ -94,13 +94,12 @@ type MediaFile struct {
 }
 
 type Role struct {
-	ID          pgtype.UUID        `json:"id"`
-	GuildID     pgtype.UUID        `json:"guild_id"`
-	Name        string             `json:"name"`
-	Color       string             `json:"color"`
-	Position    int32              `json:"position"`
-	Permissions int64              `json:"permissions"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	ID        pgtype.UUID        `json:"id"`
+	GuildID   pgtype.UUID        `json:"guild_id"`
+	Name      string             `json:"name"`
+	Color     string             `json:"color"`
+	Position  int32              `json:"position"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type RoleMember struct {

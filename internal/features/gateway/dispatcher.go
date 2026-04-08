@@ -11,6 +11,7 @@ import (
 	messagev1 "github.com/ananddub/ndiscord_backend/gen/message/v1"
 	userv1 "github.com/ananddub/ndiscord_backend/gen/user/v1"
 	voicev1 "github.com/ananddub/ndiscord_backend/gen/voice/v1"
+	"github.com/ananddub/ndiscord_backend/internal/shared/authz"
 	"github.com/ananddub/ndiscord_backend/internal/shared/event"
 	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
 )
@@ -18,11 +19,6 @@ import (
 // FriendLookup resolves a user's friend list for event routing.
 type FriendLookup interface {
 	GetFriendIDs(ctx context.Context, userID string) ([]string, error)
-}
-
-// PermissionChecker checks if a user can view a channel in a guild.
-type PermissionChecker interface {
-	CanViewChannel(ctx context.Context, userID, guildID, channelID string) bool
 }
 
 // Dispatcher consumes events from Redpanda and pushes them to:
@@ -33,7 +29,7 @@ type Dispatcher struct {
 	sessions     *SessionManager
 	consumer     *event.Consumer
 	friendLookup FriendLookup
-	permChecker  PermissionChecker
+	authz        *authz.Client
 	MsgSubs      *event.SubscriptionManager[*messagev1.MessageEvent]
 	TypingSubs   *event.SubscriptionManager[*messagev1.TypingEvent]
 	GuildSubs    *event.SubscriptionManager[*guildv1.GuildEvent]
@@ -41,12 +37,12 @@ type Dispatcher struct {
 	VoiceSubs    *event.SubscriptionManager[*voicev1.VoiceStateEvent]
 }
 
-func NewDispatcher(sessions *SessionManager, consumer *event.Consumer, friendLookup FriendLookup, permChecker PermissionChecker) *Dispatcher {
+func NewDispatcher(sessions *SessionManager, consumer *event.Consumer, friendLookup FriendLookup, authzClient *authz.Client) *Dispatcher {
 	return &Dispatcher{
 		sessions:     sessions,
 		consumer:     consumer,
 		friendLookup: friendLookup,
-		permChecker:  permChecker,
+		authz:        authzClient,
 		MsgSubs:      event.NewSubscriptionManager[*messagev1.MessageEvent](),
 		TypingSubs:   event.NewSubscriptionManager[*messagev1.TypingEvent](),
 		GuildSubs:    event.NewSubscriptionManager[*guildv1.GuildEvent](),
@@ -63,7 +59,7 @@ func (d *Dispatcher) Start(ctx context.Context) error {
 // broadcastToGuildFiltered sends event only to guild members who have ViewChannels permission.
 // For guild-level events (no channelID), it sends to all members.
 func (d *Dispatcher) broadcastToGuildFiltered(guildID, channelID string, evt *gatewayv1.ServerEvent) {
-	if channelID == "" || d.permChecker == nil {
+	if channelID == "" || d.authz == nil {
 		// No channel = guild-level event, send to all
 		d.sessions.BroadcastToGuild(guildID, evt)
 		return
@@ -85,7 +81,7 @@ func (d *Dispatcher) broadcastToGuildFiltered(guildID, channelID string, evt *ga
 	d.sessions.mu.RUnlock()
 
 	for _, userID := range eligibleUsers {
-		if d.permChecker.CanViewChannel(context.Background(), userID, guildID, channelID) {
+		if d.authz.CanViewChannel(context.Background(), userID, channelID) {
 			d.sessions.mu.RLock()
 			userMap, exists := d.sessions.userSessions[userID]
 			if exists {

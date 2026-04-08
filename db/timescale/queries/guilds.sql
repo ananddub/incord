@@ -64,5 +64,9 @@ SELECT * FROM invites WHERE code = $1;
 -- name: IncrementInviteUses :exec
 UPDATE invites SET uses = uses + 1 WHERE code = $1;
 
+-- name: TransferGuildOwnership :one
+UPDATE guilds SET owner_id = $2 WHERE id = $1
+RETURNING *;
+
 -- name: DeleteInvite :exec
 DELETE FROM invites WHERE code = $1;

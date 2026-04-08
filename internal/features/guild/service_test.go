@@ -16,7 +16,7 @@ func setupGuildService(t *testing.T) (*Service, *testutil.TestInfra) {
 	t.Helper()
 	infra := testutil.SetupTestInfra(t)
 	repo := NewRepository(infra.Pool, infra.Redis)
-	svc := NewService(repo)
+	svc := NewService(repo, nil)
 	return svc, infra
 }
 
@@ -280,7 +280,7 @@ func TestRoleLifecycle(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create role
-	role, err := svc.CreateRole(ctx, owner, g.ID, "Moderator", "#FF0000", 8)
+	role, err := svc.CreateRole(ctx, owner, g.ID, "Moderator", "#FF0000")
 	require.NoError(t, err)
 	assert.Equal(t, "Moderator", role.Name)
 	assert.Equal(t, "#FF0000", role.Color)
@@ -308,6 +308,6 @@ func TestCreateRoleNonOwnerFails(t *testing.T) {
 	g, err := svc.CreateGuild(ctx, owner, "Guild", "", "")
 	require.NoError(t, err)
 
-	_, err = svc.CreateRole(ctx, other, g.ID, "Admin", "#000000", 8)
+	_, err = svc.CreateRole(ctx, other, g.ID, "Admin", "#000000")
 	assert.ErrorIs(t, err, ErrNotGuildOwner)
 }

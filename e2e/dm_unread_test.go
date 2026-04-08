@@ -24,8 +24,8 @@ func TestSendDirectMessage(t *testing.T) {
 	msg := messagev1.NewMessageServiceClient(conn)
 
 	ts := fmt.Sprintf("%d", time.Now().UnixNano())
-	alice := registerAndVerify(t, auth, "dm_a_"+ts, "dm_a_"+ts+"@t.com", "p")
-	bob := registerAndVerify(t, auth, "dm_b_"+ts, "dm_b_"+ts+"@t.com", "p")
+	alice := registerAndVerify(t, auth, "dm_a_"+ts, "dm_a_"+ts+"@t.com", "password123")
+	bob := registerAndVerify(t, auth, "dm_b_"+ts, "dm_b_"+ts+"@t.com", "password123")
 
 	// Alice sends DM to Bob
 	resp, err := msg.SendDirectMessage(alice.ctx(), &messagev1.SendDirectMessageRequest{
@@ -73,8 +73,8 @@ func TestSendDirectMessage_Blocked(t *testing.T) {
 	msg := messagev1.NewMessageServiceClient(conn)
 
 	ts := fmt.Sprintf("%d", time.Now().UnixNano())
-	alice := registerAndVerify(t, auth, "blk_a_"+ts, "blk_a_"+ts+"@t.com", "p")
-	bob := registerAndVerify(t, auth, "blk_b_"+ts, "blk_b_"+ts+"@t.com", "p")
+	alice := registerAndVerify(t, auth, "blk_a_"+ts, "blk_a_"+ts+"@t.com", "password123")
+	bob := registerAndVerify(t, auth, "blk_b_"+ts, "blk_b_"+ts+"@t.com", "password123")
 
 	// Alice blocks Bob
 	_, err := users.BlockUser(alice.ctx(), &userv1.BlockUserRequest{TargetUserId: bob.ID})
@@ -122,8 +122,8 @@ func TestGetUnreadCounts(t *testing.T) {
 	msg := messagev1.NewMessageServiceClient(conn)
 
 	ts := fmt.Sprintf("%d", time.Now().UnixNano())
-	alice := registerAndVerify(t, auth, "ur_a_"+ts, "ur_a_"+ts+"@t.com", "p")
-	bob := registerAndVerify(t, auth, "ur_b_"+ts, "ur_b_"+ts+"@t.com", "p")
+	alice := registerAndVerify(t, auth, "ur_a_"+ts, "ur_a_"+ts+"@t.com", "password123")
+	bob := registerAndVerify(t, auth, "ur_b_"+ts, "ur_b_"+ts+"@t.com", "password123")
 
 	// Alice sends DM to Bob
 	dmResp, err := msg.SendDirectMessage(alice.ctx(), &messagev1.SendDirectMessageRequest{
@@ -171,7 +171,7 @@ func TestSendDirectMessage_Validation(t *testing.T) {
 	msg := messagev1.NewMessageServiceClient(conn)
 
 	ts := fmt.Sprintf("%d", time.Now().UnixNano())
-	alice := registerAndVerify(t, auth, "dv_a_"+ts, "dv_a_"+ts+"@t.com", "p")
+	alice := registerAndVerify(t, auth, "dv_a_"+ts, "dv_a_"+ts+"@t.com", "password123")
 
 	// Empty recipient
 	_, err := msg.SendDirectMessage(alice.ctx(), &messagev1.SendDirectMessageRequest{

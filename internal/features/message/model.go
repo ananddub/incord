@@ -47,6 +47,14 @@ type ReactionCount struct {
 	Me    bool
 }
 
+// EditHistory tracks previous versions of a message.
+type EditHistory struct {
+	ChannelID  gocql.UUID
+	MessageID  gocql.UUID
+	OldContent string
+	EditedAt   time.Time
+}
+
 // ReadState tracks the last-read position per user per channel.
 type ReadState struct {
 	UserID            gocql.UUID

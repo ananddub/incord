@@ -40,8 +40,28 @@ type RequestUploadResult struct {
 	UploadURL string
 }
 
+const maxFileSize = 25 * 1024 * 1024 // 25MB
+
+var allowedContentTypes = map[string]bool{
+	"image/jpeg":      true,
+	"image/png":       true,
+	"image/gif":       true,
+	"image/webp":      true,
+	"video/mp4":       true,
+	"audio/ogg":       true,
+	"audio/mpeg":      true,
+	"application/pdf": true,
+}
+
 // RequestUpload creates a DB record for the pending upload and generates a presigned PUT URL.
 func (s *Service) RequestUpload(ctx context.Context, userID, filename, contentType string, size int64) (*RequestUploadResult, error) {
+	if size > maxFileSize {
+		return nil, ErrFileTooLarge
+	}
+	if !allowedContentTypes[contentType] {
+		return nil, ErrInvalidContentType
+	}
+
 	// Generate a unique object key
 	objectKey := fmt.Sprintf("uploads/%s/%s_%s", userID, uuid.New().String(), filename)
 

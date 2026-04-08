@@ -19,13 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ChannelService_CreateChannel_FullMethodName     = "/channel.v1.ChannelService/CreateChannel"
-	ChannelService_GetChannel_FullMethodName        = "/channel.v1.ChannelService/GetChannel"
-	ChannelService_UpdateChannel_FullMethodName     = "/channel.v1.ChannelService/UpdateChannel"
-	ChannelService_DeleteChannel_FullMethodName     = "/channel.v1.ChannelService/DeleteChannel"
-	ChannelService_ListGuildChannels_FullMethodName = "/channel.v1.ChannelService/ListGuildChannels"
-	ChannelService_CreateDMChannel_FullMethodName   = "/channel.v1.ChannelService/CreateDMChannel"
-	ChannelService_ListDMChannels_FullMethodName    = "/channel.v1.ChannelService/ListDMChannels"
+	ChannelService_CreateChannel_FullMethodName       = "/channel.v1.ChannelService/CreateChannel"
+	ChannelService_GetChannel_FullMethodName          = "/channel.v1.ChannelService/GetChannel"
+	ChannelService_UpdateChannel_FullMethodName       = "/channel.v1.ChannelService/UpdateChannel"
+	ChannelService_DeleteChannel_FullMethodName       = "/channel.v1.ChannelService/DeleteChannel"
+	ChannelService_ListGuildChannels_FullMethodName   = "/channel.v1.ChannelService/ListGuildChannels"
+	ChannelService_CreateDMChannel_FullMethodName     = "/channel.v1.ChannelService/CreateDMChannel"
+	ChannelService_ListDMChannels_FullMethodName      = "/channel.v1.ChannelService/ListDMChannels"
+	ChannelService_AddDMGroupMember_FullMethodName    = "/channel.v1.ChannelService/AddDMGroupMember"
+	ChannelService_RemoveDMGroupMember_FullMethodName = "/channel.v1.ChannelService/RemoveDMGroupMember"
 )
 
 // ChannelServiceClient is the client API for ChannelService service.
@@ -39,6 +41,8 @@ type ChannelServiceClient interface {
 	ListGuildChannels(ctx context.Context, in *ListGuildChannelsRequest, opts ...grpc.CallOption) (*ListGuildChannelsResponse, error)
 	CreateDMChannel(ctx context.Context, in *CreateDMChannelRequest, opts ...grpc.CallOption) (*CreateDMChannelResponse, error)
 	ListDMChannels(ctx context.Context, in *ListDMChannelsRequest, opts ...grpc.CallOption) (*ListDMChannelsResponse, error)
+	AddDMGroupMember(ctx context.Context, in *AddDMGroupMemberRequest, opts ...grpc.CallOption) (*AddDMGroupMemberResponse, error)
+	RemoveDMGroupMember(ctx context.Context, in *RemoveDMGroupMemberRequest, opts ...grpc.CallOption) (*RemoveDMGroupMemberResponse, error)
 }
 
 type channelServiceClient struct {
@@ -119,6 +123,26 @@ func (c *channelServiceClient) ListDMChannels(ctx context.Context, in *ListDMCha
 	return out, nil
 }
 
+func (c *channelServiceClient) AddDMGroupMember(ctx context.Context, in *AddDMGroupMemberRequest, opts ...grpc.CallOption) (*AddDMGroupMemberResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddDMGroupMemberResponse)
+	err := c.cc.Invoke(ctx, ChannelService_AddDMGroupMember_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *channelServiceClient) RemoveDMGroupMember(ctx context.Context, in *RemoveDMGroupMemberRequest, opts ...grpc.CallOption) (*RemoveDMGroupMemberResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RemoveDMGroupMemberResponse)
+	err := c.cc.Invoke(ctx, ChannelService_RemoveDMGroupMember_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChannelServiceServer is the server API for ChannelService service.
 // All implementations must embed UnimplementedChannelServiceServer
 // for forward compatibility.
@@ -130,6 +154,8 @@ type ChannelServiceServer interface {
 	ListGuildChannels(context.Context, *ListGuildChannelsRequest) (*ListGuildChannelsResponse, error)
 	CreateDMChannel(context.Context, *CreateDMChannelRequest) (*CreateDMChannelResponse, error)
 	ListDMChannels(context.Context, *ListDMChannelsRequest) (*ListDMChannelsResponse, error)
+	AddDMGroupMember(context.Context, *AddDMGroupMemberRequest) (*AddDMGroupMemberResponse, error)
+	RemoveDMGroupMember(context.Context, *RemoveDMGroupMemberRequest) (*RemoveDMGroupMemberResponse, error)
 	mustEmbedUnimplementedChannelServiceServer()
 }
 
@@ -160,6 +186,12 @@ func (UnimplementedChannelServiceServer) CreateDMChannel(context.Context, *Creat
 }
 func (UnimplementedChannelServiceServer) ListDMChannels(context.Context, *ListDMChannelsRequest) (*ListDMChannelsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListDMChannels not implemented")
+}
+func (UnimplementedChannelServiceServer) AddDMGroupMember(context.Context, *AddDMGroupMemberRequest) (*AddDMGroupMemberResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AddDMGroupMember not implemented")
+}
+func (UnimplementedChannelServiceServer) RemoveDMGroupMember(context.Context, *RemoveDMGroupMemberRequest) (*RemoveDMGroupMemberResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RemoveDMGroupMember not implemented")
 }
 func (UnimplementedChannelServiceServer) mustEmbedUnimplementedChannelServiceServer() {}
 func (UnimplementedChannelServiceServer) testEmbeddedByValue()                        {}
@@ -308,6 +340,42 @@ func _ChannelService_ListDMChannels_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChannelService_AddDMGroupMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddDMGroupMemberRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChannelServiceServer).AddDMGroupMember(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChannelService_AddDMGroupMember_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChannelServiceServer).AddDMGroupMember(ctx, req.(*AddDMGroupMemberRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChannelService_RemoveDMGroupMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveDMGroupMemberRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChannelServiceServer).RemoveDMGroupMember(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChannelService_RemoveDMGroupMember_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChannelServiceServer).RemoveDMGroupMember(ctx, req.(*RemoveDMGroupMemberRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ChannelService_ServiceDesc is the grpc.ServiceDesc for ChannelService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -342,6 +410,14 @@ var ChannelService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListDMChannels",
 			Handler:    _ChannelService_ListDMChannels_Handler,
+		},
+		{
+			MethodName: "AddDMGroupMember",
+			Handler:    _ChannelService_AddDMGroupMember_Handler,
+		},
+		{
+			MethodName: "RemoveDMGroupMember",
+			Handler:    _ChannelService_RemoveDMGroupMember_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

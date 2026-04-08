@@ -72,6 +72,12 @@ func (s *Service) UpdatePresence(ctx context.Context, userID string, st presence
 	return p, nil
 }
 
+// SetOffline sets the user's presence to OFFLINE and publishes the event.
+func (s *Service) SetOffline(ctx context.Context, userID string) error {
+	_, err := s.UpdatePresence(ctx, userID, presencev1.Status_STATUS_OFFLINE, "")
+	return err
+}
+
 // GetPresence retrieves the presence for a single user from Redis.
 func (s *Service) GetPresence(ctx context.Context, userID string) (*presencev1.Presence, error) {
 	key := presenceKeyPrefix + userID

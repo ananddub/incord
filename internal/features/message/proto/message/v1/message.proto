@@ -22,8 +22,20 @@ service MessageService {
   // DM: send message directly to a user (auto-creates DM channel)
   rpc SendDirectMessage(SendDirectMessageRequest) returns (SendDirectMessageResponse);
 
-  // Unread: get pending messages across channels
+  // Unread
   rpc GetUnreadCounts(GetUnreadCountsRequest) returns (GetUnreadCountsResponse);
+
+  // Search
+  rpc SearchMessages(SearchMessagesRequest) returns (SearchMessagesResponse);
+
+  // Threads
+  rpc GetThreadMessages(GetThreadMessagesRequest) returns (GetThreadMessagesResponse);
+
+  // Bulk operations
+  rpc BulkDeleteMessages(BulkDeleteMessagesRequest) returns (BulkDeleteMessagesResponse);
+
+  // Edit history
+  rpc GetEditHistory(GetEditHistoryRequest) returns (GetEditHistoryResponse);
 
   // Streams
   rpc StreamMessages(StreamMessagesRequest) returns (stream MessageEvent);
@@ -219,4 +231,52 @@ message UnreadChannel {
 message GetUnreadCountsResponse {
   repeated UnreadChannel channels = 1;
   int32 total_unread = 2;
+}
+
+// Search messages by content
+message SearchMessagesRequest {
+  string channel_id = 1;
+  string query = 2;
+  int32 limit = 3;
+}
+
+message SearchMessagesResponse {
+  repeated Message messages = 1;
+  int32 total = 2;
+}
+
+// Get thread (replies to a message)
+message GetThreadMessagesRequest {
+  string channel_id = 1;
+  string parent_message_id = 2;
+  int32 limit = 3;
+}
+
+message GetThreadMessagesResponse {
+  repeated Message messages = 1;
+}
+
+// Bulk delete messages
+message BulkDeleteMessagesRequest {
+  string channel_id = 1;
+  repeated string message_ids = 2;
+}
+
+message BulkDeleteMessagesResponse {
+  int32 deleted_count = 1;
+}
+
+// Edit history for a message
+message MessageEdit {
+  string content = 1;
+  google.protobuf.Timestamp edited_at = 2;
+}
+
+message GetEditHistoryRequest {
+  string channel_id = 1;
+  string message_id = 2;
+}
+
+message GetEditHistoryResponse {
+  repeated MessageEdit edits = 1;
 }

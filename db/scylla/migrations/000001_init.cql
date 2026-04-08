@@ -58,3 +58,12 @@ CREATE TABLE IF NOT EXISTS audit_log (
     created_at  TIMESTAMP,
     PRIMARY KEY (guild_id, id)
 ) WITH CLUSTERING ORDER BY (id DESC);
+
+-- Message edit history
+CREATE TABLE IF NOT EXISTS message_edit_history (
+    channel_id  UUID,
+    message_id  TIMEUUID,
+    old_content TEXT,
+    edited_at   TIMESTAMP,
+    PRIMARY KEY ((channel_id, message_id), edited_at)
+) WITH CLUSTERING ORDER BY (edited_at DESC);
