@@ -1,4 +1,5 @@
 services:
+
   server:
     build:
       context: .
@@ -152,6 +153,7 @@ services:
       - --smp 1
       - --memory 512M
       - --mode dev-container
+      - --set redpanda.auto_create_topics_enabled=true
     volumes:
       - redpanda_data:/var/lib/redpanda/data
 
