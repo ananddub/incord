@@ -10,6 +10,8 @@ import "buf/validate/validate.proto";
 service UserService {
   rpc GetUser(GetUserRequest) returns (GetUserResponse);
   rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+  rpc UpdateStatus(UpdateStatusRequest) returns (UpdateStatusResponse);
+  rpc UploadUserAvatar(UploadUserAvatarRequest) returns (UploadUserAvatarResponse);
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
   rpc GetUserByUsername(GetUserByUsernameRequest) returns (GetUserByUsernameResponse);
   rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
@@ -18,6 +20,9 @@ service UserService {
   rpc SendFriendRequest(SendFriendRequestRequest) returns (SendFriendRequestResponse);
   rpc AcceptFriendRequest(AcceptFriendRequestRequest) returns (AcceptFriendRequestResponse);
   rpc DeclineFriendRequest(DeclineFriendRequestRequest) returns (DeclineFriendRequestResponse);
+  // CancelFriendRequest is called by the sender to withdraw their own
+  // outgoing pending request before the recipient has acted on it.
+  rpc CancelFriendRequest(CancelFriendRequestRequest) returns (CancelFriendRequestResponse);
   rpc RemoveFriend(RemoveFriendRequest) returns (RemoveFriendResponse);
   rpc BlockUser(BlockUserRequest) returns (BlockUserResponse);
   rpc UnblockUser(UnblockUserRequest) returns (UnblockUserResponse);
@@ -36,6 +41,8 @@ message User {
   string status = 6;
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
+  // Hex color (e.g. "#5865F2") used as the profile/card background.
+  string background_color = 9;
 }
 
 message GetUserRequest {
@@ -51,10 +58,31 @@ message UpdateUserRequest {
   optional string avatar_url = 2 [(buf.validate.field).string = {max_len: 2048}];
   optional string bio = 3 [(buf.validate.field).string = {max_len: 500}];
   optional string status = 4 [(buf.validate.field).string = {max_len: 128}];
+  // Hex color like "#5865F2". Must be 4 or 7 chars starting with '#'.
+  optional string background_color = 5 [(buf.validate.field).string = {pattern: "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"}];
 }
 
 message UpdateUserResponse {
   User user = 1;
+}
+
+message UpdateStatusRequest {
+  string status = 1 [(buf.validate.field).string = {max_len: 128}];
+}
+
+message UpdateStatusResponse {
+  User user = 1;
+}
+
+message UploadUserAvatarRequest {
+  string filename = 1 [(buf.validate.field).string = {min_len: 1, max_len: 255}];
+  string content_type = 2 [(buf.validate.field).string = {in: ["image/jpeg", "image/png", "image/gif", "image/webp"]}];
+  bytes data = 3 [(buf.validate.field).bytes = {min_len: 1, max_len: 5242880}];
+}
+
+message UploadUserAvatarResponse {
+  string avatar_url = 1;
+  User user = 2;
 }
 
 message DeleteUserRequest {
@@ -119,6 +147,13 @@ message DeclineFriendRequestRequest {
 }
 
 message DeclineFriendRequestResponse {}
+
+message CancelFriendRequestRequest {
+  // The user the pending request was sent to.
+  string target_user_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message CancelFriendRequestResponse {}
 
 message RemoveFriendRequest {
   string friend_id = 1 [(buf.validate.field).string.uuid = true];

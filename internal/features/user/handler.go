@@ -50,7 +50,7 @@ func (h *Handler) GetUser(ctx context.Context, req *userv1.GetUserRequest) (*use
 	}
 
 	return &userv1.GetUserResponse{
-		User: dbUserToProto(user),
+		User: h.toProto(ctx, user),
 	}, nil
 }
 
@@ -66,11 +66,12 @@ func (h *Handler) UpdateUser(ctx context.Context, req *userv1.UpdateUserRequest)
 	}
 
 	params := db.UpdateUserParams{
-		ID:        pgID,
-		Username:  req.Username,
-		AvatarUrl: req.AvatarUrl,
-		Bio:       req.Bio,
-		Status:    req.Status,
+		ID:              pgID,
+		Username:        req.Username,
+		AvatarUrl:       req.AvatarUrl,
+		Bio:             req.Bio,
+		Status:          req.Status,
+		BackgroundColor: req.BackgroundColor,
 	}
 
 	user, err := h.svc.UpdateUser(ctx, params)
@@ -79,7 +80,31 @@ func (h *Handler) UpdateUser(ctx context.Context, req *userv1.UpdateUserRequest)
 	}
 
 	return &userv1.UpdateUserResponse{
-		User: dbUserToProto(user),
+		User: h.toProto(ctx, user),
+	}, nil
+}
+
+func (h *Handler) UpdateStatus(ctx context.Context, req *userv1.UpdateStatusRequest) (*userv1.UpdateStatusResponse, error) {
+	callerID := middleware.UserIDFromContext(ctx)
+	if callerID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+	pgID, err := parseUUID(callerID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "invalid caller id")
+	}
+
+	s := req.GetStatus()
+	user, err := h.svc.UpdateUser(ctx, db.UpdateUserParams{
+		ID:     pgID,
+		Status: &s,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to update status")
+	}
+
+	return &userv1.UpdateStatusResponse{
+		User: h.toProto(ctx, user),
 	}, nil
 }
 
@@ -119,7 +144,7 @@ func (h *Handler) GetUserByUsername(ctx context.Context, req *userv1.GetUserByUs
 	}
 
 	return &userv1.GetUserByUsernameResponse{
-		User: dbUserToProto(user),
+		User: h.toProto(ctx, user),
 	}, nil
 }
 
@@ -137,7 +162,7 @@ func (h *Handler) SearchUsers(ctx context.Context, req *userv1.SearchUsersReques
 
 	protoUsers := make([]*userv1.User, len(users))
 	for i, u := range users {
-		protoUsers[i] = dbUserToProto(u)
+		protoUsers[i] = h.toProto(ctx, u)
 	}
 
 	return &userv1.SearchUsersResponse{
@@ -235,6 +260,31 @@ func (h *Handler) DeclineFriendRequest(ctx context.Context, req *userv1.DeclineF
 	return &userv1.DeclineFriendRequestResponse{}, nil
 }
 
+func (h *Handler) CancelFriendRequest(ctx context.Context, req *userv1.CancelFriendRequestRequest) (*userv1.CancelFriendRequestResponse, error) {
+	callerID := middleware.UserIDFromContext(ctx)
+	if callerID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+
+	userPgID, err := parseUUID(callerID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "invalid caller id")
+	}
+	targetPgID, err := parseUUID(req.GetTargetUserId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid target_user_id")
+	}
+
+	if err := h.svc.CancelFriendRequest(ctx, userPgID, targetPgID); err != nil {
+		if errors.Is(err, ErrNoFriendRequest) {
+			return nil, status.Error(codes.NotFound, "no pending friend request found")
+		}
+		return nil, status.Error(codes.Internal, "failed to cancel friend request")
+	}
+
+	return &userv1.CancelFriendRequestResponse{}, nil
+}
+
 func (h *Handler) RemoveFriend(ctx context.Context, req *userv1.RemoveFriendRequest) (*userv1.RemoveFriendResponse, error) {
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
@@ -328,7 +378,7 @@ func (h *Handler) ListFriends(ctx context.Context, req *userv1.ListFriendsReques
 
 	protoUsers := make([]*userv1.User, len(friends))
 	for i, u := range friends {
-		protoUsers[i] = dbUserToProto(u)
+		protoUsers[i] = h.toProto(ctx, u)
 	}
 
 	return &userv1.ListFriendsResponse{
@@ -386,7 +436,7 @@ func (h *Handler) ListBlocked(ctx context.Context, req *userv1.ListBlockedReques
 
 	protoUsers := make([]*userv1.User, len(blocked))
 	for i, u := range blocked {
-		protoUsers[i] = dbUserToProto(u)
+		protoUsers[i] = h.toProto(ctx, u)
 	}
 
 	return &userv1.ListBlockedResponse{
@@ -406,12 +456,13 @@ func parseUUID(s string) (pgtype.UUID, error) {
 
 func dbUserToProto(u db.User) *userv1.User {
 	pu := &userv1.User{
-		Id:        u.ID.String(),
-		Username:  u.Username,
-		Email:     u.Email,
-		AvatarUrl: u.AvatarUrl,
-		Bio:       u.Bio,
-		Status:    u.Status,
+		Id:              u.ID.String(),
+		Username:        u.Username,
+		Email:           u.Email,
+		AvatarUrl:       u.AvatarUrl,
+		Bio:             u.Bio,
+		Status:          u.Status,
+		BackgroundColor: u.BackgroundColor,
 	}
 	if u.CreatedAt.Valid {
 		pu.CreatedAt = timestamppb.New(u.CreatedAt.Time)
@@ -420,6 +471,35 @@ func dbUserToProto(u db.User) *userv1.User {
 		pu.UpdatedAt = timestamppb.New(u.UpdatedAt.Time)
 	}
 	return pu
+}
+
+// toProto resolves the stored avatar object key into a fresh presigned URL
+// before returning the user to the client.
+func (h *Handler) toProto(ctx context.Context, u db.User) *userv1.User {
+	pu := dbUserToProto(u)
+	pu.AvatarUrl = h.svc.ResolveAvatarURL(ctx, u.AvatarUrl)
+	return pu
+}
+
+func (h *Handler) UploadUserAvatar(ctx context.Context, req *userv1.UploadUserAvatarRequest) (*userv1.UploadUserAvatarResponse, error) {
+	callerID := middleware.UserIDFromContext(ctx)
+	if callerID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+	pgID, err := parseUUID(callerID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "invalid caller id")
+	}
+
+	user, avatarURL, err := h.svc.UploadAvatar(ctx, pgID, req.GetFilename(), req.GetContentType(), req.GetData())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &userv1.UploadUserAvatarResponse{
+		AvatarUrl: avatarURL,
+		User:      h.toProto(ctx, user),
+	}, nil
 }
 
 func dbFriendshipToProto(f db.Friendship) *userv1.Friendship {

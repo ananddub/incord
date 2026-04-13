@@ -17,7 +17,7 @@ func setupUserService(t *testing.T) (*Service, *testutil.TestInfra) {
 	t.Helper()
 	infra := testutil.SetupTestInfra(t)
 	repo := NewRepository(infra.Pool, infra.Redis)
-	svc := NewService(repo)
+	svc := NewService(repo, nil)
 	return svc, infra
 }
 

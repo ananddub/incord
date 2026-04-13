@@ -22,18 +22,22 @@ const (
 	VoiceService_JoinChannel_FullMethodName            = "/voice.v1.VoiceService/JoinChannel"
 	VoiceService_LeaveChannel_FullMethodName           = "/voice.v1.VoiceService/LeaveChannel"
 	VoiceService_GetChannelParticipants_FullMethodName = "/voice.v1.VoiceService/GetChannelParticipants"
-	VoiceService_UpdateVoiceState_FullMethodName       = "/voice.v1.VoiceService/UpdateVoiceState"
 )
 
 // VoiceServiceClient is the client API for VoiceService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// VoiceService issues LiveKit access tokens so clients can connect directly
+// to the LiveKit SFU over WebRTC. The backend itself never handles media —
+// it only handles auth, room metadata, and participant bookkeeping.
 type VoiceServiceClient interface {
-	// Client requests to join a voice channel, gets UDP endpoint info
+	// JoinChannel returns a LiveKit URL + short-lived JWT. The client is
+	// expected to feed these into a LiveKit client SDK (web/iOS/Android/Flutter)
+	// and let it negotiate DTLS-SRTP/WebRTC directly with the SFU.
 	JoinChannel(ctx context.Context, in *JoinChannelRequest, opts ...grpc.CallOption) (*JoinChannelResponse, error)
 	LeaveChannel(ctx context.Context, in *LeaveChannelRequest, opts ...grpc.CallOption) (*LeaveChannelResponse, error)
 	GetChannelParticipants(ctx context.Context, in *GetChannelParticipantsRequest, opts ...grpc.CallOption) (*GetChannelParticipantsResponse, error)
-	UpdateVoiceState(ctx context.Context, in *UpdateVoiceStateRequest, opts ...grpc.CallOption) (*UpdateVoiceStateResponse, error)
 }
 
 type voiceServiceClient struct {
@@ -74,25 +78,20 @@ func (c *voiceServiceClient) GetChannelParticipants(ctx context.Context, in *Get
 	return out, nil
 }
 
-func (c *voiceServiceClient) UpdateVoiceState(ctx context.Context, in *UpdateVoiceStateRequest, opts ...grpc.CallOption) (*UpdateVoiceStateResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateVoiceStateResponse)
-	err := c.cc.Invoke(ctx, VoiceService_UpdateVoiceState_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // VoiceServiceServer is the server API for VoiceService service.
 // All implementations must embed UnimplementedVoiceServiceServer
 // for forward compatibility.
+//
+// VoiceService issues LiveKit access tokens so clients can connect directly
+// to the LiveKit SFU over WebRTC. The backend itself never handles media —
+// it only handles auth, room metadata, and participant bookkeeping.
 type VoiceServiceServer interface {
-	// Client requests to join a voice channel, gets UDP endpoint info
+	// JoinChannel returns a LiveKit URL + short-lived JWT. The client is
+	// expected to feed these into a LiveKit client SDK (web/iOS/Android/Flutter)
+	// and let it negotiate DTLS-SRTP/WebRTC directly with the SFU.
 	JoinChannel(context.Context, *JoinChannelRequest) (*JoinChannelResponse, error)
 	LeaveChannel(context.Context, *LeaveChannelRequest) (*LeaveChannelResponse, error)
 	GetChannelParticipants(context.Context, *GetChannelParticipantsRequest) (*GetChannelParticipantsResponse, error)
-	UpdateVoiceState(context.Context, *UpdateVoiceStateRequest) (*UpdateVoiceStateResponse, error)
 	mustEmbedUnimplementedVoiceServiceServer()
 }
 
@@ -111,9 +110,6 @@ func (UnimplementedVoiceServiceServer) LeaveChannel(context.Context, *LeaveChann
 }
 func (UnimplementedVoiceServiceServer) GetChannelParticipants(context.Context, *GetChannelParticipantsRequest) (*GetChannelParticipantsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetChannelParticipants not implemented")
-}
-func (UnimplementedVoiceServiceServer) UpdateVoiceState(context.Context, *UpdateVoiceStateRequest) (*UpdateVoiceStateResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateVoiceState not implemented")
 }
 func (UnimplementedVoiceServiceServer) mustEmbedUnimplementedVoiceServiceServer() {}
 func (UnimplementedVoiceServiceServer) testEmbeddedByValue()                      {}
@@ -190,24 +186,6 @@ func _VoiceService_GetChannelParticipants_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
-func _VoiceService_UpdateVoiceState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateVoiceStateRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VoiceServiceServer).UpdateVoiceState(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: VoiceService_UpdateVoiceState_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VoiceServiceServer).UpdateVoiceState(ctx, req.(*UpdateVoiceStateRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // VoiceService_ServiceDesc is the grpc.ServiceDesc for VoiceService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -226,10 +204,6 @@ var VoiceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetChannelParticipants",
 			Handler:    _VoiceService_GetChannelParticipants_Handler,
-		},
-		{
-			MethodName: "UpdateVoiceState",
-			Handler:    _VoiceService_UpdateVoiceState_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

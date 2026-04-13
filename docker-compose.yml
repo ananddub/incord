@@ -62,6 +62,10 @@ services:
       SMTP_FROM: noreply@ndiscord.local
       NATS_URL: nats://nats:4222
       INVITE_BASE_URL: ${INVITE_BASE_URL:-https://ndiscord.app/invite}
+      LIVEKIT_URL: ${LIVEKIT_URL:-ws://192.168.1.2:7880}
+      LIVEKIT_HTTP_URL: http://livekit:7880
+      LIVEKIT_API_KEY: devkey
+      LIVEKIT_API_SECRET: secret
     depends_on:
       timescaledb:
         condition: service_healthy
@@ -80,36 +84,6 @@ services:
         - action: sync
           path: ./gen
           target: /app/gen
-        - action: rebuild
-          path: ./go.mod
-
-  voice:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    container_name: ndiscord-voice
-    command: ["-c", ".air.voice.toml"]
-    ports:
-      - "50052:50052/udp"
-    volumes:
-      - .:/app
-      - go_mod_cache:/go/pkg/mod
-      - go_build_cache:/root/.cache/go-build
-    environment:
-      VOICE_UDP_HOST: "0.0.0.0"
-      VOICE_UDP_PORT: "50052"
-      REDIS_ADDR: redis:6379
-    depends_on:
-      redis:
-        condition: service_healthy
-    develop:
-      watch:
-        - action: sync
-          path: ./internal
-          target: /app/internal
-        - action: sync
-          path: ./cmd
-          target: /app/cmd
         - action: rebuild
           path: ./go.mod
 
@@ -255,6 +229,31 @@ services:
       timeout: 5s
       retries: 5
 
+  nui:
+    image: ghcr.io/nats-nui/nui:latest
+    container_name: ndiscord-nui
+    ports:
+      - "31311:31311"
+    volumes:
+      - nui_data:/db
+    depends_on:
+      nats:
+        condition: service_started
+    restart: unless-stopped
+
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: ndiscord-livekit
+    command: ["--config", "/etc/livekit.yaml", "--bind", "0.0.0.0"]
+    ports:
+      - "7880:7880"        # WebSocket signaling
+      - "7881:7881"        # RTC / TURN-TCP
+      - "50100-50150:50100-50150/udp"  # RTC media (narrow range for dev)
+      # 6789 (prometheus) is only scraped from inside the docker network.
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    restart: unless-stopped
+
   mailpit:
     image: axllent/mailpit:latest
     container_name: ndiscord-mailpit
@@ -274,5 +273,6 @@ volumes:
   prometheus_data:
   loki_data:
   promtail_data:
+  nui_data:
   go_mod_cache:
   go_build_cache:

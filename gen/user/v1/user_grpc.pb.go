@@ -21,12 +21,15 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	UserService_GetUser_FullMethodName              = "/user.v1.UserService/GetUser"
 	UserService_UpdateUser_FullMethodName           = "/user.v1.UserService/UpdateUser"
+	UserService_UpdateStatus_FullMethodName         = "/user.v1.UserService/UpdateStatus"
+	UserService_UploadUserAvatar_FullMethodName     = "/user.v1.UserService/UploadUserAvatar"
 	UserService_DeleteUser_FullMethodName           = "/user.v1.UserService/DeleteUser"
 	UserService_GetUserByUsername_FullMethodName    = "/user.v1.UserService/GetUserByUsername"
 	UserService_SearchUsers_FullMethodName          = "/user.v1.UserService/SearchUsers"
 	UserService_SendFriendRequest_FullMethodName    = "/user.v1.UserService/SendFriendRequest"
 	UserService_AcceptFriendRequest_FullMethodName  = "/user.v1.UserService/AcceptFriendRequest"
 	UserService_DeclineFriendRequest_FullMethodName = "/user.v1.UserService/DeclineFriendRequest"
+	UserService_CancelFriendRequest_FullMethodName  = "/user.v1.UserService/CancelFriendRequest"
 	UserService_RemoveFriend_FullMethodName         = "/user.v1.UserService/RemoveFriend"
 	UserService_BlockUser_FullMethodName            = "/user.v1.UserService/BlockUser"
 	UserService_UnblockUser_FullMethodName          = "/user.v1.UserService/UnblockUser"
@@ -41,6 +44,8 @@ const (
 type UserServiceClient interface {
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
 	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
+	UpdateStatus(ctx context.Context, in *UpdateStatusRequest, opts ...grpc.CallOption) (*UpdateStatusResponse, error)
+	UploadUserAvatar(ctx context.Context, in *UploadUserAvatarRequest, opts ...grpc.CallOption) (*UploadUserAvatarResponse, error)
 	DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*DeleteUserResponse, error)
 	GetUserByUsername(ctx context.Context, in *GetUserByUsernameRequest, opts ...grpc.CallOption) (*GetUserByUsernameResponse, error)
 	SearchUsers(ctx context.Context, in *SearchUsersRequest, opts ...grpc.CallOption) (*SearchUsersResponse, error)
@@ -48,6 +53,9 @@ type UserServiceClient interface {
 	SendFriendRequest(ctx context.Context, in *SendFriendRequestRequest, opts ...grpc.CallOption) (*SendFriendRequestResponse, error)
 	AcceptFriendRequest(ctx context.Context, in *AcceptFriendRequestRequest, opts ...grpc.CallOption) (*AcceptFriendRequestResponse, error)
 	DeclineFriendRequest(ctx context.Context, in *DeclineFriendRequestRequest, opts ...grpc.CallOption) (*DeclineFriendRequestResponse, error)
+	// CancelFriendRequest is called by the sender to withdraw their own
+	// outgoing pending request before the recipient has acted on it.
+	CancelFriendRequest(ctx context.Context, in *CancelFriendRequestRequest, opts ...grpc.CallOption) (*CancelFriendRequestResponse, error)
 	RemoveFriend(ctx context.Context, in *RemoveFriendRequest, opts ...grpc.CallOption) (*RemoveFriendResponse, error)
 	BlockUser(ctx context.Context, in *BlockUserRequest, opts ...grpc.CallOption) (*BlockUserResponse, error)
 	UnblockUser(ctx context.Context, in *UnblockUserRequest, opts ...grpc.CallOption) (*UnblockUserResponse, error)
@@ -78,6 +86,26 @@ func (c *userServiceClient) UpdateUser(ctx context.Context, in *UpdateUserReques
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateUserResponse)
 	err := c.cc.Invoke(ctx, UserService_UpdateUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) UpdateStatus(ctx context.Context, in *UpdateStatusRequest, opts ...grpc.CallOption) (*UpdateStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateStatusResponse)
+	err := c.cc.Invoke(ctx, UserService_UpdateStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) UploadUserAvatar(ctx context.Context, in *UploadUserAvatarRequest, opts ...grpc.CallOption) (*UploadUserAvatarResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UploadUserAvatarResponse)
+	err := c.cc.Invoke(ctx, UserService_UploadUserAvatar_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -138,6 +166,16 @@ func (c *userServiceClient) DeclineFriendRequest(ctx context.Context, in *Declin
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DeclineFriendRequestResponse)
 	err := c.cc.Invoke(ctx, UserService_DeclineFriendRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) CancelFriendRequest(ctx context.Context, in *CancelFriendRequestRequest, opts ...grpc.CallOption) (*CancelFriendRequestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CancelFriendRequestResponse)
+	err := c.cc.Invoke(ctx, UserService_CancelFriendRequest_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -210,6 +248,8 @@ func (c *userServiceClient) ListBlocked(ctx context.Context, in *ListBlockedRequ
 type UserServiceServer interface {
 	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
 	UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error)
+	UpdateStatus(context.Context, *UpdateStatusRequest) (*UpdateStatusResponse, error)
+	UploadUserAvatar(context.Context, *UploadUserAvatarRequest) (*UploadUserAvatarResponse, error)
 	DeleteUser(context.Context, *DeleteUserRequest) (*DeleteUserResponse, error)
 	GetUserByUsername(context.Context, *GetUserByUsernameRequest) (*GetUserByUsernameResponse, error)
 	SearchUsers(context.Context, *SearchUsersRequest) (*SearchUsersResponse, error)
@@ -217,6 +257,9 @@ type UserServiceServer interface {
 	SendFriendRequest(context.Context, *SendFriendRequestRequest) (*SendFriendRequestResponse, error)
 	AcceptFriendRequest(context.Context, *AcceptFriendRequestRequest) (*AcceptFriendRequestResponse, error)
 	DeclineFriendRequest(context.Context, *DeclineFriendRequestRequest) (*DeclineFriendRequestResponse, error)
+	// CancelFriendRequest is called by the sender to withdraw their own
+	// outgoing pending request before the recipient has acted on it.
+	CancelFriendRequest(context.Context, *CancelFriendRequestRequest) (*CancelFriendRequestResponse, error)
 	RemoveFriend(context.Context, *RemoveFriendRequest) (*RemoveFriendResponse, error)
 	BlockUser(context.Context, *BlockUserRequest) (*BlockUserResponse, error)
 	UnblockUser(context.Context, *UnblockUserRequest) (*UnblockUserResponse, error)
@@ -239,6 +282,12 @@ func (UnimplementedUserServiceServer) GetUser(context.Context, *GetUserRequest) 
 func (UnimplementedUserServiceServer) UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateUser not implemented")
 }
+func (UnimplementedUserServiceServer) UpdateStatus(context.Context, *UpdateStatusRequest) (*UpdateStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateStatus not implemented")
+}
+func (UnimplementedUserServiceServer) UploadUserAvatar(context.Context, *UploadUserAvatarRequest) (*UploadUserAvatarResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UploadUserAvatar not implemented")
+}
 func (UnimplementedUserServiceServer) DeleteUser(context.Context, *DeleteUserRequest) (*DeleteUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteUser not implemented")
 }
@@ -256,6 +305,9 @@ func (UnimplementedUserServiceServer) AcceptFriendRequest(context.Context, *Acce
 }
 func (UnimplementedUserServiceServer) DeclineFriendRequest(context.Context, *DeclineFriendRequestRequest) (*DeclineFriendRequestResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeclineFriendRequest not implemented")
+}
+func (UnimplementedUserServiceServer) CancelFriendRequest(context.Context, *CancelFriendRequestRequest) (*CancelFriendRequestResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CancelFriendRequest not implemented")
 }
 func (UnimplementedUserServiceServer) RemoveFriend(context.Context, *RemoveFriendRequest) (*RemoveFriendResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveFriend not implemented")
@@ -328,6 +380,42 @@ func _UserService_UpdateUser_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserServiceServer).UpdateUser(ctx, req.(*UpdateUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_UpdateStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).UpdateStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_UpdateStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).UpdateStatus(ctx, req.(*UpdateStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_UploadUserAvatar_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UploadUserAvatarRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).UploadUserAvatar(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_UploadUserAvatar_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).UploadUserAvatar(ctx, req.(*UploadUserAvatarRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -436,6 +524,24 @@ func _UserService_DeclineFriendRequest_Handler(srv interface{}, ctx context.Cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserServiceServer).DeclineFriendRequest(ctx, req.(*DeclineFriendRequestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_CancelFriendRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelFriendRequestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).CancelFriendRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_CancelFriendRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).CancelFriendRequest(ctx, req.(*CancelFriendRequestRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -564,6 +670,14 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _UserService_UpdateUser_Handler,
 		},
 		{
+			MethodName: "UpdateStatus",
+			Handler:    _UserService_UpdateStatus_Handler,
+		},
+		{
+			MethodName: "UploadUserAvatar",
+			Handler:    _UserService_UploadUserAvatar_Handler,
+		},
+		{
 			MethodName: "DeleteUser",
 			Handler:    _UserService_DeleteUser_Handler,
 		},
@@ -586,6 +700,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeclineFriendRequest",
 			Handler:    _UserService_DeclineFriendRequest_Handler,
+		},
+		{
+			MethodName: "CancelFriendRequest",
+			Handler:    _UserService_CancelFriendRequest_Handler,
 		},
 		{
 			MethodName: "RemoveFriend",

@@ -115,11 +115,14 @@ message TypingEvent {
 message StreamFriendActivityRequest {}
 
 message FriendActivityEvent {
-  string event = 1;      // "presence_update", "profile_update", "friend_request", "friend_accepted"
+  string event = 1;      // "presence_update", "profile_update", "friend_request", "friend_accepted", "friend_declined", "friend_removed"
   string user_id = 2;
   string username = 3;
   string status = 4;
   string custom_status = 5;
   string avatar_url = 6;
   google.protobuf.Timestamp timestamp = 7;
+  // For friend_accepted: the auto-opened DM channel id so both ends can
+  // jump straight into conversation.
+  string channel_id = 8;
 }

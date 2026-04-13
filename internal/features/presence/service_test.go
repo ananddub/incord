@@ -15,7 +15,7 @@ import (
 func setupPresence(t *testing.T) (*Service, *testutil.TestInfra) {
 	t.Helper()
 	infra := testutil.SetupTestInfra(t)
-	svc := NewService(infra.Redis)
+	svc := NewService(infra.Redis, nil)
 	return svc, infra
 }
 

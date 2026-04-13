@@ -56,6 +56,7 @@ message SyncUser {
   string bio = 7;
   string status = 8;
   bool verified = 9;
+  string background_color = 10;
 }
 
 message SyncGuild {

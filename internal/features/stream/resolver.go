@@ -35,6 +35,22 @@ func (r *Resolver) GetUserGuildIDs(ctx context.Context, userID string) ([]string
 	return ids, nil
 }
 
+func (r *Resolver) GetUserFriendIDs(ctx context.Context, userID string) ([]string, error) {
+	uid, err := parseUUID(userID)
+	if err != nil {
+		return nil, err
+	}
+	friends, err := r.q.ListFriends(ctx, uid)
+	if err != nil {
+		return nil, fmt.Errorf("list friends: %w", err)
+	}
+	ids := make([]string, 0, len(friends))
+	for _, f := range friends {
+		ids = append(ids, uuidToString(f.ID))
+	}
+	return ids, nil
+}
+
 // parseUUID converts a string to pgtype.UUID.
 func parseUUID(s string) (pgtype.UUID, error) {
 	var u pgtype.UUID

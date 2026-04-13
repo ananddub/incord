@@ -90,7 +90,7 @@ func setupPresenceServer(t *testing.T) presencev1.PresenceServiceClient {
 
 	rdb := setupRedis(t)
 
-	svc := NewService(rdb)
+	svc := NewService(rdb, nil)
 	handler := NewHandler(svc)
 
 	lis, err := net.Listen("tcp", "127.0.0.1:0")

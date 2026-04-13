@@ -24,13 +24,18 @@ import (
 
 const testSecret = "test-secret"
 
-// mockResolver returns fake guild IDs for testing
+// mockResolver returns fake guild and friend IDs for testing.
 type mockResolver struct {
-	guilds map[string][]string // userID → guildIDs
+	guilds  map[string][]string // userID → guildIDs
+	friends map[string][]string // userID → friendIDs
 }
 
 func (m *mockResolver) GetUserGuildIDs(_ context.Context, userID string) ([]string, error) {
 	return m.guilds[userID], nil
+}
+
+func (m *mockResolver) GetUserFriendIDs(_ context.Context, userID string) ([]string, error) {
+	return m.friends[userID], nil
 }
 
 func makeToken(userID string) string {

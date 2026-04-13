@@ -10,37 +10,75 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	presencev1 "github.com/ananddub/ndiscord_backend/gen/presence/v1"
+	"github.com/ananddub/ndiscord_backend/internal/shared/realtime"
 )
 
 const presenceKeyPrefix = "presence:"
 
+// UserInfoResolver returns the basic profile of a user (username + avatar URL)
+// so presence events can be enriched without a hard dependency on the user
+// feature package.
+type UserInfoResolver interface {
+	LookupBasicProfile(ctx context.Context, userID string) (username, avatarURL string)
+}
+
 // Service contains the business logic for the presence feature.
 type Service struct {
-	redis *redis.Client
+	redis    *redis.Client
+	nats     *realtime.Hub
+	resolver UserInfoResolver
 }
 
 // NewService creates a new presence Service.
-func NewService(rdb *redis.Client) *Service {
+func NewService(rdb *redis.Client, nats *realtime.Hub) *Service {
 	return &Service{
 		redis: rdb,
+		nats:  nats,
 	}
 }
 
-// UpdatePresence sets the presence for a user in Redis and publishes an event.
+// SetUserResolver wires a user-info resolver used to enrich presence events.
+func (s *Service) SetUserResolver(r UserInfoResolver) {
+	s.resolver = r
+}
+
+// statusToString maps the presence enum to the string used on the wire.
+var statusToString = map[presencev1.Status]string{
+	presencev1.Status_STATUS_ONLINE:  "online",
+	presencev1.Status_STATUS_IDLE:    "idle",
+	presencev1.Status_STATUS_DND:     "dnd",
+	presencev1.Status_STATUS_OFFLINE: "offline",
+}
+
+// publishPresence fans out a presence_update event on the user's FriendActivity
+// subject. StreamFriendActivity subscribers on this subject (the user's
+// friends) will receive it.
+func (s *Service) publishPresence(ctx context.Context, userID string, status presencev1.Status, customStatus string) {
+	if s.nats == nil {
+		return
+	}
+	payload := map[string]any{
+		"event":         "presence_update",
+		"user_id":       userID,
+		"status":        statusToString[status],
+		"custom_status": customStatus,
+	}
+	if s.resolver != nil {
+		username, avatarURL := s.resolver.LookupBasicProfile(ctx, userID)
+		payload["username"] = username
+		payload["avatar_url"] = avatarURL
+	}
+	_ = s.nats.Publish(realtime.FriendActivity(userID), payload)
+}
+
+// UpdatePresence sets the presence for a user in Redis and broadcasts the
+// event on the user's FriendActivity subject.
 func (s *Service) UpdatePresence(ctx context.Context, userID string, st presencev1.Status, customStatus string) (*presencev1.Presence, error) {
 	key := presenceKeyPrefix + userID
 	now := time.Now()
 
-	statusStrMap := map[presencev1.Status]string{
-		presencev1.Status_STATUS_ONLINE:  "online",
-		presencev1.Status_STATUS_IDLE:    "idle",
-		presencev1.Status_STATUS_DND:     "dnd",
-		presencev1.Status_STATUS_OFFLINE: "offline",
-	}
-	statusStr := statusStrMap[st]
-
 	fields := map[string]interface{}{
-		"status":        statusStr,
+		"status":        statusToString[st],
 		"custom_status": customStatus,
 		"last_seen":     now.Unix(),
 	}
@@ -48,6 +86,8 @@ func (s *Service) UpdatePresence(ctx context.Context, userID string, st presence
 	if err := s.redis.HSet(ctx, key, fields).Err(); err != nil {
 		return nil, fmt.Errorf("failed to set presence: %w", err)
 	}
+
+	s.publishPresence(ctx, userID, st, customStatus)
 
 	p := &presencev1.Presence{
 		UserId:       userID,

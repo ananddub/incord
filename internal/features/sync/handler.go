@@ -57,6 +57,7 @@ func (h *Handler) Sync(ctx context.Context, req *syncv1.SyncRequest) (*syncv1.Sy
 				Id: ustr(u.ID), IsDeleted: u.Deleted, UpdatedAt: ts(u.UpdatedAt),
 				Username: u.Username, Email: u.Email, AvatarUrl: u.AvatarUrl,
 				Bio: u.Bio, Status: u.Status, Verified: u.Verified,
+				BackgroundColor: u.BackgroundColor,
 			})
 		}
 	}

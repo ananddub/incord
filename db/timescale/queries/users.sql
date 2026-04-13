@@ -18,6 +18,7 @@ UPDATE users SET
     avatar_url = COALESCE(sqlc.narg('avatar_url'), avatar_url),
     bio = COALESCE(sqlc.narg('bio'), bio),
     status = COALESCE(sqlc.narg('status'), status),
+    background_color = COALESCE(sqlc.narg('background_color'), background_color),
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;

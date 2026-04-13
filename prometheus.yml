@@ -8,3 +8,9 @@ scrape_configs:
       - targets: ["server:9100"]
         labels:
           service: "ndiscord"
+
+  - job_name: "livekit"
+    static_configs:
+      - targets: ["livekit:6789"]
+        labels:
+          service: "livekit"

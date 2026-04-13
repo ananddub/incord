@@ -803,14 +803,17 @@ func (*StreamFriendActivityRequest) Descriptor() ([]byte, []int) {
 }
 
 type FriendActivityEvent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Event         string                 `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"` // "presence_update", "profile_update", "friend_request", "friend_accepted"
-	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
-	Status        string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
-	CustomStatus  string                 `protobuf:"bytes,5,opt,name=custom_status,json=customStatus,proto3" json:"custom_status,omitempty"`
-	AvatarUrl     string                 `protobuf:"bytes,6,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Event        string                 `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"` // "presence_update", "profile_update", "friend_request", "friend_accepted", "friend_declined", "friend_removed"
+	UserId       string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Username     string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	Status       string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	CustomStatus string                 `protobuf:"bytes,5,opt,name=custom_status,json=customStatus,proto3" json:"custom_status,omitempty"`
+	AvatarUrl    string                 `protobuf:"bytes,6,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	Timestamp    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	// For friend_accepted: the auto-opened DM channel id so both ends can
+	// jump straight into conversation.
+	ChannelId     string `protobuf:"bytes,8,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -894,6 +897,13 @@ func (x *FriendActivityEvent) GetTimestamp() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *FriendActivityEvent) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
 var File_stream_v1_stream_proto protoreflect.FileDescriptor
 
 const file_stream_v1_stream_proto_rawDesc = "" +
@@ -960,7 +970,7 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\bguild_id\x18\x02 \x01(\tR\aguildId\x12\x17\n" +
 	"\auser_id\x18\x03 \x01(\tR\x06userId\x128\n" +
 	"\ttimestamp\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\x1d\n" +
-	"\x1bStreamFriendActivityRequest\"\xf6\x01\n" +
+	"\x1bStreamFriendActivityRequest\"\x95\x02\n" +
 	"\x13FriendActivityEvent\x12\x14\n" +
 	"\x05event\x18\x01 \x01(\tR\x05event\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1a\n" +
@@ -969,7 +979,9 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\rcustom_status\x18\x05 \x01(\tR\fcustomStatus\x12\x1d\n" +
 	"\n" +
 	"avatar_url\x18\x06 \x01(\tR\tavatarUrl\x128\n" +
-	"\ttimestamp\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp2\xdc\x04\n" +
+	"\ttimestamp\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1d\n" +
+	"\n" +
+	"channel_id\x18\b \x01(\tR\tchannelId2\xdc\x04\n" +
 	"\rStreamService\x12H\n" +
 	"\fStreamDmChat\x12\x1e.stream.v1.StreamDmChatRequest\x1a\x16.stream.v1.DmChatEvent0\x01\x12Y\n" +
 	"\x12StreamTextChannels\x12$.stream.v1.StreamTextChannelsRequest\x1a\x1b.stream.v1.TextChannelEvent0\x01\x12Q\n" +

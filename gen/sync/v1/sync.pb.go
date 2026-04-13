@@ -183,18 +183,19 @@ func (x *SyncResponse) GetDmMembers() []*SyncDmMember {
 }
 
 type SyncUser struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	IsDeleted     bool                   `protobuf:"varint,2,opt,name=is_deleted,json=isDeleted,proto3" json:"is_deleted,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	Username      string                 `protobuf:"bytes,4,opt,name=username,proto3" json:"username,omitempty"`
-	Email         string                 `protobuf:"bytes,5,opt,name=email,proto3" json:"email,omitempty"`
-	AvatarUrl     string                 `protobuf:"bytes,6,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	Bio           string                 `protobuf:"bytes,7,opt,name=bio,proto3" json:"bio,omitempty"`
-	Status        string                 `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"`
-	Verified      bool                   `protobuf:"varint,9,opt,name=verified,proto3" json:"verified,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	IsDeleted       bool                   `protobuf:"varint,2,opt,name=is_deleted,json=isDeleted,proto3" json:"is_deleted,omitempty"`
+	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Username        string                 `protobuf:"bytes,4,opt,name=username,proto3" json:"username,omitempty"`
+	Email           string                 `protobuf:"bytes,5,opt,name=email,proto3" json:"email,omitempty"`
+	AvatarUrl       string                 `protobuf:"bytes,6,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	Bio             string                 `protobuf:"bytes,7,opt,name=bio,proto3" json:"bio,omitempty"`
+	Status          string                 `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"`
+	Verified        bool                   `protobuf:"varint,9,opt,name=verified,proto3" json:"verified,omitempty"`
+	BackgroundColor string                 `protobuf:"bytes,10,opt,name=background_color,json=backgroundColor,proto3" json:"background_color,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *SyncUser) Reset() {
@@ -288,6 +289,13 @@ func (x *SyncUser) GetVerified() bool {
 		return x.Verified
 	}
 	return false
+}
+
+func (x *SyncUser) GetBackgroundColor() string {
+	if x != nil {
+		return x.BackgroundColor
+	}
+	return ""
 }
 
 type SyncGuild struct {
@@ -928,7 +936,7 @@ const file_sync_v1_sync_proto_rawDesc = "" +
 	"\vfriendships\x18\a \x03(\v2\x17.sync.v1.SyncFriendshipR\vfriendships\x120\n" +
 	"\bmessages\x18\b \x03(\v2\x14.sync.v1.SyncMessageR\bmessages\x124\n" +
 	"\n" +
-	"dm_members\x18\t \x03(\v2\x15.sync.v1.SyncDmMemberR\tdmMembers\"\x8b\x02\n" +
+	"dm_members\x18\t \x03(\v2\x15.sync.v1.SyncDmMemberR\tdmMembers\"\xb6\x02\n" +
 	"\bSyncUser\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -941,7 +949,9 @@ const file_sync_v1_sync_proto_rawDesc = "" +
 	"avatar_url\x18\x06 \x01(\tR\tavatarUrl\x12\x10\n" +
 	"\x03bio\x18\a \x01(\tR\x03bio\x12\x16\n" +
 	"\x06status\x18\b \x01(\tR\x06status\x12\x1a\n" +
-	"\bverified\x18\t \x01(\bR\bverified\"\xe1\x01\n" +
+	"\bverified\x18\t \x01(\bR\bverified\x12)\n" +
+	"\x10background_color\x18\n" +
+	" \x01(\tR\x0fbackgroundColor\"\xe1\x01\n" +
 	"\tSyncGuild\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +

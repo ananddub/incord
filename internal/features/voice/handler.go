@@ -22,14 +22,15 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-// JoinChannel allows a user to join a voice channel.
+// JoinChannel returns the LiveKit URL + JWT the client should use to connect
+// directly to the SFU.
 func (h *Handler) JoinChannel(ctx context.Context, req *voicev1.JoinChannelRequest) (*voicev1.JoinChannelResponse, error) {
 	userID := middleware.UserIDFromContext(ctx)
 	if userID == "" {
 		return nil, status.Error(codes.Unauthenticated, "missing user id")
 	}
 
-result, err := h.service.JoinChannel(ctx, userID, req.GetGuildId(), req.GetChannelId())
+	result, err := h.service.JoinChannel(ctx, userID, req.GetGuildId(), req.GetChannelId())
 	if err != nil {
 		if errors.Is(err, ErrInsufficientPermissions) {
 			return nil, status.Error(codes.PermissionDenied, err.Error())
@@ -38,31 +39,30 @@ result, err := h.service.JoinChannel(ctx, userID, req.GetGuildId(), req.GetChann
 	}
 
 	return &voicev1.JoinChannelResponse{
-		SessionId:     result.SessionID,
-		UdpEndpoint:   result.UDPEndpoint,
-		UdpPort:       result.UDPPort,
-		EncryptionKey: result.EncryptionKey,
-		Ssrc:          result.SSRC,
+		Url:       result.URL,
+		Token:     result.Token,
+		Room:      result.Room,
+		ExpiresIn: result.ExpiresIn,
 	}, nil
 }
 
-// LeaveChannel allows a user to leave a voice channel.
+// LeaveChannel tells LiveKit to evict the caller from the room.
 func (h *Handler) LeaveChannel(ctx context.Context, req *voicev1.LeaveChannelRequest) (*voicev1.LeaveChannelResponse, error) {
 	userID := middleware.UserIDFromContext(ctx)
 	if userID == "" {
 		return nil, status.Error(codes.Unauthenticated, "missing user id")
 	}
 
-if err := h.service.LeaveChannel(ctx, userID, req.GetChannelId()); err != nil {
+	if err := h.service.LeaveChannel(ctx, userID, req.GetGuildId(), req.GetChannelId()); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to leave channel: %v", err)
 	}
 
 	return &voicev1.LeaveChannelResponse{}, nil
 }
 
-// GetChannelParticipants returns all participants in a voice channel.
+// GetChannelParticipants returns the LiveKit participants for a voice channel.
 func (h *Handler) GetChannelParticipants(ctx context.Context, req *voicev1.GetChannelParticipantsRequest) (*voicev1.GetChannelParticipantsResponse, error) {
-participants, err := h.service.GetChannelParticipants(ctx, req.GetChannelId())
+	participants, err := h.service.GetChannelParticipants(ctx, req.GetChannelId())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get participants: %v", err)
 	}
@@ -71,18 +71,3 @@ participants, err := h.service.GetChannelParticipants(ctx, req.GetChannelId())
 		Participants: participants,
 	}, nil
 }
-
-// UpdateVoiceState updates the calling user's voice state in a channel.
-func (h *Handler) UpdateVoiceState(ctx context.Context, req *voicev1.UpdateVoiceStateRequest) (*voicev1.UpdateVoiceStateResponse, error) {
-	userID := middleware.UserIDFromContext(ctx)
-	if userID == "" {
-		return nil, status.Error(codes.Unauthenticated, "missing user id")
-	}
-
-if err := h.service.UpdateVoiceState(ctx, userID, req.GetChannelId(), req.GetSelfMute(), req.GetSelfDeaf(), req.GetVideo(), req.GetStream()); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to update voice state: %v", err)
-	}
-
-	return &voicev1.UpdateVoiceStateResponse{}, nil
-}
-

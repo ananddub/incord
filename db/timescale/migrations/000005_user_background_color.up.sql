@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN background_color TEXT NOT NULL DEFAULT '';

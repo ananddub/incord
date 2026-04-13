@@ -418,43 +418,29 @@ func TestFullDiscordFlow(t *testing.T) {
 	// 15. VOICE: Join voice channel
 	// ──────────────────────────────────────
 	t.Run("15_Voice", func(t *testing.T) {
-		// Alice joins voice
+		// Alice joins voice → receives LiveKit URL + JWT.
 		joinResp, err := c.voice.JoinChannel(alice.ctx(), &voicev1.JoinChannelRequest{
 			GuildId: guildID, ChannelId: voiceChannelID,
 		})
 		require.NoError(t, err)
-		assert.NotEmpty(t, joinResp.SessionId)
-		assert.NotEmpty(t, joinResp.UdpEndpoint)
-		assert.NotZero(t, joinResp.Ssrc)
-		assert.NotEmpty(t, joinResp.EncryptionKey)
+		assert.NotEmpty(t, joinResp.Url, "livekit URL required")
+		assert.NotEmpty(t, joinResp.Token, "livekit token required")
+		assert.Equal(t, voiceChannelID, joinResp.Room)
+		assert.Positive(t, joinResp.ExpiresIn)
 
-		// Bob joins voice too
-		bobJoin, err := c.voice.JoinChannel(bob.ctx(), &voicev1.JoinChannelRequest{
+		// Bob joins voice too.
+		_, err = c.voice.JoinChannel(bob.ctx(), &voicev1.JoinChannelRequest{
 			GuildId: guildID, ChannelId: voiceChannelID,
 		})
 		require.NoError(t, err)
-		assert.NotEqual(t, joinResp.Ssrc, bobJoin.Ssrc, "each user gets unique SSRC")
 
-		// Check participants
-		partResp, err := c.voice.GetChannelParticipants(alice.ctx(), &voicev1.GetChannelParticipantsRequest{
-			ChannelId: voiceChannelID,
-		})
-		require.NoError(t, err)
-		assert.GreaterOrEqual(t, len(partResp.Participants), 2)
-
-		// Alice mutes
-		_, err = c.voice.UpdateVoiceState(alice.ctx(), &voicev1.UpdateVoiceStateRequest{
-			ChannelId: voiceChannelID, SelfMute: true,
-		})
-		require.NoError(t, err)
-
-		// Alice leaves
+		// Alice leaves.
 		_, err = c.voice.LeaveChannel(alice.ctx(), &voicev1.LeaveChannelRequest{
 			GuildId: guildID, ChannelId: voiceChannelID,
 		})
 		require.NoError(t, err)
 
-		// Bob leaves
+		// Bob leaves.
 		_, err = c.voice.LeaveChannel(bob.ctx(), &voicev1.LeaveChannelRequest{
 			GuildId: guildID, ChannelId: voiceChannelID,
 		})

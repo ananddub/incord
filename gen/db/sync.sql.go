@@ -253,7 +253,7 @@ func (q *Queries) SyncRoles(ctx context.Context, arg SyncRolesParams) ([]Role, e
 
 const syncUsers = `-- name: SyncUsers :many
 
-SELECT DISTINCT u.id, u.username, u.email, u.password_hash, u.avatar_url, u.bio, u.status, u.created_at, u.updated_at, u.verified, u.deleted FROM users u
+SELECT DISTINCT u.id, u.username, u.email, u.password_hash, u.avatar_url, u.bio, u.status, u.created_at, u.updated_at, u.verified, u.deleted, u.background_color FROM users u
 WHERE u.updated_at > $1
 AND (
   -- User's own profile
@@ -297,6 +297,7 @@ func (q *Queries) SyncUsers(ctx context.Context, arg SyncUsersParams) ([]User, e
 			&i.UpdatedAt,
 			&i.Verified,
 			&i.Deleted,
+			&i.BackgroundColor,
 		); err != nil {
 			return nil, err
 		}

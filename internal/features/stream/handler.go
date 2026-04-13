@@ -12,9 +12,11 @@ import (
 	"github.com/ananddub/ndiscord_backend/internal/shared/realtime"
 )
 
-// UserDataResolver provides the user's guild memberships for stream subscriptions.
+// UserDataResolver provides the user's guild memberships and friend list for
+// stream subscriptions.
 type UserDataResolver interface {
 	GetUserGuildIDs(ctx context.Context, userID string) ([]string, error)
+	GetUserFriendIDs(ctx context.Context, userID string) ([]string, error)
 }
 
 type Handler struct {
@@ -152,30 +154,30 @@ func (h *Handler) StreamTyping(req *streamv1.StreamTypingRequest, stream streamv
 	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
 }
 
-// StreamFriendActivity - presence + profile updates
+// StreamFriendActivity - presence + profile updates + friend requests.
+//
+// The caller listens on:
+//   - their OWN subject — to receive targeted events like "X sent you a friend
+//     request" or "X accepted your request"
+//   - each FRIEND's subject — to receive ambient events like presence/profile
+//     updates that a friend publishes to their own subject
+//
+// When the friend list changes mid-stream, the client is expected to reconnect.
 func (h *Handler) StreamFriendActivity(req *streamv1.StreamFriendActivityRequest, stream streamv1.StreamService_StreamFriendActivityServer) error {
 	userID := middleware.UserIDFromContext(stream.Context())
 	if userID == "" {
 		return status.Error(codes.Unauthenticated, "not authenticated")
 	}
-	sub, err := h.nats.Subscribe(realtime.FriendActivity(userID))
-	if err != nil {
-		return status.Error(codes.Internal, "failed to subscribe")
-	}
-	defer sub.Unsubscribe()
 
-	for {
-		select {
-		case <-stream.Context().Done():
-			return nil
-		case data, ok := <-sub.Ch:
-			if !ok {
-				return nil
-			}
-			var evt streamv1.FriendActivityEvent
-			if json.Unmarshal(data, &evt) == nil {
-				stream.Send(&evt)
+	subjects := []string{realtime.FriendActivity(userID)}
+	if h.resolver != nil {
+		friendIDs, err := h.resolver.GetUserFriendIDs(stream.Context(), userID)
+		if err == nil {
+			for _, fid := range friendIDs {
+				subjects = append(subjects, realtime.FriendActivity(fid))
 			}
 		}
 	}
+
+	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
 }

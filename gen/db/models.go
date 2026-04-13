@@ -128,17 +128,18 @@ type RoleMember struct {
 }
 
 type User struct {
-	ID           pgtype.UUID        `json:"id"`
-	Username     string             `json:"username"`
-	Email        string             `json:"email"`
-	PasswordHash string             `json:"password_hash"`
-	AvatarUrl    string             `json:"avatar_url"`
-	Bio          string             `json:"bio"`
-	Status       string             `json:"status"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	Verified     bool               `json:"verified"`
-	Deleted      bool               `json:"deleted"`
+	ID              pgtype.UUID        `json:"id"`
+	Username        string             `json:"username"`
+	Email           string             `json:"email"`
+	PasswordHash    string             `json:"password_hash"`
+	AvatarUrl       string             `json:"avatar_url"`
+	Bio             string             `json:"bio"`
+	Status          string             `json:"status"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	Verified        bool               `json:"verified"`
+	Deleted         bool               `json:"deleted"`
+	BackgroundColor string             `json:"background_color"`
 }
 
 type Webhook struct {

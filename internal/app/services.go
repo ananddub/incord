@@ -42,7 +42,8 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 
 	// User
 	userRepo := user.NewRepository(infra.Pool, infra.Redis)
-	userSvc := user.NewService(userRepo)
+	userSvc := user.NewService(userRepo, infra.NATS)
+	userSvc.SetStorage(infra.MinIO, infra.MinIOSigner, cfg.MinIO.Bucket)
 	userHandler := user.NewHandler(userSvc)
 	userHandler.SetBlockChecker(user.NewBlockChecker(userRepo))
 
@@ -57,6 +58,10 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 	channelRepo := channel.NewRepository(infra.Pool)
 	channelSvc := channel.NewService(channelRepo, infra.NATS, infra.Authz)
 	channelHandler := channel.NewHandler(channelSvc)
+
+	// Wire the DM-opener into user service so accepting a friend request
+	// automatically creates (or reuses) the DM channel.
+	userSvc.SetDMOpener(channel.NewDMResolver(channelSvc))
 
 	// Message
 	messageRepo := message.NewRepository(infra.Scylla)
@@ -73,7 +78,8 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 	syncHandler := sync.NewHandler(queries, messageRepo)
 
 	// Presence
-	presenceSvc := presence.NewService(infra.Redis)
+	presenceSvc := presence.NewService(infra.Redis, infra.NATS)
+	presenceSvc.SetUserResolver(userSvc)
 	presenceHandler := presence.NewHandler(presenceSvc)
 
 	// Wire presence updater for logout → offline
@@ -84,8 +90,8 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 	mediaSvc := media.NewService(mediaRepo, infra.MinIO, cfg.MinIO)
 	mediaHandler := media.NewHandler(mediaSvc)
 
-	// Voice
-	voiceSvc := voice.NewService(infra.Redis, cfg.Voice, infra.NATS, infra.Authz)
+	// Voice (LiveKit SFU)
+	voiceSvc := voice.NewService(cfg.LiveKit, infra.NATS, infra.Authz)
 	voiceHandler := voice.NewHandler(voiceSvc)
 
 	return &Handlers{

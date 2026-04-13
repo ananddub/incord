@@ -1,0 +1,131 @@
+{
+  "id": null,
+  "uid": "ndiscord-livekit",
+  "title": "ndiscord — Voice (LiveKit)",
+  "tags": ["ndiscord", "livekit", "voice"],
+  "timezone": "browser",
+  "refresh": "5s",
+  "time": { "from": "now-30m", "to": "now" },
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Active Rooms",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "sum(livekit_room_total)", "legendFormat": "rooms" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "steps": [{"color": "green", "value": null}, {"color": "blue", "value": 1}] }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Active Participants",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        { "expr": "sum(livekit_participant_total)", "legendFormat": "participants" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "steps": [{"color": "green", "value": null}, {"color": "blue", "value": 1}] }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "LiveKit Nodes Up",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "count(up{job=\"livekit\"} == 1)", "legendFormat": "up" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}] }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Forward Jitter",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        { "expr": "max(livekit_forward_jitter)", "legendFormat": "jitter" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ms" }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Rooms & Participants (timeline)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        { "expr": "sum(livekit_room_total)", "legendFormat": "rooms" },
+        { "expr": "sum(livekit_participant_total)", "legendFormat": "participants" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Forward Latency p50 / p99 (ns)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(livekit_forward_latency_ns_bucket[1m])) by (le))",
+          "legendFormat": "p99"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(livekit_forward_latency_ns_bucket[1m])) by (le))",
+          "legendFormat": "p50"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ns", "custom": { "drawStyle": "line" } }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Packet Rate (by direction)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "sum by (direction) (rate(livekit_node_packet_total[1m]))",
+          "legendFormat": "{{direction}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "pps", "custom": { "drawStyle": "line", "fillOpacity": 15 } }
+      }
+    },
+    {
+      "id": 8,
+      "title": "Twirp Request Rate (by status)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(livekit_node_twirp_request_status[1m]))",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 10 } }
+      }
+    }
+  ]
+}

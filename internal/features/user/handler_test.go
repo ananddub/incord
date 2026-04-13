@@ -48,7 +48,7 @@ func setupUserGRPCServer(t *testing.T) *testClients {
 
 	// User stack
 	userRepo := user.NewRepository(infra.Pool, infra.Redis)
-	userSvc := user.NewService(userRepo)
+	userSvc := user.NewService(userRepo, nil)
 	userHandler := user.NewHandler(userSvc)
 
 	lis, err := net.Listen("tcp", "localhost:0")

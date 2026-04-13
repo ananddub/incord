@@ -7,13 +7,16 @@ option go_package = "github.com/ananddub/ndiscord_backend/gen/voice/v1;voicev1";
 import "google/protobuf/timestamp.proto";
 import "buf/validate/validate.proto";
 
+// VoiceService issues LiveKit access tokens so clients can connect directly
+// to the LiveKit SFU over WebRTC. The backend itself never handles media —
+// it only handles auth, room metadata, and participant bookkeeping.
 service VoiceService {
-  // Client requests to join a voice channel, gets UDP endpoint info
+  // JoinChannel returns a LiveKit URL + short-lived JWT. The client is
+  // expected to feed these into a LiveKit client SDK (web/iOS/Android/Flutter)
+  // and let it negotiate DTLS-SRTP/WebRTC directly with the SFU.
   rpc JoinChannel(JoinChannelRequest) returns (JoinChannelResponse);
   rpc LeaveChannel(LeaveChannelRequest) returns (LeaveChannelResponse);
   rpc GetChannelParticipants(GetChannelParticipantsRequest) returns (GetChannelParticipantsResponse);
-  rpc UpdateVoiceState(UpdateVoiceStateRequest) returns (UpdateVoiceStateResponse);
-
 }
 
 message JoinChannelRequest {
@@ -22,11 +25,14 @@ message JoinChannelRequest {
 }
 
 message JoinChannelResponse {
-  string session_id = 1;
-  string udp_endpoint = 2;
-  int32 udp_port = 3;
-  bytes encryption_key = 4;
-  uint32 ssrc = 5;
+  // WebSocket URL of the LiveKit SFU (e.g. "ws://192.168.1.2:7880").
+  string url = 1;
+  // Short-lived JWT access token — pass into LiveKit client SDK.
+  string token = 2;
+  // Room name (one LiveKit room per voice channel).
+  string room = 3;
+  // Seconds until the token expires.
+  int32 expires_in = 4;
 }
 
 message LeaveChannelRequest {
@@ -38,14 +44,12 @@ message LeaveChannelResponse {}
 
 message VoiceParticipant {
   string user_id = 1;
-  string session_id = 2;
-  uint32 ssrc = 3;
-  bool muted = 4;
-  bool deafened = 5;
-  bool self_muted = 6;
-  bool self_deafened = 7;
-  bool streaming = 8;
-  bool video = 9;
+  // LiveKit participant identity (== user_id for us).
+  string identity = 2;
+  // LiveKit participant SID.
+  string sid = 3;
+  string name = 4;
+  google.protobuf.Timestamp joined_at = 5;
 }
 
 message GetChannelParticipantsRequest {
@@ -55,14 +59,4 @@ message GetChannelParticipantsRequest {
 message GetChannelParticipantsResponse {
   repeated VoiceParticipant participants = 1;
 }
-
-message UpdateVoiceStateRequest {
-  string channel_id = 1 [(buf.validate.field).string.uuid = true];
-  bool self_mute = 2;
-  bool self_deaf = 3;
-  bool video = 4;
-  bool stream = 5;
-}
-
-message UpdateVoiceStateResponse {}
 

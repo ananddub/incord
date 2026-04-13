@@ -15,6 +15,7 @@ type Config struct {
 	OpenFGA    OpenFGAConfig
 	JWT        JWTConfig
 	Voice      VoiceConfig
+	LiveKit    LiveKitConfig
 	SMTP       SMTPConfig
 	NATS       NATSConfig
 	// InviteBaseURL is the public base URL under which invite codes are
@@ -45,6 +46,17 @@ type RedisConfig struct {
 type ScyllaDBConfig struct {
 	Hosts    []string
 	Keyspace string
+}
+
+// LiveKitConfig holds the connection settings for the LiveKit SFU.
+type LiveKitConfig struct {
+	// URL is the WebSocket URL clients use to connect (e.g. "ws://192.168.1.2:7880").
+	URL string
+	// HTTPURL is the HTTP URL the Go backend uses for the RoomServiceClient
+	// (server-to-server calls; reached via the docker network, e.g. "http://livekit:7880").
+	HTTPURL   string
+	APIKey    string
+	APISecret string
 }
 
 type MinIOConfig struct {
@@ -125,6 +137,12 @@ func Load() *Config {
 		Voice: VoiceConfig{
 			UDPHost: env("VOICE_UDP_HOST", "0.0.0.0"),
 			UDPPort: envInt("VOICE_UDP_PORT", 50052),
+		},
+		LiveKit: LiveKitConfig{
+			URL:       env("LIVEKIT_URL", "ws://localhost:7880"),
+			HTTPURL:   env("LIVEKIT_HTTP_URL", "http://localhost:7880"),
+			APIKey:    env("LIVEKIT_API_KEY", "devkey"),
+			APISecret: env("LIVEKIT_API_SECRET", "secret"),
 		},
 		SMTP: SMTPConfig{
 			Host: env("SMTP_HOST", "localhost"),
