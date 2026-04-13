@@ -7,6 +7,7 @@
 package channelv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -25,13 +26,16 @@ const (
 type ChannelType int32
 
 const (
-	ChannelType_CHANNEL_TYPE_UNSPECIFIED ChannelType = 0
-	ChannelType_CHANNEL_TYPE_TEXT        ChannelType = 1
-	ChannelType_CHANNEL_TYPE_VOICE       ChannelType = 2
-	ChannelType_CHANNEL_TYPE_VIDEO       ChannelType = 3
-	ChannelType_CHANNEL_TYPE_CATEGORY    ChannelType = 4
-	ChannelType_CHANNEL_TYPE_DM          ChannelType = 5
-	ChannelType_CHANNEL_TYPE_GROUP_DM    ChannelType = 6
+	ChannelType_CHANNEL_TYPE_UNSPECIFIED  ChannelType = 0
+	ChannelType_CHANNEL_TYPE_TEXT         ChannelType = 1
+	ChannelType_CHANNEL_TYPE_VOICE        ChannelType = 2
+	ChannelType_CHANNEL_TYPE_VIDEO        ChannelType = 3
+	ChannelType_CHANNEL_TYPE_CATEGORY     ChannelType = 4
+	ChannelType_CHANNEL_TYPE_DM           ChannelType = 5
+	ChannelType_CHANNEL_TYPE_GROUP_DM     ChannelType = 6
+	ChannelType_CHANNEL_TYPE_ANNOUNCEMENT ChannelType = 7
+	ChannelType_CHANNEL_TYPE_FORUM        ChannelType = 8
+	ChannelType_CHANNEL_TYPE_STAGE        ChannelType = 9
 )
 
 // Enum value maps for ChannelType.
@@ -44,15 +48,21 @@ var (
 		4: "CHANNEL_TYPE_CATEGORY",
 		5: "CHANNEL_TYPE_DM",
 		6: "CHANNEL_TYPE_GROUP_DM",
+		7: "CHANNEL_TYPE_ANNOUNCEMENT",
+		8: "CHANNEL_TYPE_FORUM",
+		9: "CHANNEL_TYPE_STAGE",
 	}
 	ChannelType_value = map[string]int32{
-		"CHANNEL_TYPE_UNSPECIFIED": 0,
-		"CHANNEL_TYPE_TEXT":        1,
-		"CHANNEL_TYPE_VOICE":       2,
-		"CHANNEL_TYPE_VIDEO":       3,
-		"CHANNEL_TYPE_CATEGORY":    4,
-		"CHANNEL_TYPE_DM":          5,
-		"CHANNEL_TYPE_GROUP_DM":    6,
+		"CHANNEL_TYPE_UNSPECIFIED":  0,
+		"CHANNEL_TYPE_TEXT":         1,
+		"CHANNEL_TYPE_VOICE":        2,
+		"CHANNEL_TYPE_VIDEO":        3,
+		"CHANNEL_TYPE_CATEGORY":     4,
+		"CHANNEL_TYPE_DM":           5,
+		"CHANNEL_TYPE_GROUP_DM":     6,
+		"CHANNEL_TYPE_ANNOUNCEMENT": 7,
+		"CHANNEL_TYPE_FORUM":        8,
+		"CHANNEL_TYPE_STAGE":        9,
 	}
 )
 
@@ -1028,7 +1038,7 @@ var File_channel_v1_channel_proto protoreflect.FileDescriptor
 const file_channel_v1_channel_proto_rawDesc = "" +
 	"\n" +
 	"\x18channel/v1/channel.proto\x12\n" +
-	"channel.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xff\x01\n" +
+	"channel.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bbuf/validate/validate.proto\"\xff\x01\n" +
 	"\aChannel\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bguild_id\x18\x02 \x01(\tR\aguildId\x12\x12\n" +
@@ -1038,59 +1048,61 @@ const file_channel_v1_channel_proto_rawDesc = "" +
 	"\bposition\x18\x06 \x01(\x05R\bposition\x12\x1b\n" +
 	"\tparent_id\x18\a \x01(\tR\bparentId\x129\n" +
 	"\n" +
-	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xa5\x01\n" +
-	"\x14CreateChannelRequest\x12\x19\n" +
-	"\bguild_id\x18\x01 \x01(\tR\aguildId\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12+\n" +
-	"\x04type\x18\x03 \x01(\x0e2\x17.channel.v1.ChannelTypeR\x04type\x12\x14\n" +
-	"\x05topic\x18\x04 \x01(\tR\x05topic\x12\x1b\n" +
-	"\tparent_id\x18\x05 \x01(\tR\bparentId\"F\n" +
+	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xd9\x01\n" +
+	"\x14CreateChannelRequest\x12#\n" +
+	"\bguild_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\aguildId\x12\x1d\n" +
+	"\x04name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\x04name\x127\n" +
+	"\x04type\x18\x03 \x01(\x0e2\x17.channel.v1.ChannelTypeB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04type\x12\x1e\n" +
+	"\x05topic\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\x05topic\x12$\n" +
+	"\tparent_id\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x18@R\bparentId\"F\n" +
 	"\x15CreateChannelResponse\x12-\n" +
-	"\achannel\x18\x01 \x01(\v2\x13.channel.v1.ChannelR\achannel\"2\n" +
-	"\x11GetChannelRequest\x12\x1d\n" +
+	"\achannel\x18\x01 \x01(\v2\x13.channel.v1.ChannelR\achannel\"<\n" +
+	"\x11GetChannelRequest\x12'\n" +
 	"\n" +
-	"channel_id\x18\x01 \x01(\tR\tchannelId\"C\n" +
+	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\"C\n" +
 	"\x12GetChannelResponse\x12-\n" +
-	"\achannel\x18\x01 \x01(\v2\x13.channel.v1.ChannelR\achannel\"\xda\x01\n" +
-	"\x14UpdateChannelRequest\x12\x1d\n" +
+	"\achannel\x18\x01 \x01(\v2\x13.channel.v1.ChannelR\achannel\"\x8b\x02\n" +
+	"\x14UpdateChannelRequest\x12'\n" +
 	"\n" +
-	"channel_id\x18\x01 \x01(\tR\tchannelId\x12\x17\n" +
-	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
-	"\x05topic\x18\x03 \x01(\tH\x01R\x05topic\x88\x01\x01\x12\x1f\n" +
-	"\bposition\x18\x04 \x01(\x05H\x02R\bposition\x88\x01\x01\x12 \n" +
-	"\tparent_id\x18\x05 \x01(\tH\x03R\bparentId\x88\x01\x01B\a\n" +
+	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\x12\"\n" +
+	"\x04name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dH\x00R\x04name\x88\x01\x01\x12#\n" +
+	"\x05topic\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bH\x01R\x05topic\x88\x01\x01\x12(\n" +
+	"\bposition\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00H\x02R\bposition\x88\x01\x01\x12)\n" +
+	"\tparent_id\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x18@H\x03R\bparentId\x88\x01\x01B\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_topicB\v\n" +
 	"\t_positionB\f\n" +
 	"\n" +
 	"_parent_id\"F\n" +
 	"\x15UpdateChannelResponse\x12-\n" +
-	"\achannel\x18\x01 \x01(\v2\x13.channel.v1.ChannelR\achannel\"5\n" +
-	"\x14DeleteChannelRequest\x12\x1d\n" +
+	"\achannel\x18\x01 \x01(\v2\x13.channel.v1.ChannelR\achannel\"?\n" +
+	"\x14DeleteChannelRequest\x12'\n" +
 	"\n" +
-	"channel_id\x18\x01 \x01(\tR\tchannelId\"\x17\n" +
-	"\x15DeleteChannelResponse\"5\n" +
-	"\x18ListGuildChannelsRequest\x12\x19\n" +
-	"\bguild_id\x18\x01 \x01(\tR\aguildId\"L\n" +
+	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\"\x17\n" +
+	"\x15DeleteChannelResponse\"?\n" +
+	"\x18ListGuildChannelsRequest\x12#\n" +
+	"\bguild_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\aguildId\"L\n" +
 	"\x19ListGuildChannelsResponse\x12/\n" +
-	"\bchannels\x18\x01 \x03(\v2\x13.channel.v1.ChannelR\bchannels\"=\n" +
-	"\x16CreateDMChannelRequest\x12#\n" +
-	"\rrecipient_ids\x18\x01 \x03(\tR\frecipientIds\"H\n" +
+	"\bchannels\x18\x01 \x03(\v2\x13.channel.v1.ChannelR\bchannels\"P\n" +
+	"\x16CreateDMChannelRequest\x126\n" +
+	"\rrecipient_ids\x18\x01 \x03(\tB\x11\xbaH\x0e\x92\x01\v\b\x01\x10\n" +
+	"\"\x05r\x03\xb0\x01\x01R\frecipientIds\"H\n" +
 	"\x17CreateDMChannelResponse\x12-\n" +
 	"\achannel\x18\x01 \x01(\v2\x13.channel.v1.ChannelR\achannel\"\x17\n" +
 	"\x15ListDMChannelsRequest\"I\n" +
 	"\x16ListDMChannelsResponse\x12/\n" +
-	"\bchannels\x18\x01 \x03(\v2\x13.channel.v1.ChannelR\bchannels\"Q\n" +
-	"\x17AddDMGroupMemberRequest\x12\x1d\n" +
+	"\bchannels\x18\x01 \x03(\v2\x13.channel.v1.ChannelR\bchannels\"e\n" +
+	"\x17AddDMGroupMemberRequest\x12'\n" +
 	"\n" +
-	"channel_id\x18\x01 \x01(\tR\tchannelId\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\"\x1a\n" +
-	"\x18AddDMGroupMemberResponse\"T\n" +
-	"\x1aRemoveDMGroupMemberRequest\x12\x1d\n" +
+	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\x12!\n" +
+	"\auser_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\"\x1a\n" +
+	"\x18AddDMGroupMemberResponse\"h\n" +
+	"\x1aRemoveDMGroupMemberRequest\x12'\n" +
 	"\n" +
-	"channel_id\x18\x01 \x01(\tR\tchannelId\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\"\x1d\n" +
-	"\x1bRemoveDMGroupMemberResponse*\xbd\x01\n" +
+	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\x12!\n" +
+	"\auser_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\"\x1d\n" +
+	"\x1bRemoveDMGroupMemberResponse*\x8c\x02\n" +
 	"\vChannelType\x12\x1c\n" +
 	"\x18CHANNEL_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11CHANNEL_TYPE_TEXT\x10\x01\x12\x16\n" +
@@ -1098,7 +1110,10 @@ const file_channel_v1_channel_proto_rawDesc = "" +
 	"\x12CHANNEL_TYPE_VIDEO\x10\x03\x12\x19\n" +
 	"\x15CHANNEL_TYPE_CATEGORY\x10\x04\x12\x13\n" +
 	"\x0fCHANNEL_TYPE_DM\x10\x05\x12\x19\n" +
-	"\x15CHANNEL_TYPE_GROUP_DM\x10\x062\xbd\x06\n" +
+	"\x15CHANNEL_TYPE_GROUP_DM\x10\x06\x12\x1d\n" +
+	"\x19CHANNEL_TYPE_ANNOUNCEMENT\x10\a\x12\x16\n" +
+	"\x12CHANNEL_TYPE_FORUM\x10\b\x12\x16\n" +
+	"\x12CHANNEL_TYPE_STAGE\x10\t2\xbd\x06\n" +
 	"\x0eChannelService\x12T\n" +
 	"\rCreateChannel\x12 .channel.v1.CreateChannelRequest\x1a!.channel.v1.CreateChannelResponse\x12K\n" +
 	"\n" +

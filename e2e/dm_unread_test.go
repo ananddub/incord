@@ -150,10 +150,10 @@ func TestGetUnreadCounts(t *testing.T) {
 	// Bob checks unread counts
 	unreadResp, err := msg.GetUnreadCounts(bob.ctx(), &messagev1.GetUnreadCountsRequest{})
 	require.NoError(t, err)
-	t.Logf("Bob has %d total unread across %d channels", unreadResp.TotalUnread, len(unreadResp.Channels))
+	t.Logf("Bob has %d total unread (%d DMs, %d channels)", unreadResp.TotalUnread, len(unreadResp.DmMessages), len(unreadResp.ChannelMessages))
 
-	for _, ch := range unreadResp.Channels {
-		t.Logf("  Channel %s: %d unread", ch.ChannelId, ch.UnreadCount)
+	for _, dm := range unreadResp.DmMessages {
+		t.Logf("  DM %s: %d unread", dm.ChannelId, dm.UnreadCount)
 	}
 
 	if unreadResp.TotalUnread > 0 {

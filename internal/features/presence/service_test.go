@@ -15,8 +15,7 @@ import (
 func setupPresence(t *testing.T) (*Service, *testutil.TestInfra) {
 	t.Helper()
 	infra := testutil.SetupTestInfra(t)
-	// Pass nil producer — we only test Redis read operations, not Publish.
-	svc := NewService(infra.Redis, nil)
+	svc := NewService(infra.Redis)
 	return svc, infra
 }
 

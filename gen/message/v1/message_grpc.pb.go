@@ -36,8 +36,6 @@ const (
 	MessageService_GetThreadMessages_FullMethodName  = "/message.v1.MessageService/GetThreadMessages"
 	MessageService_BulkDeleteMessages_FullMethodName = "/message.v1.MessageService/BulkDeleteMessages"
 	MessageService_GetEditHistory_FullMethodName     = "/message.v1.MessageService/GetEditHistory"
-	MessageService_StreamMessages_FullMethodName     = "/message.v1.MessageService/StreamMessages"
-	MessageService_StreamTyping_FullMethodName       = "/message.v1.MessageService/StreamTyping"
 )
 
 // MessageServiceClient is the client API for MessageService service.
@@ -67,9 +65,6 @@ type MessageServiceClient interface {
 	BulkDeleteMessages(ctx context.Context, in *BulkDeleteMessagesRequest, opts ...grpc.CallOption) (*BulkDeleteMessagesResponse, error)
 	// Edit history
 	GetEditHistory(ctx context.Context, in *GetEditHistoryRequest, opts ...grpc.CallOption) (*GetEditHistoryResponse, error)
-	// Streams
-	StreamMessages(ctx context.Context, in *StreamMessagesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[MessageEvent], error)
-	StreamTyping(ctx context.Context, in *StreamTypingRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TypingEvent], error)
 }
 
 type messageServiceClient struct {
@@ -250,44 +245,6 @@ func (c *messageServiceClient) GetEditHistory(ctx context.Context, in *GetEditHi
 	return out, nil
 }
 
-func (c *messageServiceClient) StreamMessages(ctx context.Context, in *StreamMessagesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[MessageEvent], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &MessageService_ServiceDesc.Streams[0], MessageService_StreamMessages_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[StreamMessagesRequest, MessageEvent]{ClientStream: stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type MessageService_StreamMessagesClient = grpc.ServerStreamingClient[MessageEvent]
-
-func (c *messageServiceClient) StreamTyping(ctx context.Context, in *StreamTypingRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TypingEvent], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &MessageService_ServiceDesc.Streams[1], MessageService_StreamTyping_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[StreamTypingRequest, TypingEvent]{ClientStream: stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type MessageService_StreamTypingClient = grpc.ServerStreamingClient[TypingEvent]
-
 // MessageServiceServer is the server API for MessageService service.
 // All implementations must embed UnimplementedMessageServiceServer
 // for forward compatibility.
@@ -315,9 +272,6 @@ type MessageServiceServer interface {
 	BulkDeleteMessages(context.Context, *BulkDeleteMessagesRequest) (*BulkDeleteMessagesResponse, error)
 	// Edit history
 	GetEditHistory(context.Context, *GetEditHistoryRequest) (*GetEditHistoryResponse, error)
-	// Streams
-	StreamMessages(*StreamMessagesRequest, grpc.ServerStreamingServer[MessageEvent]) error
-	StreamTyping(*StreamTypingRequest, grpc.ServerStreamingServer[TypingEvent]) error
 	mustEmbedUnimplementedMessageServiceServer()
 }
 
@@ -378,12 +332,6 @@ func (UnimplementedMessageServiceServer) BulkDeleteMessages(context.Context, *Bu
 }
 func (UnimplementedMessageServiceServer) GetEditHistory(context.Context, *GetEditHistoryRequest) (*GetEditHistoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetEditHistory not implemented")
-}
-func (UnimplementedMessageServiceServer) StreamMessages(*StreamMessagesRequest, grpc.ServerStreamingServer[MessageEvent]) error {
-	return status.Error(codes.Unimplemented, "method StreamMessages not implemented")
-}
-func (UnimplementedMessageServiceServer) StreamTyping(*StreamTypingRequest, grpc.ServerStreamingServer[TypingEvent]) error {
-	return status.Error(codes.Unimplemented, "method StreamTyping not implemented")
 }
 func (UnimplementedMessageServiceServer) mustEmbedUnimplementedMessageServiceServer() {}
 func (UnimplementedMessageServiceServer) testEmbeddedByValue()                        {}
@@ -712,28 +660,6 @@ func _MessageService_GetEditHistory_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MessageService_StreamMessages_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(StreamMessagesRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(MessageServiceServer).StreamMessages(m, &grpc.GenericServerStream[StreamMessagesRequest, MessageEvent]{ServerStream: stream})
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type MessageService_StreamMessagesServer = grpc.ServerStreamingServer[MessageEvent]
-
-func _MessageService_StreamTyping_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(StreamTypingRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(MessageServiceServer).StreamTyping(m, &grpc.GenericServerStream[StreamTypingRequest, TypingEvent]{ServerStream: stream})
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type MessageService_StreamTypingServer = grpc.ServerStreamingServer[TypingEvent]
-
 // MessageService_ServiceDesc is the grpc.ServiceDesc for MessageService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -810,17 +736,6 @@ var MessageService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _MessageService_GetEditHistory_Handler,
 		},
 	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "StreamMessages",
-			Handler:       _MessageService_StreamMessages_Handler,
-			ServerStreams: true,
-		},
-		{
-			StreamName:    "StreamTyping",
-			Handler:       _MessageService_StreamTyping_Handler,
-			ServerStreams: true,
-		},
-	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "message/v1/message.proto",
 }

@@ -14,6 +14,7 @@ import (
 const countSearchUsers = `-- name: CountSearchUsers :one
 SELECT COUNT(*) FROM users
 WHERE username ILIKE '%' || $1 || '%'
+  AND deleted = FALSE
 `
 
 func (q *Queries) CountSearchUsers(ctx context.Context, dollar_1 *string) (int64, error) {
@@ -26,7 +27,7 @@ func (q *Queries) CountSearchUsers(ctx context.Context, dollar_1 *string) (int64
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (username, email, password_hash)
 VALUES ($1, $2, $3)
-RETURNING id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified
+RETURNING id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted
 `
 
 type CreateUserParams struct {
@@ -49,12 +50,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Verified,
+		&i.Deleted,
 	)
 	return i, err
 }
 
 const deleteUser = `-- name: DeleteUser :exec
-DELETE FROM users WHERE id = $1
+UPDATE users SET deleted = TRUE, updated_at = NOW() WHERE id = $1
 `
 
 func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
@@ -63,7 +65,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified FROM users WHERE email = $1
+SELECT id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted FROM users WHERE email = $1 AND deleted = FALSE
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -80,12 +82,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Verified,
+		&i.Deleted,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified FROM users WHERE id = $1
+SELECT id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -102,12 +105,13 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Verified,
+		&i.Deleted,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified FROM users WHERE username = $1
+SELECT id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted FROM users WHERE username = $1 AND deleted = FALSE
 `
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
@@ -124,12 +128,13 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Verified,
+		&i.Deleted,
 	)
 	return i, err
 }
 
 const isUserVerified = `-- name: IsUserVerified :one
-SELECT verified FROM users WHERE email = $1
+SELECT verified FROM users WHERE email = $1 AND deleted = FALSE
 `
 
 func (q *Queries) IsUserVerified(ctx context.Context, email string) (bool, error) {
@@ -140,8 +145,9 @@ func (q *Queries) IsUserVerified(ctx context.Context, email string) (bool, error
 }
 
 const searchUsers = `-- name: SearchUsers :many
-SELECT id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified FROM users
+SELECT id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted FROM users
 WHERE username ILIKE '%' || $1 || '%'
+  AND deleted = FALSE
 ORDER BY username
 LIMIT $2 OFFSET $3
 `
@@ -172,6 +178,7 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Use
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Verified,
+			&i.Deleted,
 		); err != nil {
 			return nil, err
 		}
@@ -191,7 +198,7 @@ UPDATE users SET
     status = COALESCE($5, status),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified
+RETURNING id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted
 `
 
 type UpdateUserParams struct {
@@ -222,6 +229,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Verified,
+		&i.Deleted,
 	)
 	return i, err
 }
@@ -229,7 +237,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 const verifyUser = `-- name: VerifyUser :one
 UPDATE users SET verified = TRUE, updated_at = NOW()
 WHERE id = $1
-RETURNING id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified
+RETURNING id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted
 `
 
 func (q *Queries) VerifyUser(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -246,6 +254,7 @@ func (q *Queries) VerifyUser(ctx context.Context, id pgtype.UUID) (User, error) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Verified,
+		&i.Deleted,
 	)
 	return i, err
 }

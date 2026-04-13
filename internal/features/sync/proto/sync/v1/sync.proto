@@ -1,0 +1,126 @@
+syntax = "proto3";
+
+package sync.v1;
+
+option go_package = "github.com/ananddub/ndiscord_backend/gen/sync/v1;syncv1";
+
+import "google/protobuf/timestamp.proto";
+
+// SyncService - client sends last sync time, gets all changes since then.
+service SyncService {
+  // Get all changes across all tables since last_sync_time for this user
+  rpc Sync(SyncRequest) returns (SyncResponse);
+}
+
+message SyncRequest {
+  google.protobuf.Timestamp last_sync_time = 1;
+}
+
+message SyncResponse {
+  google.protobuf.Timestamp server_time = 1;
+
+  // Changed/deleted users (friends, guild members, etc)
+  repeated SyncUser users = 2;
+
+  // Changed/deleted guilds user is in
+  repeated SyncGuild guilds = 3;
+
+  // Changed/deleted channels
+  repeated SyncChannel channels = 4;
+
+  // Changed/deleted roles
+  repeated SyncRole roles = 5;
+
+  // Changed/deleted guild memberships
+  repeated SyncGuildMember guild_members = 6;
+
+  // Changed/deleted friendships
+  repeated SyncFriendship friendships = 7;
+
+  // Changed/deleted messages (ScyllaDB)
+  repeated SyncMessage messages = 8;
+
+  // Changed DM channel memberships
+  repeated SyncDmMember dm_members = 9;
+}
+
+// Each sync entity has: id, deleted flag, updated_at, and the data
+
+message SyncUser {
+  string id = 1;
+  bool is_deleted = 2;
+  google.protobuf.Timestamp updated_at = 3;
+  string username = 4;
+  string email = 5;
+  string avatar_url = 6;
+  string bio = 7;
+  string status = 8;
+  bool verified = 9;
+}
+
+message SyncGuild {
+  string id = 1;
+  bool is_deleted = 2;
+  google.protobuf.Timestamp updated_at = 3;
+  string name = 4;
+  string description = 5;
+  string icon_url = 6;
+  string owner_id = 7;
+}
+
+message SyncChannel {
+  string id = 1;
+  bool is_deleted = 2;
+  google.protobuf.Timestamp updated_at = 3;
+  string guild_id = 4;
+  string name = 5;
+  int32 type = 6;
+  string topic = 7;
+  int32 position = 8;
+  string parent_id = 9;
+}
+
+message SyncRole {
+  string id = 1;
+  bool is_deleted = 2;
+  google.protobuf.Timestamp updated_at = 3;
+  string guild_id = 4;
+  string name = 5;
+  string color = 6;
+  int32 position = 7;
+}
+
+message SyncGuildMember {
+  string guild_id = 1;
+  string user_id = 2;
+  bool is_deleted = 3;
+  google.protobuf.Timestamp updated_at = 4;
+  string nickname = 5;
+}
+
+message SyncFriendship {
+  string user_id = 1;
+  string friend_id = 2;
+  bool is_deleted = 3;
+  google.protobuf.Timestamp updated_at = 4;
+  string status = 5;  // pending, accepted, blocked
+}
+
+message SyncMessage {
+  string channel_id = 1;
+  string id = 2;
+  bool is_deleted = 3;
+  google.protobuf.Timestamp updated_at = 4;
+  string author_id = 5;
+  string content = 6;
+  int32 type = 7;
+  string reply_to_id = 8;
+  bool pinned = 9;
+}
+
+message SyncDmMember {
+  string channel_id = 1;
+  string user_id = 2;
+  bool is_deleted = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}

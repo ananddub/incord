@@ -33,7 +33,6 @@ const (
 	UserService_ListFriends_FullMethodName          = "/user.v1.UserService/ListFriends"
 	UserService_ListPendingRequests_FullMethodName  = "/user.v1.UserService/ListPendingRequests"
 	UserService_ListBlocked_FullMethodName          = "/user.v1.UserService/ListBlocked"
-	UserService_StreamFriendActivity_FullMethodName = "/user.v1.UserService/StreamFriendActivity"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -55,8 +54,6 @@ type UserServiceClient interface {
 	ListFriends(ctx context.Context, in *ListFriendsRequest, opts ...grpc.CallOption) (*ListFriendsResponse, error)
 	ListPendingRequests(ctx context.Context, in *ListPendingRequestsRequest, opts ...grpc.CallOption) (*ListPendingRequestsResponse, error)
 	ListBlocked(ctx context.Context, in *ListBlockedRequest, opts ...grpc.CallOption) (*ListBlockedResponse, error)
-	// Stream: friend activity (presence, friend request events)
-	StreamFriendActivity(ctx context.Context, in *StreamFriendActivityRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[FriendActivityEvent], error)
 }
 
 type userServiceClient struct {
@@ -207,25 +204,6 @@ func (c *userServiceClient) ListBlocked(ctx context.Context, in *ListBlockedRequ
 	return out, nil
 }
 
-func (c *userServiceClient) StreamFriendActivity(ctx context.Context, in *StreamFriendActivityRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[FriendActivityEvent], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &UserService_ServiceDesc.Streams[0], UserService_StreamFriendActivity_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[StreamFriendActivityRequest, FriendActivityEvent]{ClientStream: stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type UserService_StreamFriendActivityClient = grpc.ServerStreamingClient[FriendActivityEvent]
-
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -245,8 +223,6 @@ type UserServiceServer interface {
 	ListFriends(context.Context, *ListFriendsRequest) (*ListFriendsResponse, error)
 	ListPendingRequests(context.Context, *ListPendingRequestsRequest) (*ListPendingRequestsResponse, error)
 	ListBlocked(context.Context, *ListBlockedRequest) (*ListBlockedResponse, error)
-	// Stream: friend activity (presence, friend request events)
-	StreamFriendActivity(*StreamFriendActivityRequest, grpc.ServerStreamingServer[FriendActivityEvent]) error
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -298,9 +274,6 @@ func (UnimplementedUserServiceServer) ListPendingRequests(context.Context, *List
 }
 func (UnimplementedUserServiceServer) ListBlocked(context.Context, *ListBlockedRequest) (*ListBlockedResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListBlocked not implemented")
-}
-func (UnimplementedUserServiceServer) StreamFriendActivity(*StreamFriendActivityRequest, grpc.ServerStreamingServer[FriendActivityEvent]) error {
-	return status.Error(codes.Unimplemented, "method StreamFriendActivity not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -575,17 +548,6 @@ func _UserService_ListBlocked_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _UserService_StreamFriendActivity_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(StreamFriendActivityRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(UserServiceServer).StreamFriendActivity(m, &grpc.GenericServerStream[StreamFriendActivityRequest, FriendActivityEvent]{ServerStream: stream})
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type UserService_StreamFriendActivityServer = grpc.ServerStreamingServer[FriendActivityEvent]
-
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -650,12 +612,6 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _UserService_ListBlocked_Handler,
 		},
 	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "StreamFriendActivity",
-			Handler:       _UserService_StreamFriendActivity_Handler,
-			ServerStreams: true,
-		},
-	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "user/v1/user.proto",
 }

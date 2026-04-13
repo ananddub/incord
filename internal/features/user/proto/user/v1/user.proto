@@ -5,6 +5,7 @@ package user.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/user/v1;userv1";
 
 import "google/protobuf/timestamp.proto";
+import "buf/validate/validate.proto";
 
 service UserService {
   rpc GetUser(GetUserRequest) returns (GetUserResponse);
@@ -24,8 +25,6 @@ service UserService {
   rpc ListPendingRequests(ListPendingRequestsRequest) returns (ListPendingRequestsResponse);
   rpc ListBlocked(ListBlockedRequest) returns (ListBlockedResponse);
 
-  // Stream: friend activity (presence, friend request events)
-  rpc StreamFriendActivity(StreamFriendActivityRequest) returns (stream FriendActivityEvent);
 }
 
 message User {
@@ -40,7 +39,7 @@ message User {
 }
 
 message GetUserRequest {
-  string user_id = 1;
+  string user_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message GetUserResponse {
@@ -48,11 +47,10 @@ message GetUserResponse {
 }
 
 message UpdateUserRequest {
-  string user_id = 1;
-  optional string username = 2;
-  optional string avatar_url = 3;
-  optional string bio = 4;
-  optional string status = 5;
+  optional string username = 1 [(buf.validate.field).string = {min_len: 2, max_len: 32}];
+  optional string avatar_url = 2 [(buf.validate.field).string = {max_len: 2048}];
+  optional string bio = 3 [(buf.validate.field).string = {max_len: 500}];
+  optional string status = 4 [(buf.validate.field).string = {max_len: 128}];
 }
 
 message UpdateUserResponse {
@@ -60,13 +58,13 @@ message UpdateUserResponse {
 }
 
 message DeleteUserRequest {
-  string user_id = 1;
+  string user_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message DeleteUserResponse {}
 
 message GetUserByUsernameRequest {
-  string username = 1;
+  string username = 1 [(buf.validate.field).string = {min_len: 2, max_len: 32}];
 }
 
 message GetUserByUsernameResponse {
@@ -74,9 +72,9 @@ message GetUserByUsernameResponse {
 }
 
 message SearchUsersRequest {
-  string query = 1;
-  int32 limit = 2;
-  int32 offset = 3;
+  string query = 1 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
+  int32 limit = 2 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
+  int32 offset = 3 [(buf.validate.field).int32.gte = 0];
 }
 
 message SearchUsersResponse {
@@ -101,7 +99,7 @@ message Friendship {
 }
 
 message SendFriendRequestRequest {
-  string target_user_id = 1;
+  string target_user_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message SendFriendRequestResponse {
@@ -109,7 +107,7 @@ message SendFriendRequestResponse {
 }
 
 message AcceptFriendRequestRequest {
-  string requester_user_id = 1;
+  string requester_user_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message AcceptFriendRequestResponse {
@@ -117,25 +115,25 @@ message AcceptFriendRequestResponse {
 }
 
 message DeclineFriendRequestRequest {
-  string requester_user_id = 1;
+  string requester_user_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message DeclineFriendRequestResponse {}
 
 message RemoveFriendRequest {
-  string friend_id = 1;
+  string friend_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message RemoveFriendResponse {}
 
 message BlockUserRequest {
-  string target_user_id = 1;
+  string target_user_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message BlockUserResponse {}
 
 message UnblockUserRequest {
-  string target_user_id = 1;
+  string target_user_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message UnblockUserResponse {}
@@ -159,24 +157,3 @@ message ListBlockedResponse {
   repeated User blocked = 1;
 }
 
-// Stream: friend activity
-message StreamFriendActivityRequest {}
-
-enum FriendActivityType {
-  FRIEND_ACTIVITY_TYPE_UNSPECIFIED = 0;
-  FRIEND_ACTIVITY_TYPE_PRESENCE_UPDATE = 1;
-  FRIEND_ACTIVITY_TYPE_FRIEND_REQUEST = 2;
-  FRIEND_ACTIVITY_TYPE_FRIEND_ACCEPTED = 3;
-  FRIEND_ACTIVITY_TYPE_FRIEND_REMOVED = 4;
-  FRIEND_ACTIVITY_TYPE_BLOCKED = 5;
-  FRIEND_ACTIVITY_TYPE_PROFILE_UPDATE = 6;
-}
-
-message FriendActivityEvent {
-  FriendActivityType type = 1;
-  string user_id = 2;
-  string status = 3;
-  string custom_status = 4;
-  User user = 5;
-  google.protobuf.Timestamp timestamp = 6;
-}

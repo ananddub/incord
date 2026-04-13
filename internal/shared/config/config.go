@@ -11,12 +11,12 @@ type Config struct {
 	Database   DatabaseConfig
 	Redis      RedisConfig
 	ScyllaDB   ScyllaDBConfig
-	Redpanda   RedpandaConfig
 	MinIO      MinIOConfig
 	OpenFGA    OpenFGAConfig
 	JWT        JWTConfig
 	Voice      VoiceConfig
 	SMTP       SMTPConfig
+	NATS       NATSConfig
 }
 
 type ServerConfig struct {
@@ -44,16 +44,13 @@ type ScyllaDBConfig struct {
 	Keyspace string
 }
 
-type RedpandaConfig struct {
-	Brokers []string
-}
-
 type MinIOConfig struct {
-	Endpoint  string
-	AccessKey string
-	SecretKey string
-	Bucket    string
-	UseSSL    bool
+	Endpoint       string
+	PublicEndpoint string
+	AccessKey      string
+	SecretKey      string
+	Bucket         string
+	UseSSL         bool
 }
 
 type OpenFGAConfig struct {
@@ -76,6 +73,10 @@ type SMTPConfig struct {
 	Host string
 	Port int
 	From string
+}
+
+type NATSConfig struct {
+	URL string
 }
 
 func Load() *Config {
@@ -101,15 +102,13 @@ func Load() *Config {
 			Hosts:    []string{env("SCYLLA_HOST", "localhost:9042")},
 			Keyspace: env("SCYLLA_KEYSPACE", "ndiscord"),
 		},
-		Redpanda: RedpandaConfig{
-			Brokers: []string{env("REDPANDA_BROKER", "localhost:9092")},
-		},
 		MinIO: MinIOConfig{
-			Endpoint:  env("MINIO_ENDPOINT", "localhost:9000"),
-			AccessKey: env("MINIO_ACCESS_KEY", "ndiscord"),
-			SecretKey: env("MINIO_SECRET_KEY", "ndiscord123"),
-			Bucket:    env("MINIO_BUCKET", "ndiscord"),
-			UseSSL:    envBool("MINIO_USE_SSL", false),
+			Endpoint:       env("MINIO_ENDPOINT", "localhost:9000"),
+			PublicEndpoint: env("MINIO_PUBLIC_ENDPOINT", env("MINIO_ENDPOINT", "localhost:9000")),
+			AccessKey:      env("MINIO_ACCESS_KEY", "ndiscord"),
+			SecretKey:      env("MINIO_SECRET_KEY", "ndiscord123"),
+			Bucket:         env("MINIO_BUCKET", "ndiscord"),
+			UseSSL:         envBool("MINIO_USE_SSL", false),
 		},
 		OpenFGA: OpenFGAConfig{
 			APIUrl:  env("OPENFGA_API_URL", "http://localhost:8090"),
@@ -117,7 +116,7 @@ func Load() *Config {
 		},
 		JWT: JWTConfig{
 			Secret:          env("JWT_SECRET", "change-me-in-production"),
-			AccessTokenTTL:  envDuration("JWT_ACCESS_TTL", 15*time.Minute),
+			AccessTokenTTL:  envDuration("JWT_ACCESS_TTL", 7*24*time.Hour),
 			RefreshTokenTTL: envDuration("JWT_REFRESH_TTL", 7*24*time.Hour),
 		},
 		Voice: VoiceConfig{
@@ -128,6 +127,9 @@ func Load() *Config {
 			Host: env("SMTP_HOST", "localhost"),
 			Port: envInt("SMTP_PORT", 1025),
 			From: env("SMTP_FROM", "noreply@ndiscord.local"),
+		},
+		NATS: NATSConfig{
+			URL: env("NATS_URL", "nats://localhost:4222"),
 		},
 	}
 }

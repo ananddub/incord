@@ -1,5 +1,5 @@
 services:
-  # Auto-init: PG migrations + ScyllaDB tables + Redpanda topics (Go binary)
+  # Auto-init: PG migrations + ScyllaDB tables + OpenFGA setup (Go binary)
   init:
     build:
       context: .
@@ -14,15 +14,12 @@ services:
       DB_SSLMODE: disable
       SCYLLA_HOST: scylladb:9042
       SCYLLA_KEYSPACE: ndiscord
-      REDPANDA_BROKER: redpanda:9092
       OPENFGA_API_URL: http://openfga:8080
     depends_on:
       timescaledb:
         condition: service_healthy
       scylladb:
         condition: service_healthy
-      redpanda:
-        condition: service_started
       openfga:
         condition: service_started
     restart: "no"
@@ -52,8 +49,8 @@ services:
       REDIS_ADDR: redis:6379
       SCYLLA_HOST: scylladb:9042
       SCYLLA_KEYSPACE: ndiscord
-      REDPANDA_BROKER: redpanda:9092
-      MINIO_ENDPOINT: minio:9000
+      MINIO_ENDPOINT: rustfs:9000
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-192.168.1.2:9000}
       MINIO_ACCESS_KEY: ndiscord
       MINIO_SECRET_KEY: ndiscord123
       MINIO_BUCKET: ndiscord
@@ -63,6 +60,7 @@ services:
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       SMTP_FROM: noreply@ndiscord.local
+      NATS_URL: nats://nats:4222
     depends_on:
       timescaledb:
         condition: service_healthy
@@ -159,56 +157,21 @@ services:
       timeout: 10s
       retries: 10
 
-  redpanda:
-    image: redpandadata/redpanda:latest
-    container_name: ndiscord-redpanda
-    ports:
-      - "9092:9092"
-      - "8081:8081"
-      - "8082:8082"
-      - "9644:9644"
-    command:
-      - redpanda
-      - start
-      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
-      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
-      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
-      - --advertise-pandaproxy-addr internal://redpanda:8082,external://localhost:18082
-      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
-      - --rpc-addr redpanda:33145
-      - --advertise-rpc-addr redpanda:33145
-      - --smp 1
-      - --memory 512M
-      - --mode dev-container
-      - --set redpanda.auto_create_topics_enabled=true
-    volumes:
-      - redpanda_data:/var/lib/redpanda/data
-
-  redpanda-console:
-    image: redpandadata/console:latest
-    container_name: ndiscord-redpanda-console
-    ports:
-      - "8080:8080"
-    environment:
-      KAFKA_BROKERS: redpanda:9092
-      REDPANDA_ADMINAPI_URLS: http://redpanda:9644
-    depends_on:
-      - redpanda
-
-  minio:
-    image: minio/minio:latest
-    container_name: ndiscord-minio
+  rustfs:
+    image: rustfs/rustfs:latest
+    container_name: ndiscord-rustfs
     ports:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: ndiscord
-      MINIO_ROOT_PASSWORD: ndiscord123
+      RUSTFS_ACCESS_KEY: ndiscord
+      RUSTFS_SECRET_KEY: ndiscord123
+      RUSTFS_CONSOLE_ENABLE: "true"
     volumes:
-      - minio_data:/data
-    command: server /data --console-address ":9001"
+      - rustfs_data:/data
+    command: server --console-enable --address :9000 --console-address :9001 /data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -243,6 +206,28 @@ services:
       - ./grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
       - prometheus
+      - loki
+
+  loki:
+    image: grafana/loki:latest
+    container_name: ndiscord-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: ndiscord-promtail
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - promtail_data:/tmp
+    depends_on:
+      - loki
 
   prometheus:
     image: prom/prometheus:latest
@@ -255,6 +240,19 @@ services:
     volumes:
       - prometheus_data:/prometheus
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  nats:
+    image: nats:latest
+    container_name: ndiscord-nats
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: ["-js", "-m", "8222"]
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   mailpit:
     image: axllent/mailpit:latest
@@ -270,9 +268,10 @@ volumes:
   timescaledb_data:
   redis_data:
   scylla_data:
-  redpanda_data:
-  minio_data:
+  rustfs_data:
   grafana_data:
   prometheus_data:
+  loki_data:
+  promtail_data:
   go_mod_cache:
   go_build_cache:

@@ -55,7 +55,6 @@ CREATE TABLE roles (
     name        VARCHAR(100) NOT NULL,
     color       VARCHAR(7) NOT NULL DEFAULT '#99AAB5',
     position    INT NOT NULL DEFAULT 0,
-    permissions BIGINT NOT NULL DEFAULT 0,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -73,7 +72,7 @@ CREATE TABLE channels (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     guild_id   UUID REFERENCES guilds(id) ON DELETE CASCADE,
     name       VARCHAR(100) NOT NULL,
-    type       INT NOT NULL DEFAULT 1, -- 1=text, 2=voice, 3=video, 4=category, 5=dm, 6=group_dm
+    type       INT NOT NULL DEFAULT 1, -- 1=text, 2=voice, 3=video, 4=category, 5=dm, 6=group_dm, 7=announcement, 8=forum, 9=stage
     topic      TEXT NOT NULL DEFAULT '',
     position   INT NOT NULL DEFAULT 0,
     parent_id  UUID REFERENCES channels(id) ON DELETE SET NULL,

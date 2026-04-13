@@ -5,12 +5,9 @@ import (
 	"errors"
 
 	"github.com/gocql/gocql"
-	"github.com/google/uuid"
 
 	messagev1 "github.com/ananddub/ndiscord_backend/gen/message/v1"
-	event "github.com/ananddub/ndiscord_backend/internal/shared/event"
 	"github.com/ananddub/ndiscord_backend/internal/shared/middleware"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -24,21 +21,11 @@ type ChannelGuildResolver interface {
 type Handler struct {
 	messagev1.UnimplementedMessageServiceServer
 	svc           *Service
-	msgSubs       *event.SubscriptionManager[*messagev1.MessageEvent]
-	typingSubs    *event.SubscriptionManager[*messagev1.TypingEvent]
 	guildResolver ChannelGuildResolver
 }
 
-func NewHandler(
-	svc *Service,
-	msgSubs *event.SubscriptionManager[*messagev1.MessageEvent],
-	typingSubs *event.SubscriptionManager[*messagev1.TypingEvent],
-) *Handler {
-	return &Handler{
-		svc:        svc,
-		msgSubs:    msgSubs,
-		typingSubs: typingSubs,
-	}
+func NewHandler(svc *Service) *Handler {
+	return &Handler{svc: svc}
 }
 
 // SetGuildResolver sets the channel-to-guild resolver.
@@ -268,69 +255,11 @@ func (h *Handler) StartTyping(ctx context.Context, req *messagev1.StartTypingReq
 		return nil, status.Error(codes.InvalidArgument, "channel_id is required")
 	}
 
-	if err := h.svc.StartTyping(ctx, userID, req.ChannelId); err != nil {
+	if err := h.svc.StartTyping(ctx, userID, req.ChannelId, h.resolveGuildID(ctx, req.ChannelId)); err != nil {
 		return nil, mapError(err)
 	}
 
 	return &messagev1.StartTypingResponse{}, nil
-}
-
-// StreamMessages opens a server-streaming RPC that pushes message events for a channel.
-func (h *Handler) StreamMessages(req *messagev1.StreamMessagesRequest, stream grpc.ServerStreamingServer[messagev1.MessageEvent]) error {
-	userID := middleware.UserIDFromContext(stream.Context())
-	if userID == "" {
-		return status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if req.GetChannelId() == "" {
-		return status.Error(codes.InvalidArgument, "channel_id is required")
-	}
-
-	subID := userID + ":" + uuid.New().String()
-	ch := h.msgSubs.Subscribe(req.GetChannelId(), subID, 64)
-	defer h.msgSubs.Unsubscribe(req.GetChannelId(), subID)
-
-	for {
-		select {
-		case <-stream.Context().Done():
-			return nil
-		case evt, ok := <-ch:
-			if !ok {
-				return nil
-			}
-			if err := stream.Send(evt); err != nil {
-				return err
-			}
-		}
-	}
-}
-
-// StreamTyping opens a server-streaming RPC that pushes typing events for a channel.
-func (h *Handler) StreamTyping(req *messagev1.StreamTypingRequest, stream grpc.ServerStreamingServer[messagev1.TypingEvent]) error {
-	userID := middleware.UserIDFromContext(stream.Context())
-	if userID == "" {
-		return status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if req.GetChannelId() == "" {
-		return status.Error(codes.InvalidArgument, "channel_id is required")
-	}
-
-	subID := userID + ":" + uuid.New().String()
-	ch := h.typingSubs.Subscribe(req.GetChannelId(), subID, 64)
-	defer h.typingSubs.Unsubscribe(req.GetChannelId(), subID)
-
-	for {
-		select {
-		case <-stream.Context().Done():
-			return nil
-		case evt, ok := <-ch:
-			if !ok {
-				return nil
-			}
-			if err := stream.Send(evt); err != nil {
-				return err
-			}
-		}
-	}
 }
 
 // messageToProto converts an internal Message to the proto Message, including reactions.
@@ -408,20 +337,46 @@ func (h *Handler) GetUnreadCounts(ctx context.Context, req *messagev1.GetUnreadC
 		return nil, mapError(err)
 	}
 
-	channels := make([]*messagev1.UnreadChannel, len(unreads))
-	for i, u := range unreads {
-		channels[i] = &messagev1.UnreadChannel{
-			ChannelId:         u.ChannelID,
-			LastReadMessageId: u.LastReadMsgID,
-			UnreadCount:       u.UnreadCount,
-			LastMessageId:     u.LastMessageID,
-			LastMessageAt:     timestamppb.New(u.LastMessageTime),
+	var dms []*messagev1.UnreadDM
+	var chMsgs []*messagev1.UnreadChannelMessage
+
+	for _, u := range unreads {
+		// Build recent messages list
+		var pbMsgs []*messagev1.Message
+		for _, m := range u.RecentMessages {
+			pb, _ := h.messageToProto(ctx, m, userID)
+			if pb != nil {
+				pbMsgs = append(pbMsgs, pb)
+			}
+		}
+
+		if u.IsDM {
+			dms = append(dms, &messagev1.UnreadDM{
+				ChannelId:         u.ChannelID,
+				SenderId:          u.SenderID,
+				SenderName:        u.SenderName,
+				UnreadCount:       u.UnreadCount,
+				LastReadMessageId: u.LastReadMsgID,
+				Messages:          pbMsgs,
+				LastMessageAt:     timestamppb.New(u.LastMessageTime),
+			})
+		} else {
+			chMsgs = append(chMsgs, &messagev1.UnreadChannelMessage{
+				ChannelId:         u.ChannelID,
+				GuildId:           u.GuildID,
+				ChannelName:       u.ChannelName,
+				UnreadCount:       u.UnreadCount,
+				LastReadMessageId: u.LastReadMsgID,
+				Messages:          pbMsgs,
+				LastMessageAt:     timestamppb.New(u.LastMessageTime),
+			})
 		}
 	}
 
 	return &messagev1.GetUnreadCountsResponse{
-		Channels:     channels,
-		TotalUnread:  total,
+		DmMessages:      dms,
+		ChannelMessages: chMsgs,
+		TotalUnread:     total,
 	}, nil
 }
 

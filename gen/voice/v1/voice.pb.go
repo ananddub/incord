@@ -7,9 +7,10 @@
 package voicev1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	_ "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -21,58 +22,6 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
-
-type VoiceStateEventType int32
-
-const (
-	VoiceStateEventType_VOICE_STATE_EVENT_TYPE_UNSPECIFIED VoiceStateEventType = 0
-	VoiceStateEventType_VOICE_STATE_EVENT_TYPE_JOIN        VoiceStateEventType = 1
-	VoiceStateEventType_VOICE_STATE_EVENT_TYPE_LEAVE       VoiceStateEventType = 2
-	VoiceStateEventType_VOICE_STATE_EVENT_TYPE_UPDATE      VoiceStateEventType = 3
-)
-
-// Enum value maps for VoiceStateEventType.
-var (
-	VoiceStateEventType_name = map[int32]string{
-		0: "VOICE_STATE_EVENT_TYPE_UNSPECIFIED",
-		1: "VOICE_STATE_EVENT_TYPE_JOIN",
-		2: "VOICE_STATE_EVENT_TYPE_LEAVE",
-		3: "VOICE_STATE_EVENT_TYPE_UPDATE",
-	}
-	VoiceStateEventType_value = map[string]int32{
-		"VOICE_STATE_EVENT_TYPE_UNSPECIFIED": 0,
-		"VOICE_STATE_EVENT_TYPE_JOIN":        1,
-		"VOICE_STATE_EVENT_TYPE_LEAVE":       2,
-		"VOICE_STATE_EVENT_TYPE_UPDATE":      3,
-	}
-)
-
-func (x VoiceStateEventType) Enum() *VoiceStateEventType {
-	p := new(VoiceStateEventType)
-	*p = x
-	return p
-}
-
-func (x VoiceStateEventType) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (VoiceStateEventType) Descriptor() protoreflect.EnumDescriptor {
-	return file_voice_v1_voice_proto_enumTypes[0].Descriptor()
-}
-
-func (VoiceStateEventType) Type() protoreflect.EnumType {
-	return &file_voice_v1_voice_proto_enumTypes[0]
-}
-
-func (x VoiceStateEventType) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use VoiceStateEventType.Descriptor instead.
-func (VoiceStateEventType) EnumDescriptor() ([]byte, []int) {
-	return file_voice_v1_voice_proto_rawDescGZIP(), []int{0}
-}
 
 type JoinChannelRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -598,139 +547,26 @@ func (*UpdateVoiceStateResponse) Descriptor() ([]byte, []int) {
 	return file_voice_v1_voice_proto_rawDescGZIP(), []int{8}
 }
 
-// Stream: voice state changes
-type StreamVoiceStateRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *StreamVoiceStateRequest) Reset() {
-	*x = StreamVoiceStateRequest{}
-	mi := &file_voice_v1_voice_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *StreamVoiceStateRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*StreamVoiceStateRequest) ProtoMessage() {}
-
-func (x *StreamVoiceStateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_voice_v1_voice_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use StreamVoiceStateRequest.ProtoReflect.Descriptor instead.
-func (*StreamVoiceStateRequest) Descriptor() ([]byte, []int) {
-	return file_voice_v1_voice_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *StreamVoiceStateRequest) GetChannelId() string {
-	if x != nil {
-		return x.ChannelId
-	}
-	return ""
-}
-
-type VoiceStateEvent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          VoiceStateEventType    `protobuf:"varint,1,opt,name=type,proto3,enum=voice.v1.VoiceStateEventType" json:"type,omitempty"`
-	ChannelId     string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	Participant   *VoiceParticipant      `protobuf:"bytes,3,opt,name=participant,proto3" json:"participant,omitempty"`
-	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *VoiceStateEvent) Reset() {
-	*x = VoiceStateEvent{}
-	mi := &file_voice_v1_voice_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *VoiceStateEvent) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*VoiceStateEvent) ProtoMessage() {}
-
-func (x *VoiceStateEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_voice_v1_voice_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use VoiceStateEvent.ProtoReflect.Descriptor instead.
-func (*VoiceStateEvent) Descriptor() ([]byte, []int) {
-	return file_voice_v1_voice_proto_rawDescGZIP(), []int{10}
-}
-
-func (x *VoiceStateEvent) GetType() VoiceStateEventType {
-	if x != nil {
-		return x.Type
-	}
-	return VoiceStateEventType_VOICE_STATE_EVENT_TYPE_UNSPECIFIED
-}
-
-func (x *VoiceStateEvent) GetChannelId() string {
-	if x != nil {
-		return x.ChannelId
-	}
-	return ""
-}
-
-func (x *VoiceStateEvent) GetParticipant() *VoiceParticipant {
-	if x != nil {
-		return x.Participant
-	}
-	return nil
-}
-
-func (x *VoiceStateEvent) GetTimestamp() *timestamppb.Timestamp {
-	if x != nil {
-		return x.Timestamp
-	}
-	return nil
-}
-
 var File_voice_v1_voice_proto protoreflect.FileDescriptor
 
 const file_voice_v1_voice_proto_rawDesc = "" +
 	"\n" +
-	"\x14voice/v1/voice.proto\x12\bvoice.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"N\n" +
-	"\x12JoinChannelRequest\x12\x19\n" +
-	"\bguild_id\x18\x01 \x01(\tR\aguildId\x12\x1d\n" +
+	"\x14voice/v1/voice.proto\x12\bvoice.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bbuf/validate/validate.proto\"b\n" +
+	"\x12JoinChannelRequest\x12#\n" +
+	"\bguild_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\aguildId\x12'\n" +
 	"\n" +
-	"channel_id\x18\x02 \x01(\tR\tchannelId\"\xad\x01\n" +
+	"channel_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\"\xad\x01\n" +
 	"\x13JoinChannelResponse\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12!\n" +
 	"\fudp_endpoint\x18\x02 \x01(\tR\vudpEndpoint\x12\x19\n" +
 	"\budp_port\x18\x03 \x01(\x05R\audpPort\x12%\n" +
 	"\x0eencryption_key\x18\x04 \x01(\fR\rencryptionKey\x12\x12\n" +
-	"\x04ssrc\x18\x05 \x01(\rR\x04ssrc\"O\n" +
-	"\x13LeaveChannelRequest\x12\x19\n" +
-	"\bguild_id\x18\x01 \x01(\tR\aguildId\x12\x1d\n" +
+	"\x04ssrc\x18\x05 \x01(\rR\x04ssrc\"c\n" +
+	"\x13LeaveChannelRequest\x12#\n" +
+	"\bguild_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\aguildId\x12'\n" +
 	"\n" +
-	"channel_id\x18\x02 \x01(\tR\tchannelId\"\x16\n" +
+	"channel_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\"\x16\n" +
 	"\x14LeaveChannelResponse\"\x88\x02\n" +
 	"\x10VoiceParticipant\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
@@ -743,40 +579,25 @@ const file_voice_v1_voice_proto_rawDesc = "" +
 	"self_muted\x18\x06 \x01(\bR\tselfMuted\x12#\n" +
 	"\rself_deafened\x18\a \x01(\bR\fselfDeafened\x12\x1c\n" +
 	"\tstreaming\x18\b \x01(\bR\tstreaming\x12\x14\n" +
-	"\x05video\x18\t \x01(\bR\x05video\">\n" +
-	"\x1dGetChannelParticipantsRequest\x12\x1d\n" +
+	"\x05video\x18\t \x01(\bR\x05video\"H\n" +
+	"\x1dGetChannelParticipantsRequest\x12'\n" +
 	"\n" +
-	"channel_id\x18\x01 \x01(\tR\tchannelId\"`\n" +
+	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\"`\n" +
 	"\x1eGetChannelParticipantsResponse\x12>\n" +
-	"\fparticipants\x18\x01 \x03(\v2\x1a.voice.v1.VoiceParticipantR\fparticipants\"\xa0\x01\n" +
-	"\x17UpdateVoiceStateRequest\x12\x1d\n" +
+	"\fparticipants\x18\x01 \x03(\v2\x1a.voice.v1.VoiceParticipantR\fparticipants\"\xaa\x01\n" +
+	"\x17UpdateVoiceStateRequest\x12'\n" +
 	"\n" +
-	"channel_id\x18\x01 \x01(\tR\tchannelId\x12\x1b\n" +
+	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\x12\x1b\n" +
 	"\tself_mute\x18\x02 \x01(\bR\bselfMute\x12\x1b\n" +
 	"\tself_deaf\x18\x03 \x01(\bR\bselfDeaf\x12\x14\n" +
 	"\x05video\x18\x04 \x01(\bR\x05video\x12\x16\n" +
 	"\x06stream\x18\x05 \x01(\bR\x06stream\"\x1a\n" +
-	"\x18UpdateVoiceStateResponse\"8\n" +
-	"\x17StreamVoiceStateRequest\x12\x1d\n" +
-	"\n" +
-	"channel_id\x18\x01 \x01(\tR\tchannelId\"\xdb\x01\n" +
-	"\x0fVoiceStateEvent\x121\n" +
-	"\x04type\x18\x01 \x01(\x0e2\x1d.voice.v1.VoiceStateEventTypeR\x04type\x12\x1d\n" +
-	"\n" +
-	"channel_id\x18\x02 \x01(\tR\tchannelId\x12<\n" +
-	"\vparticipant\x18\x03 \x01(\v2\x1a.voice.v1.VoiceParticipantR\vparticipant\x128\n" +
-	"\ttimestamp\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp*\xa3\x01\n" +
-	"\x13VoiceStateEventType\x12&\n" +
-	"\"VOICE_STATE_EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x1f\n" +
-	"\x1bVOICE_STATE_EVENT_TYPE_JOIN\x10\x01\x12 \n" +
-	"\x1cVOICE_STATE_EVENT_TYPE_LEAVE\x10\x02\x12!\n" +
-	"\x1dVOICE_STATE_EVENT_TYPE_UPDATE\x10\x032\xc5\x03\n" +
+	"\x18UpdateVoiceStateResponse2\xf1\x02\n" +
 	"\fVoiceService\x12J\n" +
 	"\vJoinChannel\x12\x1c.voice.v1.JoinChannelRequest\x1a\x1d.voice.v1.JoinChannelResponse\x12M\n" +
 	"\fLeaveChannel\x12\x1d.voice.v1.LeaveChannelRequest\x1a\x1e.voice.v1.LeaveChannelResponse\x12k\n" +
 	"\x16GetChannelParticipants\x12'.voice.v1.GetChannelParticipantsRequest\x1a(.voice.v1.GetChannelParticipantsResponse\x12Y\n" +
-	"\x10UpdateVoiceState\x12!.voice.v1.UpdateVoiceStateRequest\x1a\".voice.v1.UpdateVoiceStateResponse\x12R\n" +
-	"\x10StreamVoiceState\x12!.voice.v1.StreamVoiceStateRequest\x1a\x19.voice.v1.VoiceStateEvent0\x01B;Z9github.com/ananddub/ndiscord_backend/gen/voice/v1;voicev1b\x06proto3"
+	"\x10UpdateVoiceState\x12!.voice.v1.UpdateVoiceStateRequest\x1a\".voice.v1.UpdateVoiceStateResponseB;Z9github.com/ananddub/ndiscord_backend/gen/voice/v1;voicev1b\x06proto3"
 
 var (
 	file_voice_v1_voice_proto_rawDescOnce sync.Once
@@ -790,43 +611,33 @@ func file_voice_v1_voice_proto_rawDescGZIP() []byte {
 	return file_voice_v1_voice_proto_rawDescData
 }
 
-var file_voice_v1_voice_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_voice_v1_voice_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_voice_v1_voice_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_voice_v1_voice_proto_goTypes = []any{
-	(VoiceStateEventType)(0),               // 0: voice.v1.VoiceStateEventType
-	(*JoinChannelRequest)(nil),             // 1: voice.v1.JoinChannelRequest
-	(*JoinChannelResponse)(nil),            // 2: voice.v1.JoinChannelResponse
-	(*LeaveChannelRequest)(nil),            // 3: voice.v1.LeaveChannelRequest
-	(*LeaveChannelResponse)(nil),           // 4: voice.v1.LeaveChannelResponse
-	(*VoiceParticipant)(nil),               // 5: voice.v1.VoiceParticipant
-	(*GetChannelParticipantsRequest)(nil),  // 6: voice.v1.GetChannelParticipantsRequest
-	(*GetChannelParticipantsResponse)(nil), // 7: voice.v1.GetChannelParticipantsResponse
-	(*UpdateVoiceStateRequest)(nil),        // 8: voice.v1.UpdateVoiceStateRequest
-	(*UpdateVoiceStateResponse)(nil),       // 9: voice.v1.UpdateVoiceStateResponse
-	(*StreamVoiceStateRequest)(nil),        // 10: voice.v1.StreamVoiceStateRequest
-	(*VoiceStateEvent)(nil),                // 11: voice.v1.VoiceStateEvent
-	(*timestamppb.Timestamp)(nil),          // 12: google.protobuf.Timestamp
+	(*JoinChannelRequest)(nil),             // 0: voice.v1.JoinChannelRequest
+	(*JoinChannelResponse)(nil),            // 1: voice.v1.JoinChannelResponse
+	(*LeaveChannelRequest)(nil),            // 2: voice.v1.LeaveChannelRequest
+	(*LeaveChannelResponse)(nil),           // 3: voice.v1.LeaveChannelResponse
+	(*VoiceParticipant)(nil),               // 4: voice.v1.VoiceParticipant
+	(*GetChannelParticipantsRequest)(nil),  // 5: voice.v1.GetChannelParticipantsRequest
+	(*GetChannelParticipantsResponse)(nil), // 6: voice.v1.GetChannelParticipantsResponse
+	(*UpdateVoiceStateRequest)(nil),        // 7: voice.v1.UpdateVoiceStateRequest
+	(*UpdateVoiceStateResponse)(nil),       // 8: voice.v1.UpdateVoiceStateResponse
 }
 var file_voice_v1_voice_proto_depIdxs = []int32{
-	5,  // 0: voice.v1.GetChannelParticipantsResponse.participants:type_name -> voice.v1.VoiceParticipant
-	0,  // 1: voice.v1.VoiceStateEvent.type:type_name -> voice.v1.VoiceStateEventType
-	5,  // 2: voice.v1.VoiceStateEvent.participant:type_name -> voice.v1.VoiceParticipant
-	12, // 3: voice.v1.VoiceStateEvent.timestamp:type_name -> google.protobuf.Timestamp
-	1,  // 4: voice.v1.VoiceService.JoinChannel:input_type -> voice.v1.JoinChannelRequest
-	3,  // 5: voice.v1.VoiceService.LeaveChannel:input_type -> voice.v1.LeaveChannelRequest
-	6,  // 6: voice.v1.VoiceService.GetChannelParticipants:input_type -> voice.v1.GetChannelParticipantsRequest
-	8,  // 7: voice.v1.VoiceService.UpdateVoiceState:input_type -> voice.v1.UpdateVoiceStateRequest
-	10, // 8: voice.v1.VoiceService.StreamVoiceState:input_type -> voice.v1.StreamVoiceStateRequest
-	2,  // 9: voice.v1.VoiceService.JoinChannel:output_type -> voice.v1.JoinChannelResponse
-	4,  // 10: voice.v1.VoiceService.LeaveChannel:output_type -> voice.v1.LeaveChannelResponse
-	7,  // 11: voice.v1.VoiceService.GetChannelParticipants:output_type -> voice.v1.GetChannelParticipantsResponse
-	9,  // 12: voice.v1.VoiceService.UpdateVoiceState:output_type -> voice.v1.UpdateVoiceStateResponse
-	11, // 13: voice.v1.VoiceService.StreamVoiceState:output_type -> voice.v1.VoiceStateEvent
-	9,  // [9:14] is the sub-list for method output_type
-	4,  // [4:9] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	4, // 0: voice.v1.GetChannelParticipantsResponse.participants:type_name -> voice.v1.VoiceParticipant
+	0, // 1: voice.v1.VoiceService.JoinChannel:input_type -> voice.v1.JoinChannelRequest
+	2, // 2: voice.v1.VoiceService.LeaveChannel:input_type -> voice.v1.LeaveChannelRequest
+	5, // 3: voice.v1.VoiceService.GetChannelParticipants:input_type -> voice.v1.GetChannelParticipantsRequest
+	7, // 4: voice.v1.VoiceService.UpdateVoiceState:input_type -> voice.v1.UpdateVoiceStateRequest
+	1, // 5: voice.v1.VoiceService.JoinChannel:output_type -> voice.v1.JoinChannelResponse
+	3, // 6: voice.v1.VoiceService.LeaveChannel:output_type -> voice.v1.LeaveChannelResponse
+	6, // 7: voice.v1.VoiceService.GetChannelParticipants:output_type -> voice.v1.GetChannelParticipantsResponse
+	8, // 8: voice.v1.VoiceService.UpdateVoiceState:output_type -> voice.v1.UpdateVoiceStateResponse
+	5, // [5:9] is the sub-list for method output_type
+	1, // [1:5] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_voice_v1_voice_proto_init() }
@@ -839,14 +650,13 @@ func file_voice_v1_voice_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_voice_v1_voice_proto_rawDesc), len(file_voice_v1_voice_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   11,
+			NumEnums:      0,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_voice_v1_voice_proto_goTypes,
 		DependencyIndexes: file_voice_v1_voice_proto_depIdxs,
-		EnumInfos:         file_voice_v1_voice_proto_enumTypes,
 		MessageInfos:      file_voice_v1_voice_proto_msgTypes,
 	}.Build()
 	File_voice_v1_voice_proto = out.File

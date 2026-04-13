@@ -13,6 +13,8 @@ type Ban struct {
 	UserID    pgtype.UUID        `json:"user_id"`
 	Reason    string             `json:"reason"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Deleted   bool               `json:"deleted"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Channel struct {
@@ -24,6 +26,8 @@ type Channel struct {
 	Position  int32              `json:"position"`
 	ParentID  pgtype.UUID        `json:"parent_id"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Deleted   bool               `json:"deleted"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type ChannelPermissionOverwrite struct {
@@ -35,8 +39,10 @@ type ChannelPermissionOverwrite struct {
 }
 
 type DmChannelMember struct {
-	ChannelID pgtype.UUID `json:"channel_id"`
-	UserID    pgtype.UUID `json:"user_id"`
+	ChannelID pgtype.UUID        `json:"channel_id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Deleted   bool               `json:"deleted"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Emoji struct {
@@ -53,6 +59,8 @@ type Friendship struct {
 	FriendID  pgtype.UUID        `json:"friend_id"`
 	Status    string             `json:"status"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Deleted   bool               `json:"deleted"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Guild struct {
@@ -62,13 +70,17 @@ type Guild struct {
 	IconUrl     string             `json:"icon_url"`
 	OwnerID     pgtype.UUID        `json:"owner_id"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	Deleted     bool               `json:"deleted"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type GuildMember struct {
-	GuildID  pgtype.UUID        `json:"guild_id"`
-	UserID   pgtype.UUID        `json:"user_id"`
-	Nickname string             `json:"nickname"`
-	JoinedAt pgtype.Timestamptz `json:"joined_at"`
+	GuildID   pgtype.UUID        `json:"guild_id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Nickname  string             `json:"nickname"`
+	JoinedAt  pgtype.Timestamptz `json:"joined_at"`
+	Deleted   bool               `json:"deleted"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Invite struct {
@@ -80,6 +92,8 @@ type Invite struct {
 	Uses      int32              `json:"uses"`
 	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Deleted   bool               `json:"deleted"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type MediaFile struct {
@@ -91,6 +105,8 @@ type MediaFile struct {
 	BucketKey   string             `json:"bucket_key"`
 	Confirmed   bool               `json:"confirmed"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	Deleted     bool               `json:"deleted"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Role struct {
@@ -100,11 +116,15 @@ type Role struct {
 	Color     string             `json:"color"`
 	Position  int32              `json:"position"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Deleted   bool               `json:"deleted"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type RoleMember struct {
-	RoleID pgtype.UUID `json:"role_id"`
-	UserID pgtype.UUID `json:"user_id"`
+	RoleID    pgtype.UUID        `json:"role_id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Deleted   bool               `json:"deleted"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type User struct {
@@ -118,6 +138,7 @@ type User struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	Verified     bool               `json:"verified"`
+	Deleted      bool               `json:"deleted"`
 }
 
 type Webhook struct {

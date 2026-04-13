@@ -21,8 +21,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	messagev1 "github.com/ananddub/ndiscord_backend/gen/message/v1"
-	"github.com/ananddub/ndiscord_backend/internal/shared/config"
-	"github.com/ananddub/ndiscord_backend/internal/shared/event"
 	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
 	"github.com/ananddub/ndiscord_backend/internal/shared/middleware"
 )
@@ -85,39 +83,7 @@ func setupRedis(t *testing.T) *redis.Client {
 	return rdb
 }
 
-func setupRedpanda(t *testing.T) *event.Producer {
-	t.Helper()
-	ctx := context.Background()
-
-	rpReq := testcontainers.ContainerRequest{
-		Image:        "redpandadata/redpanda:latest",
-		ExposedPorts: []string{"9092/tcp"},
-		Cmd:          []string{"redpanda", "start", "--mode", "dev-container", "--smp", "1", "--memory", "256M"},
-		WaitingFor:   wait.ForLog("Successfully started Redpanda").WithStartupTimeout(60 * time.Second),
-	}
-	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: rpReq,
-		Started:          true,
-	})
-	require.NoError(t, err, "failed to start redpanda")
-
-	host, err := container.Host(ctx)
-	require.NoError(t, err)
-	port, err := container.MappedPort(ctx, "9092")
-	require.NoError(t, err)
-
-	addr := fmt.Sprintf("%s:%s", host, port.Port())
-	producer, err := event.NewProducer(config.RedpandaConfig{Brokers: []string{addr}})
-	require.NoError(t, err, "failed to create redpanda producer")
-
-	t.Cleanup(func() {
-		producer.Close()
-		_ = container.Terminate(ctx)
-	})
-	return producer
-}
-
-// setupMessageServer spins up ScyllaDB, Redis, Redpanda, builds the full
+// setupMessageServer spins up ScyllaDB and Redis, builds the full
 // handler stack, starts a gRPC server with auth interceptor, and returns
 // a connected client.
 func setupMessageServer(t *testing.T) messagev1.MessageServiceClient {
@@ -126,12 +92,9 @@ func setupMessageServer(t *testing.T) messagev1.MessageServiceClient {
 	session := setupScylla(t)
 	rdb := setupRedis(t)
 
-	var producer *event.Producer
 	repo := NewRepository(session)
-	svc := NewService(repo, producer, rdb)
-	msgSubs := event.NewSubscriptionManager[*messagev1.MessageEvent]()
-	typingSubs := event.NewSubscriptionManager[*messagev1.TypingEvent]()
-	handler := NewHandler(svc, msgSubs, typingSubs)
+	svc := NewService(repo, rdb, nil)
+	handler := NewHandler(svc)
 
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)

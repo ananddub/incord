@@ -7,6 +7,7 @@
 package userv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -72,67 +73,6 @@ func (x FriendshipStatus) Number() protoreflect.EnumNumber {
 // Deprecated: Use FriendshipStatus.Descriptor instead.
 func (FriendshipStatus) EnumDescriptor() ([]byte, []int) {
 	return file_user_v1_user_proto_rawDescGZIP(), []int{0}
-}
-
-type FriendActivityType int32
-
-const (
-	FriendActivityType_FRIEND_ACTIVITY_TYPE_UNSPECIFIED     FriendActivityType = 0
-	FriendActivityType_FRIEND_ACTIVITY_TYPE_PRESENCE_UPDATE FriendActivityType = 1
-	FriendActivityType_FRIEND_ACTIVITY_TYPE_FRIEND_REQUEST  FriendActivityType = 2
-	FriendActivityType_FRIEND_ACTIVITY_TYPE_FRIEND_ACCEPTED FriendActivityType = 3
-	FriendActivityType_FRIEND_ACTIVITY_TYPE_FRIEND_REMOVED  FriendActivityType = 4
-	FriendActivityType_FRIEND_ACTIVITY_TYPE_BLOCKED         FriendActivityType = 5
-	FriendActivityType_FRIEND_ACTIVITY_TYPE_PROFILE_UPDATE  FriendActivityType = 6
-)
-
-// Enum value maps for FriendActivityType.
-var (
-	FriendActivityType_name = map[int32]string{
-		0: "FRIEND_ACTIVITY_TYPE_UNSPECIFIED",
-		1: "FRIEND_ACTIVITY_TYPE_PRESENCE_UPDATE",
-		2: "FRIEND_ACTIVITY_TYPE_FRIEND_REQUEST",
-		3: "FRIEND_ACTIVITY_TYPE_FRIEND_ACCEPTED",
-		4: "FRIEND_ACTIVITY_TYPE_FRIEND_REMOVED",
-		5: "FRIEND_ACTIVITY_TYPE_BLOCKED",
-		6: "FRIEND_ACTIVITY_TYPE_PROFILE_UPDATE",
-	}
-	FriendActivityType_value = map[string]int32{
-		"FRIEND_ACTIVITY_TYPE_UNSPECIFIED":     0,
-		"FRIEND_ACTIVITY_TYPE_PRESENCE_UPDATE": 1,
-		"FRIEND_ACTIVITY_TYPE_FRIEND_REQUEST":  2,
-		"FRIEND_ACTIVITY_TYPE_FRIEND_ACCEPTED": 3,
-		"FRIEND_ACTIVITY_TYPE_FRIEND_REMOVED":  4,
-		"FRIEND_ACTIVITY_TYPE_BLOCKED":         5,
-		"FRIEND_ACTIVITY_TYPE_PROFILE_UPDATE":  6,
-	}
-)
-
-func (x FriendActivityType) Enum() *FriendActivityType {
-	p := new(FriendActivityType)
-	*p = x
-	return p
-}
-
-func (x FriendActivityType) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (FriendActivityType) Descriptor() protoreflect.EnumDescriptor {
-	return file_user_v1_user_proto_enumTypes[1].Descriptor()
-}
-
-func (FriendActivityType) Type() protoreflect.EnumType {
-	return &file_user_v1_user_proto_enumTypes[1]
-}
-
-func (x FriendActivityType) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use FriendActivityType.Descriptor instead.
-func (FriendActivityType) EnumDescriptor() ([]byte, []int) {
-	return file_user_v1_user_proto_rawDescGZIP(), []int{1}
 }
 
 type User struct {
@@ -325,11 +265,10 @@ func (x *GetUserResponse) GetUser() *User {
 
 type UpdateUserRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Username      *string                `protobuf:"bytes,2,opt,name=username,proto3,oneof" json:"username,omitempty"`
-	AvatarUrl     *string                `protobuf:"bytes,3,opt,name=avatar_url,json=avatarUrl,proto3,oneof" json:"avatar_url,omitempty"`
-	Bio           *string                `protobuf:"bytes,4,opt,name=bio,proto3,oneof" json:"bio,omitempty"`
-	Status        *string                `protobuf:"bytes,5,opt,name=status,proto3,oneof" json:"status,omitempty"`
+	Username      *string                `protobuf:"bytes,1,opt,name=username,proto3,oneof" json:"username,omitempty"`
+	AvatarUrl     *string                `protobuf:"bytes,2,opt,name=avatar_url,json=avatarUrl,proto3,oneof" json:"avatar_url,omitempty"`
+	Bio           *string                `protobuf:"bytes,3,opt,name=bio,proto3,oneof" json:"bio,omitempty"`
+	Status        *string                `protobuf:"bytes,4,opt,name=status,proto3,oneof" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -362,13 +301,6 @@ func (x *UpdateUserRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use UpdateUserRequest.ProtoReflect.Descriptor instead.
 func (*UpdateUserRequest) Descriptor() ([]byte, []int) {
 	return file_user_v1_user_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *UpdateUserRequest) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
 }
 
 func (x *UpdateUserRequest) GetUsername() string {
@@ -1535,132 +1467,11 @@ func (x *ListBlockedResponse) GetBlocked() []*User {
 	return nil
 }
 
-// Stream: friend activity
-type StreamFriendActivityRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *StreamFriendActivityRequest) Reset() {
-	*x = StreamFriendActivityRequest{}
-	mi := &file_user_v1_user_proto_msgTypes[30]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *StreamFriendActivityRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*StreamFriendActivityRequest) ProtoMessage() {}
-
-func (x *StreamFriendActivityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_user_v1_user_proto_msgTypes[30]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use StreamFriendActivityRequest.ProtoReflect.Descriptor instead.
-func (*StreamFriendActivityRequest) Descriptor() ([]byte, []int) {
-	return file_user_v1_user_proto_rawDescGZIP(), []int{30}
-}
-
-type FriendActivityEvent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          FriendActivityType     `protobuf:"varint,1,opt,name=type,proto3,enum=user.v1.FriendActivityType" json:"type,omitempty"`
-	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
-	CustomStatus  string                 `protobuf:"bytes,4,opt,name=custom_status,json=customStatus,proto3" json:"custom_status,omitempty"`
-	User          *User                  `protobuf:"bytes,5,opt,name=user,proto3" json:"user,omitempty"`
-	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *FriendActivityEvent) Reset() {
-	*x = FriendActivityEvent{}
-	mi := &file_user_v1_user_proto_msgTypes[31]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *FriendActivityEvent) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*FriendActivityEvent) ProtoMessage() {}
-
-func (x *FriendActivityEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_user_v1_user_proto_msgTypes[31]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use FriendActivityEvent.ProtoReflect.Descriptor instead.
-func (*FriendActivityEvent) Descriptor() ([]byte, []int) {
-	return file_user_v1_user_proto_rawDescGZIP(), []int{31}
-}
-
-func (x *FriendActivityEvent) GetType() FriendActivityType {
-	if x != nil {
-		return x.Type
-	}
-	return FriendActivityType_FRIEND_ACTIVITY_TYPE_UNSPECIFIED
-}
-
-func (x *FriendActivityEvent) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
-}
-
-func (x *FriendActivityEvent) GetStatus() string {
-	if x != nil {
-		return x.Status
-	}
-	return ""
-}
-
-func (x *FriendActivityEvent) GetCustomStatus() string {
-	if x != nil {
-		return x.CustomStatus
-	}
-	return ""
-}
-
-func (x *FriendActivityEvent) GetUser() *User {
-	if x != nil {
-		return x.User
-	}
-	return nil
-}
-
-func (x *FriendActivityEvent) GetTimestamp() *timestamppb.Timestamp {
-	if x != nil {
-		return x.Timestamp
-	}
-	return nil
-}
-
 var File_user_v1_user_proto protoreflect.FileDescriptor
 
 const file_user_v1_user_proto_rawDesc = "" +
 	"\n" +
-	"\x12user/v1/user.proto\x12\auser.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x87\x02\n" +
+	"\x12user/v1/user.proto\x12\auser.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bbuf/validate/validate.proto\"\x87\x02\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x14\n" +
@@ -1672,35 +1483,34 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\")\n" +
-	"\x0eGetUserRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\"4\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"3\n" +
+	"\x0eGetUserRequest\x12!\n" +
+	"\auser_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\"4\n" +
 	"\x0fGetUserResponse\x12!\n" +
-	"\x04user\x18\x01 \x01(\v2\r.user.v1.UserR\x04user\"\xd4\x01\n" +
-	"\x11UpdateUserRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1f\n" +
-	"\busername\x18\x02 \x01(\tH\x00R\busername\x88\x01\x01\x12\"\n" +
+	"\x04user\x18\x01 \x01(\v2\r.user.v1.UserR\x04user\"\xe4\x01\n" +
+	"\x11UpdateUserRequest\x12*\n" +
+	"\busername\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x02\x18 H\x00R\busername\x88\x01\x01\x12,\n" +
 	"\n" +
-	"avatar_url\x18\x03 \x01(\tH\x01R\tavatarUrl\x88\x01\x01\x12\x15\n" +
-	"\x03bio\x18\x04 \x01(\tH\x02R\x03bio\x88\x01\x01\x12\x1b\n" +
-	"\x06status\x18\x05 \x01(\tH\x03R\x06status\x88\x01\x01B\v\n" +
+	"avatar_url\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10H\x01R\tavatarUrl\x88\x01\x01\x12\x1f\n" +
+	"\x03bio\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03H\x02R\x03bio\x88\x01\x01\x12%\n" +
+	"\x06status\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01H\x03R\x06status\x88\x01\x01B\v\n" +
 	"\t_usernameB\r\n" +
 	"\v_avatar_urlB\x06\n" +
 	"\x04_bioB\t\n" +
 	"\a_status\"7\n" +
 	"\x12UpdateUserResponse\x12!\n" +
-	"\x04user\x18\x01 \x01(\v2\r.user.v1.UserR\x04user\",\n" +
-	"\x11DeleteUserRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x14\n" +
-	"\x12DeleteUserResponse\"6\n" +
-	"\x18GetUserByUsernameRequest\x12\x1a\n" +
-	"\busername\x18\x01 \x01(\tR\busername\">\n" +
+	"\x04user\x18\x01 \x01(\v2\r.user.v1.UserR\x04user\"6\n" +
+	"\x11DeleteUserRequest\x12!\n" +
+	"\auser_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\"\x14\n" +
+	"\x12DeleteUserResponse\"A\n" +
+	"\x18GetUserByUsernameRequest\x12%\n" +
+	"\busername\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x02\x18 R\busername\">\n" +
 	"\x19GetUserByUsernameResponse\x12!\n" +
-	"\x04user\x18\x01 \x01(\v2\r.user.v1.UserR\x04user\"X\n" +
-	"\x12SearchUsersRequest\x12\x14\n" +
-	"\x05query\x18\x01 \x01(\tR\x05query\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06offset\x18\x03 \x01(\x05R\x06offset\"P\n" +
+	"\x04user\x18\x01 \x01(\v2\r.user.v1.UserR\x04user\"w\n" +
+	"\x12SearchUsersRequest\x12\x1f\n" +
+	"\x05query\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\x05query\x12\x1f\n" +
+	"\x05limit\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x00R\x05limit\x12\x1f\n" +
+	"\x06offset\x18\x03 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x06offset\"P\n" +
 	"\x13SearchUsersResponse\x12#\n" +
 	"\x05users\x18\x01 \x03(\v2\r.user.v1.UserR\x05users\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\"\xb0\x01\n" +
@@ -1710,30 +1520,30 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\tfriend_id\x18\x02 \x01(\tR\bfriendId\x121\n" +
 	"\x06status\x18\x03 \x01(\x0e2\x19.user.v1.FriendshipStatusR\x06status\x129\n" +
 	"\n" +
-	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"@\n" +
-	"\x18SendFriendRequestRequest\x12$\n" +
-	"\x0etarget_user_id\x18\x01 \x01(\tR\ftargetUserId\"P\n" +
+	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"J\n" +
+	"\x18SendFriendRequestRequest\x12.\n" +
+	"\x0etarget_user_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\ftargetUserId\"P\n" +
 	"\x19SendFriendRequestResponse\x123\n" +
 	"\n" +
 	"friendship\x18\x01 \x01(\v2\x13.user.v1.FriendshipR\n" +
-	"friendship\"H\n" +
-	"\x1aAcceptFriendRequestRequest\x12*\n" +
-	"\x11requester_user_id\x18\x01 \x01(\tR\x0frequesterUserId\"R\n" +
+	"friendship\"R\n" +
+	"\x1aAcceptFriendRequestRequest\x124\n" +
+	"\x11requester_user_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0frequesterUserId\"R\n" +
 	"\x1bAcceptFriendRequestResponse\x123\n" +
 	"\n" +
 	"friendship\x18\x01 \x01(\v2\x13.user.v1.FriendshipR\n" +
-	"friendship\"I\n" +
-	"\x1bDeclineFriendRequestRequest\x12*\n" +
-	"\x11requester_user_id\x18\x01 \x01(\tR\x0frequesterUserId\"\x1e\n" +
-	"\x1cDeclineFriendRequestResponse\"2\n" +
-	"\x13RemoveFriendRequest\x12\x1b\n" +
-	"\tfriend_id\x18\x01 \x01(\tR\bfriendId\"\x16\n" +
-	"\x14RemoveFriendResponse\"8\n" +
-	"\x10BlockUserRequest\x12$\n" +
-	"\x0etarget_user_id\x18\x01 \x01(\tR\ftargetUserId\"\x13\n" +
-	"\x11BlockUserResponse\":\n" +
-	"\x12UnblockUserRequest\x12$\n" +
-	"\x0etarget_user_id\x18\x01 \x01(\tR\ftargetUserId\"\x15\n" +
+	"friendship\"S\n" +
+	"\x1bDeclineFriendRequestRequest\x124\n" +
+	"\x11requester_user_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0frequesterUserId\"\x1e\n" +
+	"\x1cDeclineFriendRequestResponse\"<\n" +
+	"\x13RemoveFriendRequest\x12%\n" +
+	"\tfriend_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bfriendId\"\x16\n" +
+	"\x14RemoveFriendResponse\"B\n" +
+	"\x10BlockUserRequest\x12.\n" +
+	"\x0etarget_user_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\ftargetUserId\"\x13\n" +
+	"\x11BlockUserResponse\"D\n" +
+	"\x12UnblockUserRequest\x12.\n" +
+	"\x0etarget_user_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\ftargetUserId\"\x15\n" +
 	"\x13UnblockUserResponse\"\x14\n" +
 	"\x12ListFriendsRequest\">\n" +
 	"\x13ListFriendsResponse\x12'\n" +
@@ -1744,28 +1554,12 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\boutgoing\x18\x02 \x03(\v2\x13.user.v1.FriendshipR\boutgoing\"\x14\n" +
 	"\x12ListBlockedRequest\">\n" +
 	"\x13ListBlockedResponse\x12'\n" +
-	"\ablocked\x18\x01 \x03(\v2\r.user.v1.UserR\ablocked\"\x1d\n" +
-	"\x1bStreamFriendActivityRequest\"\xf9\x01\n" +
-	"\x13FriendActivityEvent\x12/\n" +
-	"\x04type\x18\x01 \x01(\x0e2\x1b.user.v1.FriendActivityTypeR\x04type\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x16\n" +
-	"\x06status\x18\x03 \x01(\tR\x06status\x12#\n" +
-	"\rcustom_status\x18\x04 \x01(\tR\fcustomStatus\x12!\n" +
-	"\x04user\x18\x05 \x01(\v2\r.user.v1.UserR\x04user\x128\n" +
-	"\ttimestamp\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp*\x93\x01\n" +
+	"\ablocked\x18\x01 \x03(\v2\r.user.v1.UserR\ablocked*\x93\x01\n" +
 	"\x10FriendshipStatus\x12!\n" +
 	"\x1dFRIENDSHIP_STATUS_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19FRIENDSHIP_STATUS_PENDING\x10\x01\x12\x1e\n" +
 	"\x1aFRIENDSHIP_STATUS_ACCEPTED\x10\x02\x12\x1d\n" +
-	"\x19FRIENDSHIP_STATUS_BLOCKED\x10\x03*\xab\x02\n" +
-	"\x12FriendActivityType\x12$\n" +
-	" FRIEND_ACTIVITY_TYPE_UNSPECIFIED\x10\x00\x12(\n" +
-	"$FRIEND_ACTIVITY_TYPE_PRESENCE_UPDATE\x10\x01\x12'\n" +
-	"#FRIEND_ACTIVITY_TYPE_FRIEND_REQUEST\x10\x02\x12(\n" +
-	"$FRIEND_ACTIVITY_TYPE_FRIEND_ACCEPTED\x10\x03\x12'\n" +
-	"#FRIEND_ACTIVITY_TYPE_FRIEND_REMOVED\x10\x04\x12 \n" +
-	"\x1cFRIEND_ACTIVITY_TYPE_BLOCKED\x10\x05\x12'\n" +
-	"#FRIEND_ACTIVITY_TYPE_PROFILE_UPDATE\x10\x062\xd1\t\n" +
+	"\x19FRIENDSHIP_STATUS_BLOCKED\x10\x032\xf3\b\n" +
 	"\vUserService\x12<\n" +
 	"\aGetUser\x12\x17.user.v1.GetUserRequest\x1a\x18.user.v1.GetUserResponse\x12E\n" +
 	"\n" +
@@ -1782,8 +1576,7 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\vUnblockUser\x12\x1b.user.v1.UnblockUserRequest\x1a\x1c.user.v1.UnblockUserResponse\x12H\n" +
 	"\vListFriends\x12\x1b.user.v1.ListFriendsRequest\x1a\x1c.user.v1.ListFriendsResponse\x12`\n" +
 	"\x13ListPendingRequests\x12#.user.v1.ListPendingRequestsRequest\x1a$.user.v1.ListPendingRequestsResponse\x12H\n" +
-	"\vListBlocked\x12\x1b.user.v1.ListBlockedRequest\x1a\x1c.user.v1.ListBlockedResponse\x12\\\n" +
-	"\x14StreamFriendActivity\x12$.user.v1.StreamFriendActivityRequest\x1a\x1c.user.v1.FriendActivityEvent0\x01B9Z7github.com/ananddub/ndiscord_backend/gen/user/v1;userv1b\x06proto3"
+	"\vListBlocked\x12\x1b.user.v1.ListBlockedRequest\x1a\x1c.user.v1.ListBlockedResponseB9Z7github.com/ananddub/ndiscord_backend/gen/user/v1;userv1b\x06proto3"
 
 var (
 	file_user_v1_user_proto_rawDescOnce sync.Once
@@ -1797,98 +1590,90 @@ func file_user_v1_user_proto_rawDescGZIP() []byte {
 	return file_user_v1_user_proto_rawDescData
 }
 
-var file_user_v1_user_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_user_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
+var file_user_v1_user_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_user_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
 var file_user_v1_user_proto_goTypes = []any{
 	(FriendshipStatus)(0),                // 0: user.v1.FriendshipStatus
-	(FriendActivityType)(0),              // 1: user.v1.FriendActivityType
-	(*User)(nil),                         // 2: user.v1.User
-	(*GetUserRequest)(nil),               // 3: user.v1.GetUserRequest
-	(*GetUserResponse)(nil),              // 4: user.v1.GetUserResponse
-	(*UpdateUserRequest)(nil),            // 5: user.v1.UpdateUserRequest
-	(*UpdateUserResponse)(nil),           // 6: user.v1.UpdateUserResponse
-	(*DeleteUserRequest)(nil),            // 7: user.v1.DeleteUserRequest
-	(*DeleteUserResponse)(nil),           // 8: user.v1.DeleteUserResponse
-	(*GetUserByUsernameRequest)(nil),     // 9: user.v1.GetUserByUsernameRequest
-	(*GetUserByUsernameResponse)(nil),    // 10: user.v1.GetUserByUsernameResponse
-	(*SearchUsersRequest)(nil),           // 11: user.v1.SearchUsersRequest
-	(*SearchUsersResponse)(nil),          // 12: user.v1.SearchUsersResponse
-	(*Friendship)(nil),                   // 13: user.v1.Friendship
-	(*SendFriendRequestRequest)(nil),     // 14: user.v1.SendFriendRequestRequest
-	(*SendFriendRequestResponse)(nil),    // 15: user.v1.SendFriendRequestResponse
-	(*AcceptFriendRequestRequest)(nil),   // 16: user.v1.AcceptFriendRequestRequest
-	(*AcceptFriendRequestResponse)(nil),  // 17: user.v1.AcceptFriendRequestResponse
-	(*DeclineFriendRequestRequest)(nil),  // 18: user.v1.DeclineFriendRequestRequest
-	(*DeclineFriendRequestResponse)(nil), // 19: user.v1.DeclineFriendRequestResponse
-	(*RemoveFriendRequest)(nil),          // 20: user.v1.RemoveFriendRequest
-	(*RemoveFriendResponse)(nil),         // 21: user.v1.RemoveFriendResponse
-	(*BlockUserRequest)(nil),             // 22: user.v1.BlockUserRequest
-	(*BlockUserResponse)(nil),            // 23: user.v1.BlockUserResponse
-	(*UnblockUserRequest)(nil),           // 24: user.v1.UnblockUserRequest
-	(*UnblockUserResponse)(nil),          // 25: user.v1.UnblockUserResponse
-	(*ListFriendsRequest)(nil),           // 26: user.v1.ListFriendsRequest
-	(*ListFriendsResponse)(nil),          // 27: user.v1.ListFriendsResponse
-	(*ListPendingRequestsRequest)(nil),   // 28: user.v1.ListPendingRequestsRequest
-	(*ListPendingRequestsResponse)(nil),  // 29: user.v1.ListPendingRequestsResponse
-	(*ListBlockedRequest)(nil),           // 30: user.v1.ListBlockedRequest
-	(*ListBlockedResponse)(nil),          // 31: user.v1.ListBlockedResponse
-	(*StreamFriendActivityRequest)(nil),  // 32: user.v1.StreamFriendActivityRequest
-	(*FriendActivityEvent)(nil),          // 33: user.v1.FriendActivityEvent
-	(*timestamppb.Timestamp)(nil),        // 34: google.protobuf.Timestamp
+	(*User)(nil),                         // 1: user.v1.User
+	(*GetUserRequest)(nil),               // 2: user.v1.GetUserRequest
+	(*GetUserResponse)(nil),              // 3: user.v1.GetUserResponse
+	(*UpdateUserRequest)(nil),            // 4: user.v1.UpdateUserRequest
+	(*UpdateUserResponse)(nil),           // 5: user.v1.UpdateUserResponse
+	(*DeleteUserRequest)(nil),            // 6: user.v1.DeleteUserRequest
+	(*DeleteUserResponse)(nil),           // 7: user.v1.DeleteUserResponse
+	(*GetUserByUsernameRequest)(nil),     // 8: user.v1.GetUserByUsernameRequest
+	(*GetUserByUsernameResponse)(nil),    // 9: user.v1.GetUserByUsernameResponse
+	(*SearchUsersRequest)(nil),           // 10: user.v1.SearchUsersRequest
+	(*SearchUsersResponse)(nil),          // 11: user.v1.SearchUsersResponse
+	(*Friendship)(nil),                   // 12: user.v1.Friendship
+	(*SendFriendRequestRequest)(nil),     // 13: user.v1.SendFriendRequestRequest
+	(*SendFriendRequestResponse)(nil),    // 14: user.v1.SendFriendRequestResponse
+	(*AcceptFriendRequestRequest)(nil),   // 15: user.v1.AcceptFriendRequestRequest
+	(*AcceptFriendRequestResponse)(nil),  // 16: user.v1.AcceptFriendRequestResponse
+	(*DeclineFriendRequestRequest)(nil),  // 17: user.v1.DeclineFriendRequestRequest
+	(*DeclineFriendRequestResponse)(nil), // 18: user.v1.DeclineFriendRequestResponse
+	(*RemoveFriendRequest)(nil),          // 19: user.v1.RemoveFriendRequest
+	(*RemoveFriendResponse)(nil),         // 20: user.v1.RemoveFriendResponse
+	(*BlockUserRequest)(nil),             // 21: user.v1.BlockUserRequest
+	(*BlockUserResponse)(nil),            // 22: user.v1.BlockUserResponse
+	(*UnblockUserRequest)(nil),           // 23: user.v1.UnblockUserRequest
+	(*UnblockUserResponse)(nil),          // 24: user.v1.UnblockUserResponse
+	(*ListFriendsRequest)(nil),           // 25: user.v1.ListFriendsRequest
+	(*ListFriendsResponse)(nil),          // 26: user.v1.ListFriendsResponse
+	(*ListPendingRequestsRequest)(nil),   // 27: user.v1.ListPendingRequestsRequest
+	(*ListPendingRequestsResponse)(nil),  // 28: user.v1.ListPendingRequestsResponse
+	(*ListBlockedRequest)(nil),           // 29: user.v1.ListBlockedRequest
+	(*ListBlockedResponse)(nil),          // 30: user.v1.ListBlockedResponse
+	(*timestamppb.Timestamp)(nil),        // 31: google.protobuf.Timestamp
 }
 var file_user_v1_user_proto_depIdxs = []int32{
-	34, // 0: user.v1.User.created_at:type_name -> google.protobuf.Timestamp
-	34, // 1: user.v1.User.updated_at:type_name -> google.protobuf.Timestamp
-	2,  // 2: user.v1.GetUserResponse.user:type_name -> user.v1.User
-	2,  // 3: user.v1.UpdateUserResponse.user:type_name -> user.v1.User
-	2,  // 4: user.v1.GetUserByUsernameResponse.user:type_name -> user.v1.User
-	2,  // 5: user.v1.SearchUsersResponse.users:type_name -> user.v1.User
+	31, // 0: user.v1.User.created_at:type_name -> google.protobuf.Timestamp
+	31, // 1: user.v1.User.updated_at:type_name -> google.protobuf.Timestamp
+	1,  // 2: user.v1.GetUserResponse.user:type_name -> user.v1.User
+	1,  // 3: user.v1.UpdateUserResponse.user:type_name -> user.v1.User
+	1,  // 4: user.v1.GetUserByUsernameResponse.user:type_name -> user.v1.User
+	1,  // 5: user.v1.SearchUsersResponse.users:type_name -> user.v1.User
 	0,  // 6: user.v1.Friendship.status:type_name -> user.v1.FriendshipStatus
-	34, // 7: user.v1.Friendship.created_at:type_name -> google.protobuf.Timestamp
-	13, // 8: user.v1.SendFriendRequestResponse.friendship:type_name -> user.v1.Friendship
-	13, // 9: user.v1.AcceptFriendRequestResponse.friendship:type_name -> user.v1.Friendship
-	2,  // 10: user.v1.ListFriendsResponse.friends:type_name -> user.v1.User
-	13, // 11: user.v1.ListPendingRequestsResponse.incoming:type_name -> user.v1.Friendship
-	13, // 12: user.v1.ListPendingRequestsResponse.outgoing:type_name -> user.v1.Friendship
-	2,  // 13: user.v1.ListBlockedResponse.blocked:type_name -> user.v1.User
-	1,  // 14: user.v1.FriendActivityEvent.type:type_name -> user.v1.FriendActivityType
-	2,  // 15: user.v1.FriendActivityEvent.user:type_name -> user.v1.User
-	34, // 16: user.v1.FriendActivityEvent.timestamp:type_name -> google.protobuf.Timestamp
-	3,  // 17: user.v1.UserService.GetUser:input_type -> user.v1.GetUserRequest
-	5,  // 18: user.v1.UserService.UpdateUser:input_type -> user.v1.UpdateUserRequest
-	7,  // 19: user.v1.UserService.DeleteUser:input_type -> user.v1.DeleteUserRequest
-	9,  // 20: user.v1.UserService.GetUserByUsername:input_type -> user.v1.GetUserByUsernameRequest
-	11, // 21: user.v1.UserService.SearchUsers:input_type -> user.v1.SearchUsersRequest
-	14, // 22: user.v1.UserService.SendFriendRequest:input_type -> user.v1.SendFriendRequestRequest
-	16, // 23: user.v1.UserService.AcceptFriendRequest:input_type -> user.v1.AcceptFriendRequestRequest
-	18, // 24: user.v1.UserService.DeclineFriendRequest:input_type -> user.v1.DeclineFriendRequestRequest
-	20, // 25: user.v1.UserService.RemoveFriend:input_type -> user.v1.RemoveFriendRequest
-	22, // 26: user.v1.UserService.BlockUser:input_type -> user.v1.BlockUserRequest
-	24, // 27: user.v1.UserService.UnblockUser:input_type -> user.v1.UnblockUserRequest
-	26, // 28: user.v1.UserService.ListFriends:input_type -> user.v1.ListFriendsRequest
-	28, // 29: user.v1.UserService.ListPendingRequests:input_type -> user.v1.ListPendingRequestsRequest
-	30, // 30: user.v1.UserService.ListBlocked:input_type -> user.v1.ListBlockedRequest
-	32, // 31: user.v1.UserService.StreamFriendActivity:input_type -> user.v1.StreamFriendActivityRequest
-	4,  // 32: user.v1.UserService.GetUser:output_type -> user.v1.GetUserResponse
-	6,  // 33: user.v1.UserService.UpdateUser:output_type -> user.v1.UpdateUserResponse
-	8,  // 34: user.v1.UserService.DeleteUser:output_type -> user.v1.DeleteUserResponse
-	10, // 35: user.v1.UserService.GetUserByUsername:output_type -> user.v1.GetUserByUsernameResponse
-	12, // 36: user.v1.UserService.SearchUsers:output_type -> user.v1.SearchUsersResponse
-	15, // 37: user.v1.UserService.SendFriendRequest:output_type -> user.v1.SendFriendRequestResponse
-	17, // 38: user.v1.UserService.AcceptFriendRequest:output_type -> user.v1.AcceptFriendRequestResponse
-	19, // 39: user.v1.UserService.DeclineFriendRequest:output_type -> user.v1.DeclineFriendRequestResponse
-	21, // 40: user.v1.UserService.RemoveFriend:output_type -> user.v1.RemoveFriendResponse
-	23, // 41: user.v1.UserService.BlockUser:output_type -> user.v1.BlockUserResponse
-	25, // 42: user.v1.UserService.UnblockUser:output_type -> user.v1.UnblockUserResponse
-	27, // 43: user.v1.UserService.ListFriends:output_type -> user.v1.ListFriendsResponse
-	29, // 44: user.v1.UserService.ListPendingRequests:output_type -> user.v1.ListPendingRequestsResponse
-	31, // 45: user.v1.UserService.ListBlocked:output_type -> user.v1.ListBlockedResponse
-	33, // 46: user.v1.UserService.StreamFriendActivity:output_type -> user.v1.FriendActivityEvent
-	32, // [32:47] is the sub-list for method output_type
-	17, // [17:32] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	31, // 7: user.v1.Friendship.created_at:type_name -> google.protobuf.Timestamp
+	12, // 8: user.v1.SendFriendRequestResponse.friendship:type_name -> user.v1.Friendship
+	12, // 9: user.v1.AcceptFriendRequestResponse.friendship:type_name -> user.v1.Friendship
+	1,  // 10: user.v1.ListFriendsResponse.friends:type_name -> user.v1.User
+	12, // 11: user.v1.ListPendingRequestsResponse.incoming:type_name -> user.v1.Friendship
+	12, // 12: user.v1.ListPendingRequestsResponse.outgoing:type_name -> user.v1.Friendship
+	1,  // 13: user.v1.ListBlockedResponse.blocked:type_name -> user.v1.User
+	2,  // 14: user.v1.UserService.GetUser:input_type -> user.v1.GetUserRequest
+	4,  // 15: user.v1.UserService.UpdateUser:input_type -> user.v1.UpdateUserRequest
+	6,  // 16: user.v1.UserService.DeleteUser:input_type -> user.v1.DeleteUserRequest
+	8,  // 17: user.v1.UserService.GetUserByUsername:input_type -> user.v1.GetUserByUsernameRequest
+	10, // 18: user.v1.UserService.SearchUsers:input_type -> user.v1.SearchUsersRequest
+	13, // 19: user.v1.UserService.SendFriendRequest:input_type -> user.v1.SendFriendRequestRequest
+	15, // 20: user.v1.UserService.AcceptFriendRequest:input_type -> user.v1.AcceptFriendRequestRequest
+	17, // 21: user.v1.UserService.DeclineFriendRequest:input_type -> user.v1.DeclineFriendRequestRequest
+	19, // 22: user.v1.UserService.RemoveFriend:input_type -> user.v1.RemoveFriendRequest
+	21, // 23: user.v1.UserService.BlockUser:input_type -> user.v1.BlockUserRequest
+	23, // 24: user.v1.UserService.UnblockUser:input_type -> user.v1.UnblockUserRequest
+	25, // 25: user.v1.UserService.ListFriends:input_type -> user.v1.ListFriendsRequest
+	27, // 26: user.v1.UserService.ListPendingRequests:input_type -> user.v1.ListPendingRequestsRequest
+	29, // 27: user.v1.UserService.ListBlocked:input_type -> user.v1.ListBlockedRequest
+	3,  // 28: user.v1.UserService.GetUser:output_type -> user.v1.GetUserResponse
+	5,  // 29: user.v1.UserService.UpdateUser:output_type -> user.v1.UpdateUserResponse
+	7,  // 30: user.v1.UserService.DeleteUser:output_type -> user.v1.DeleteUserResponse
+	9,  // 31: user.v1.UserService.GetUserByUsername:output_type -> user.v1.GetUserByUsernameResponse
+	11, // 32: user.v1.UserService.SearchUsers:output_type -> user.v1.SearchUsersResponse
+	14, // 33: user.v1.UserService.SendFriendRequest:output_type -> user.v1.SendFriendRequestResponse
+	16, // 34: user.v1.UserService.AcceptFriendRequest:output_type -> user.v1.AcceptFriendRequestResponse
+	18, // 35: user.v1.UserService.DeclineFriendRequest:output_type -> user.v1.DeclineFriendRequestResponse
+	20, // 36: user.v1.UserService.RemoveFriend:output_type -> user.v1.RemoveFriendResponse
+	22, // 37: user.v1.UserService.BlockUser:output_type -> user.v1.BlockUserResponse
+	24, // 38: user.v1.UserService.UnblockUser:output_type -> user.v1.UnblockUserResponse
+	26, // 39: user.v1.UserService.ListFriends:output_type -> user.v1.ListFriendsResponse
+	28, // 40: user.v1.UserService.ListPendingRequests:output_type -> user.v1.ListPendingRequestsResponse
+	30, // 41: user.v1.UserService.ListBlocked:output_type -> user.v1.ListBlockedResponse
+	28, // [28:42] is the sub-list for method output_type
+	14, // [14:28] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_user_v1_user_proto_init() }
@@ -1902,8 +1687,8 @@ func file_user_v1_user_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_user_v1_user_proto_rawDesc), len(file_user_v1_user_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   32,
+			NumEnums:      1,
+			NumMessages:   30,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

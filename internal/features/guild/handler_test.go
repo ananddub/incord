@@ -18,7 +18,6 @@ import (
 
 	guildv1 "github.com/ananddub/ndiscord_backend/gen/guild/v1"
 	"github.com/ananddub/ndiscord_backend/internal/features/guild"
-	"github.com/ananddub/ndiscord_backend/internal/shared/event"
 	"github.com/ananddub/ndiscord_backend/internal/shared/middleware"
 	"github.com/ananddub/ndiscord_backend/internal/shared/testutil"
 )
@@ -46,9 +45,8 @@ func setupGuildServer(t *testing.T, infra *testutil.TestInfra) guildv1.GuildServ
 	t.Helper()
 
 	repo := guild.NewRepository(infra.Pool, infra.Redis)
-	svc := guild.NewService(repo, nil)
-	guildSubs := event.NewSubscriptionManager[*guildv1.GuildEvent]()
-	handler := guild.NewHandler(svc, guildSubs)
+	svc := guild.NewService(repo, nil, nil)
+	handler := guild.NewHandler(svc)
 
 	srv := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(middleware.AuthInterceptor(jwtSecret)),

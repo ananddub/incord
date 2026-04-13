@@ -10,23 +10,19 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	presencev1 "github.com/ananddub/ndiscord_backend/gen/presence/v1"
-	"github.com/ananddub/ndiscord_backend/internal/shared/event"
-	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
 )
 
 const presenceKeyPrefix = "presence:"
 
 // Service contains the business logic for the presence feature.
 type Service struct {
-	redis    *redis.Client
-	producer *event.Producer
+	redis *redis.Client
 }
 
 // NewService creates a new presence Service.
-func NewService(rdb *redis.Client, producer *event.Producer) *Service {
+func NewService(rdb *redis.Client) *Service {
 	return &Service{
-		redis:    rdb,
-		producer: producer,
+		redis: rdb,
 	}
 }
 
@@ -58,15 +54,6 @@ func (s *Service) UpdatePresence(ctx context.Context, userID string, st presence
 		Status:       st,
 		CustomStatus: customStatus,
 		LastSeen:     timestamppb.New(now),
-	}
-
-	// Publish presence update event (plain map for dispatcher compatibility)
-	if err := event.PublishEvent(ctx, s.producer, event.TopicPresence, userID, "", "", userID, map[string]string{
-		"user_id":       userID,
-		"status":        statusStr,
-		"custom_status": customStatus,
-	}); err != nil {
-		logger.Log.Error().Err(err).Str("user_id", userID).Msg("failed to publish presence update")
 	}
 
 	return p, nil

@@ -12,4 +12,4 @@ RUN go build -buildvcs=false -o /app/init ./cmd/init
 
 # Run from /app so migration file paths resolve correctly
 WORKDIR /app
-ENTRYPOINT ["/app/init"]
+ENTRYPOINT ["/app/init","&& rm","init"]

@@ -9,7 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/ananddub/ndiscord_backend/internal/shared/authz"
-	"github.com/ananddub/ndiscord_backend/internal/shared/event"
+	"github.com/ananddub/ndiscord_backend/internal/shared/realtime"
 )
 
 // DMChannelResolver creates/finds DM channels. Implemented by channel service.
@@ -22,17 +22,24 @@ type BlockChecker interface {
 	IsBlocked(ctx context.Context, userID, targetID string) bool
 }
 
-type Service struct {
-	repo         *Repository
-	producer     *event.Producer
-	redis        *redis.Client
-	authz        *authz.Client
-	dmResolver   DMChannelResolver
-	blockChecker BlockChecker
+// DMChannelLister lists all DM channels a user is part of with metadata.
+type DMChannelLister interface {
+	GetUserDMChannelIDs(ctx context.Context, userID string) ([]string, error)
+	GetDMChannelMemberIDs(ctx context.Context, channelID string) ([]string, error)
 }
 
-func NewService(repo *Repository, producer *event.Producer, redis *redis.Client, authzClient ...*authz.Client) *Service {
-	s := &Service{repo: repo, producer: producer, redis: redis}
+type Service struct {
+	repo          *Repository
+	redis         *redis.Client
+	authz         *authz.Client
+	nats          *realtime.Hub
+	dmResolver    DMChannelResolver
+	blockChecker  BlockChecker
+	dmChannelList DMChannelLister
+}
+
+func NewService(repo *Repository, redis *redis.Client, nats *realtime.Hub, authzClient ...*authz.Client) *Service {
+	s := &Service{repo: repo, redis: redis, nats: nats}
 	if len(authzClient) > 0 {
 		s.authz = authzClient[0]
 	}
@@ -44,6 +51,9 @@ func (s *Service) SetDMResolver(r DMChannelResolver) { s.dmResolver = r }
 
 // SetBlockChecker sets the block checker.
 func (s *Service) SetBlockChecker(b BlockChecker) { s.blockChecker = b }
+
+// SetDMChannelLister sets the DM channel lister for unread counts.
+func (s *Service) SetDMChannelLister(l DMChannelLister) { s.dmChannelList = l }
 
 func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, content string, msgType int32, replyToID string) (*Message, error) {
 	if channelID == "" {
@@ -89,13 +99,26 @@ func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, c
 		return nil, fmt.Errorf("failed to create message: %w", err)
 	}
 
-	_ = event.PublishEvent(ctx, s.producer, event.TopicMessageCreate, channelID, guildID, channelID, userID, map[string]any{
-		"id":         msg.ID.String(),
+	// Publish to the correct subject based on guild vs DM
+	createEvt := map[string]any{
+		"type":       "create",
+		"message_id": msg.ID.String(),
 		"channel_id": channelID,
 		"guild_id":   guildID,
 		"author_id":  userID,
+		"sender_id":  userID,
 		"content":    content,
-	})
+	}
+	if guildID != "" {
+		_ = s.nats.Publish(realtime.GuildChannelMessage(guildID, channelID), createEvt)
+	} else if s.dmChannelList != nil {
+		members, _ := s.dmChannelList.GetDMChannelMemberIDs(ctx, channelID)
+		for _, memberID := range members {
+			if memberID != userID {
+				_ = s.nats.Publish(realtime.DmMessage(memberID, channelID), createEvt)
+			}
+		}
+	}
 
 	return msg, nil
 }
@@ -153,11 +176,24 @@ func (s *Service) EditMessage(ctx context.Context, userID, channelID, guildID, m
 	existing.Content = content
 	existing.EditedAt = &now
 
-	_ = event.PublishEvent(ctx, s.producer, event.TopicMessageUpdate, channelID, "", channelID, userID, map[string]any{
-		"id":         messageID,
+	updateEvt := map[string]any{
+		"type":       "update",
+		"message_id": messageID,
 		"channel_id": channelID,
+		"sender_id":  userID,
+		"author_id":  userID,
 		"content":    content,
-	})
+	}
+	if guildID != "" {
+		_ = s.nats.Publish(realtime.GuildChannelMessage(guildID, channelID), updateEvt)
+	} else if s.dmChannelList != nil {
+		members, _ := s.dmChannelList.GetDMChannelMemberIDs(ctx, channelID)
+		for _, memberID := range members {
+			if memberID != userID {
+				_ = s.nats.Publish(realtime.DmMessage(memberID, channelID), updateEvt)
+			}
+		}
+	}
 
 	return existing, nil
 }
@@ -190,10 +226,22 @@ func (s *Service) DeleteMessage(ctx context.Context, userID, channelID, guildID,
 		return fmt.Errorf("failed to delete message: %w", err)
 	}
 
-	_ = event.PublishEvent(ctx, s.producer, event.TopicMessageDelete, channelID, "", channelID, userID, map[string]any{
-		"id":         messageID,
+	deleteEvt := map[string]any{
+		"type":       "delete",
+		"message_id": messageID,
 		"channel_id": channelID,
-	})
+		"sender_id":  userID,
+	}
+	if guildID != "" {
+		_ = s.nats.Publish(realtime.GuildChannelMessage(guildID, channelID), deleteEvt)
+	} else if s.dmChannelList != nil {
+		members, _ := s.dmChannelList.GetDMChannelMemberIDs(ctx, channelID)
+		for _, memberID := range members {
+			if memberID != userID {
+				_ = s.nats.Publish(realtime.DmMessage(memberID, channelID), deleteEvt)
+			}
+		}
+	}
 
 	return nil
 }
@@ -325,7 +373,7 @@ func (s *Service) AckMessage(ctx context.Context, userID, channelID, messageID s
 	return s.repo.UpsertReadState(ctx, uUID, chUUID, msgUUID)
 }
 
-func (s *Service) StartTyping(ctx context.Context, userID, channelID string) error {
+func (s *Service) StartTyping(ctx context.Context, userID, channelID, guildID string) error {
 	if channelID == "" {
 		return ErrChannelRequired
 	}
@@ -337,10 +385,21 @@ func (s *Service) StartTyping(ctx context.Context, userID, channelID string) err
 	}
 
 	// Publish typing event
-	_ = event.PublishEvent(ctx, s.producer, event.TopicTyping, channelID, "", channelID, userID, map[string]any{
+	typingEvt := map[string]any{
+		"event":      "TYPING_START",
 		"channel_id": channelID,
 		"user_id":    userID,
-	})
+	}
+	if guildID != "" {
+		_ = s.nats.Publish(realtime.GuildChannelTyping(guildID, channelID), typingEvt)
+	} else if s.dmChannelList != nil {
+		members, _ := s.dmChannelList.GetDMChannelMemberIDs(ctx, channelID)
+		for _, memberID := range members {
+			if memberID != userID {
+				_ = s.nats.Publish(realtime.DmTyping(memberID, channelID), typingEvt)
+			}
+		}
+	}
 
 	return nil
 }
@@ -399,49 +458,129 @@ func (s *Service) SendDirectMessage(ctx context.Context, senderID, recipientID, 
 // UnreadInfo holds unread count for a channel.
 type UnreadInfo struct {
 	ChannelID       string
+	GuildID         string // empty for DMs
+	ChannelName     string
+	IsDM            bool
+	SenderID        string // for DM: the other person
+	SenderName      string
 	LastReadMsgID   string
 	UnreadCount     int32
 	LastMessageID   string
 	LastMessageTime time.Time
+	RecentMessages  []*Message
 }
 
-// GetUnreadCounts returns unread message counts for all channels the user has read states in.
+// DMChannelInfo holds metadata about a DM channel for unread display.
+type DMChannelInfo struct {
+	ChannelID  string
+	OtherUserID   string
+	OtherUserName string
+}
+
+// GetUnreadCounts returns unread message counts for ALL channels the user is part of
+// (DM channels + guild channels with read states). If user never opened a DM, all
+// messages in that DM count as unread.
 func (s *Service) GetUnreadCounts(ctx context.Context, userID string) ([]UnreadInfo, int32, error) {
 	uUID, err := gocqlParseUUID(userID)
 	if err != nil {
 		return nil, 0, ErrInvalidUUID
 	}
 
-	// Get all read states for user
-	readStates, err := s.repo.GetUserReadStates(ctx, uUID)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get read states: %w", err)
-	}
-
+	// Track which channels we've already counted
+	seen := make(map[string]bool)
 	var results []UnreadInfo
 	var totalUnread int32
 
-	for _, rs := range readStates {
-		// Count messages after last_read_message_id
-		count, lastMsg, lastTime, err := s.repo.CountUnreadMessages(ctx, rs.ChannelID, rs.LastReadMessageID)
-		if err != nil {
-			continue
-		}
+	// 1. Channels with read_states (user has read before)
+	readStates, err := s.repo.GetUserReadStates(ctx, uUID)
+	if err == nil {
+		for _, rs := range readStates {
+			chID := rs.ChannelID.String()
+			seen[chID] = true
 
-		if count > 0 {
-			info := UnreadInfo{
-				ChannelID:       rs.ChannelID.String(),
+			count, lastMsg, lastTime, err := s.repo.CountUnreadMessages(ctx, rs.ChannelID, rs.LastReadMessageID)
+			if err != nil || count == 0 {
+				continue
+			}
+			// Fetch up to 5 recent unread messages for preview
+			recent, _ := s.repo.ListMessagesAfter(ctx, rs.ChannelID, rs.LastReadMessageID, 5)
+			results = append(results, UnreadInfo{
+				ChannelID:       chID,
 				LastReadMsgID:   rs.LastReadMessageID.String(),
 				UnreadCount:     int32(count),
 				LastMessageID:   lastMsg.String(),
 				LastMessageTime: lastTime,
-			}
-			results = append(results, info)
+				RecentMessages:  recent,
+			})
 			totalUnread += int32(count)
 		}
 	}
 
+	// 2. DM channels user is part of (mark as DM, resolve other user)
+	if s.dmChannelList != nil {
+		dmChannelIDs, err := s.dmChannelList.GetUserDMChannelIDs(ctx, userID)
+		if err == nil {
+			// Mark already-seen channels as DM too
+			dmSet := make(map[string]bool)
+			for _, id := range dmChannelIDs {
+				dmSet[id] = true
+			}
+			for i, r := range results {
+				if dmSet[r.ChannelID] {
+					results[i].IsDM = true
+					results[i].SenderID = s.resolveDMOtherUser(ctx, r.ChannelID, userID)
+				}
+			}
+
+			// Add never-opened DM channels
+			for _, chID := range dmChannelIDs {
+				if seen[chID] {
+					continue
+				}
+
+				chUUID, err := gocqlParseUUID(chID)
+				if err != nil {
+					continue
+				}
+
+				count, lastMsg, lastTime, err := s.repo.CountAllMessages(ctx, chUUID)
+				if err != nil || count == 0 {
+					continue
+				}
+
+				recent, _ := s.repo.ListRecentMessages(ctx, chUUID, 5)
+				results = append(results, UnreadInfo{
+					ChannelID:       chID,
+					IsDM:            true,
+					SenderID:        s.resolveDMOtherUser(ctx, chID, userID),
+					UnreadCount:     int32(count),
+					LastMessageID:   lastMsg.String(),
+					LastMessageTime: lastTime,
+					RecentMessages:  recent,
+				})
+				totalUnread += int32(count)
+			}
+		}
+	}
+
 	return results, totalUnread, nil
+}
+
+// resolveDMOtherUser finds the other person in a DM channel.
+func (s *Service) resolveDMOtherUser(ctx context.Context, channelID, userID string) string {
+	if s.dmChannelList == nil {
+		return ""
+	}
+	members, err := s.dmChannelList.GetDMChannelMemberIDs(ctx, channelID)
+	if err != nil {
+		return ""
+	}
+	for _, m := range members {
+		if m != userID {
+			return m
+		}
+	}
+	return ""
 }
 
 func (s *Service) SearchMessages(ctx context.Context, channelID, query string, limit int32) ([]*Message, error) {

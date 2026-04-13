@@ -5,6 +5,7 @@ package guild.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/guild/v1;guildv1";
 
 import "google/protobuf/timestamp.proto";
+import "buf/validate/validate.proto";
 
 enum Permission {
   PERMISSION_UNSPECIFIED = 0;
@@ -33,6 +34,7 @@ service GuildService {
   rpc CreateGuild(CreateGuildRequest) returns (CreateGuildResponse);
   rpc GetGuild(GetGuildRequest) returns (GetGuildResponse);
   rpc UpdateGuild(UpdateGuildRequest) returns (UpdateGuildResponse);
+  rpc UploadGuildIcon(UploadGuildIconRequest) returns (UploadGuildIconResponse);
   rpc DeleteGuild(DeleteGuildRequest) returns (DeleteGuildResponse);
   rpc ListUserGuilds(ListUserGuildsRequest) returns (ListUserGuildsResponse);
   rpc JoinGuild(JoinGuildRequest) returns (JoinGuildResponse);
@@ -56,8 +58,6 @@ service GuildService {
   rpc RevokePermission(RevokePermissionRequest) returns (RevokePermissionResponse);
   rpc GetUserPermissions(GetUserPermissionsRequest) returns (GetUserPermissionsResponse);
 
-  // Stream
-  rpc StreamGuildEvents(StreamGuildEventsRequest) returns (stream GuildEvent);
 }
 
 message Guild {
@@ -99,9 +99,9 @@ message Invite {
 }
 
 message CreateGuildRequest {
-  string name = 1;
-  string description = 2;
-  string icon_url = 3;
+  string name = 1 [(buf.validate.field).string = {min_len: 2, max_len: 100}];
+  string description = 2 [(buf.validate.field).string = {max_len: 1000}];
+  string icon_url = 3 [(buf.validate.field).string = {max_len: 2048}];
 }
 
 message CreateGuildResponse {
@@ -109,7 +109,7 @@ message CreateGuildResponse {
 }
 
 message GetGuildRequest {
-  string guild_id = 1;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message GetGuildResponse {
@@ -117,24 +117,36 @@ message GetGuildResponse {
 }
 
 message UpdateGuildRequest {
-  string guild_id = 1;
-  optional string name = 2;
-  optional string description = 3;
-  optional string icon_url = 4;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  optional string name = 2 [(buf.validate.field).string = {min_len: 2, max_len: 100}];
+  optional string description = 3 [(buf.validate.field).string = {max_len: 1000}];
+  optional string icon_url = 4 [(buf.validate.field).string = {max_len: 2048}];
 }
 
 message UpdateGuildResponse {
   Guild guild = 1;
 }
 
+message UploadGuildIconRequest {
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string filename = 2 [(buf.validate.field).string = {min_len: 1, max_len: 255}];
+  string content_type = 3 [(buf.validate.field).string = {in: ["image/jpeg", "image/png", "image/gif", "image/webp"]}];
+  bytes data = 4 [(buf.validate.field).bytes = {min_len: 1, max_len: 5242880}];
+}
+
+message UploadGuildIconResponse {
+  string icon_url = 1;
+  Guild guild = 2;
+}
+
 message DeleteGuildRequest {
-  string guild_id = 1;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message DeleteGuildResponse {}
 
 message ListUserGuildsRequest {
-  string user_id = 1;
+  string user_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message ListUserGuildsResponse {
@@ -142,7 +154,7 @@ message ListUserGuildsResponse {
 }
 
 message JoinGuildRequest {
-  string invite_code = 1;
+  string invite_code = 1 [(buf.validate.field).string = {min_len: 4, max_len: 32}];
 }
 
 message JoinGuildResponse {
@@ -150,15 +162,15 @@ message JoinGuildResponse {
 }
 
 message LeaveGuildRequest {
-  string guild_id = 1;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message LeaveGuildResponse {}
 
 message ListMembersRequest {
-  string guild_id = 1;
-  int32 limit = 2;
-  string after = 3;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  int32 limit = 2 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
+  string after = 3 [(buf.validate.field).string = {max_len: 128}];
 }
 
 message ListMembersResponse {
@@ -166,32 +178,32 @@ message ListMembersResponse {
 }
 
 message KickMemberRequest {
-  string guild_id = 1;
-  string user_id = 2;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.uuid = true];
 }
 
 message KickMemberResponse {}
 
 message BanMemberRequest {
-  string guild_id = 1;
-  string user_id = 2;
-  string reason = 3;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.uuid = true];
+  string reason = 3 [(buf.validate.field).string = {max_len: 500}];
 }
 
 message BanMemberResponse {}
 
 message UnbanMemberRequest {
-  string guild_id = 1;
-  string user_id = 2;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.uuid = true];
 }
 
 message UnbanMemberResponse {}
 
 message CreateInviteRequest {
-  string guild_id = 1;
-  string channel_id = 2;
-  int32 max_uses = 3;
-  int32 max_age_seconds = 4;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string channel_id = 2 [(buf.validate.field).string.uuid = true];
+  int32 max_uses = 3 [(buf.validate.field).int32.gte = 0];
+  int32 max_age_seconds = 4 [(buf.validate.field).int32.gte = 0];
 }
 
 message CreateInviteResponse {
@@ -199,9 +211,9 @@ message CreateInviteResponse {
 }
 
 message CreateRoleRequest {
-  string guild_id = 1;
-  string name = 2;
-  string color = 3;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string name = 2 [(buf.validate.field).string = {min_len: 1, max_len: 100}];
+  string color = 3 [(buf.validate.field).string = {max_len: 16}];
 }
 
 message CreateRoleResponse {
@@ -209,11 +221,11 @@ message CreateRoleResponse {
 }
 
 message UpdateRoleRequest {
-  string role_id = 1;
-  string guild_id = 2;
-  optional string name = 3;
-  optional string color = 4;
-  optional int32 position = 5;
+  string role_id = 1 [(buf.validate.field).string.uuid = true];
+  string guild_id = 2 [(buf.validate.field).string.uuid = true];
+  optional string name = 3 [(buf.validate.field).string = {min_len: 1, max_len: 100}];
+  optional string color = 4 [(buf.validate.field).string = {max_len: 16}];
+  optional int32 position = 5 [(buf.validate.field).int32.gte = 0];
 }
 
 message UpdateRoleResponse {
@@ -221,83 +233,50 @@ message UpdateRoleResponse {
 }
 
 message DeleteRoleRequest {
-  string guild_id = 1;
-  string role_id = 2;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string role_id = 2 [(buf.validate.field).string.uuid = true];
 }
 
 message DeleteRoleResponse {}
 
 message AssignRoleRequest {
-  string guild_id = 1;
-  string user_id = 2;
-  string role_id = 3;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.uuid = true];
+  string role_id = 3 [(buf.validate.field).string.uuid = true];
 }
 
 message AssignRoleResponse {}
 
 message RemoveRoleRequest {
-  string guild_id = 1;
-  string user_id = 2;
-  string role_id = 3;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.uuid = true];
+  string role_id = 3 [(buf.validate.field).string.uuid = true];
 }
 
 message RemoveRoleResponse {}
 
-// Stream: guild events
-message StreamGuildEventsRequest {
-  string guild_id = 1;
-}
-
-enum GuildEventType {
-  GUILD_EVENT_TYPE_UNSPECIFIED = 0;
-  GUILD_EVENT_TYPE_UPDATED = 1;
-  GUILD_EVENT_TYPE_DELETED = 2;
-  GUILD_EVENT_TYPE_MEMBER_ADD = 3;
-  GUILD_EVENT_TYPE_MEMBER_REMOVE = 4;
-  GUILD_EVENT_TYPE_MEMBER_BAN = 5;
-  GUILD_EVENT_TYPE_MEMBER_UNBAN = 6;
-  GUILD_EVENT_TYPE_ROLE_CREATE = 7;
-  GUILD_EVENT_TYPE_ROLE_UPDATE = 8;
-  GUILD_EVENT_TYPE_ROLE_DELETE = 9;
-  GUILD_EVENT_TYPE_CHANNEL_CREATE = 10;
-  GUILD_EVENT_TYPE_CHANNEL_UPDATE = 11;
-  GUILD_EVENT_TYPE_CHANNEL_DELETE = 12;
-}
-
-message GuildEvent {
-  GuildEventType type = 1;
-  string guild_id = 2;
-  string user_id = 3;
-  string channel_id = 4;
-  string role_id = 5;
-  Guild guild = 6;
-  GuildMember member = 7;
-  Role role = 8;
-  google.protobuf.Timestamp timestamp = 9;
-}
-
 // Grant a permission to a user in a guild (writes OpenFGA tuple)
 message GrantPermissionRequest {
-  string guild_id = 1;
-  string user_id = 2;
-  Permission permission = 3;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.uuid = true];
+  Permission permission = 3 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
 }
 
 message GrantPermissionResponse {}
 
 // Revoke a permission from a user in a guild
 message RevokePermissionRequest {
-  string guild_id = 1;
-  string user_id = 2;
-  Permission permission = 3;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.uuid = true];
+  Permission permission = 3 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
 }
 
 message RevokePermissionResponse {}
 
 // Get all permissions a user has in a guild
 message GetUserPermissionsRequest {
-  string guild_id = 1;
-  string user_id = 2;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.uuid = true];
 }
 
 message GetUserPermissionsResponse {
@@ -305,8 +284,8 @@ message GetUserPermissionsResponse {
 }
 
 message TransferOwnershipRequest {
-  string guild_id = 1;
-  string new_owner_id = 2;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string new_owner_id = 2 [(buf.validate.field).string.uuid = true];
 }
 
 message TransferOwnershipResponse {

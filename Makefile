@@ -1,5 +1,4 @@
 .PHONY: all build build-server build-voice run run-voice generate proto sqlc migrate test lint clean docker-up docker-down
-
 all: generate build
 
 # Build
@@ -14,6 +13,9 @@ build-voice:
 build-init:
 	go build -o bin/init ./cmd/init
 
+up:
+	@docker compose build
+	@docker compose up -d
 # Run
 run: build-server
 	./bin/server

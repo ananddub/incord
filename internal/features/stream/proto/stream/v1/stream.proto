@@ -1,0 +1,125 @@
+syntax = "proto3";
+
+package stream.v1;
+
+option go_package = "github.com/ananddub/ndiscord_backend/gen/stream/v1;streamv1";
+
+import "google/protobuf/timestamp.proto";
+
+service StreamService {
+  // DM: all DM messages across all DM channels (auto-detect user's DMs)
+  rpc StreamDmChat(StreamDmChatRequest) returns (stream DmChatEvent);
+
+  // Guild text channels: all text messages across all guilds user is in
+  rpc StreamTextChannels(StreamTextChannelsRequest) returns (stream TextChannelEvent);
+
+  // Guild voice chat: text chat in voice channels across all guilds
+  rpc StreamVoiceChat(StreamVoiceChatRequest) returns (stream VoiceChatEvent);
+
+  // Guild events: member join/leave, role changes etc across all guilds
+  rpc StreamGuildEvents(StreamGuildEventsRequest) returns (stream GuildEvent);
+
+  // Voice state: join/leave/mute across all voice channels in all guilds
+  rpc StreamVoiceState(StreamVoiceStateRequest) returns (stream VoiceStateEvent);
+
+  // Typing: across all channels user is in
+  rpc StreamTyping(StreamTypingRequest) returns (stream TypingEvent);
+
+  // Friend activity: presence, profile updates
+  rpc StreamFriendActivity(StreamFriendActivityRequest) returns (stream FriendActivityEvent);
+}
+
+// === DM Chat (all DMs, auto-detect) ===
+
+message StreamDmChatRequest {}
+
+message DmChatEvent {
+  string type = 1;       // "create", "update", "delete"
+  string channel_id = 2;
+  string message_id = 3;
+  string sender_id = 4;
+  string content = 5;
+  google.protobuf.Timestamp timestamp = 6;
+}
+
+// === Text Channels (all guilds, auto-detect) ===
+
+message StreamTextChannelsRequest {}
+
+message TextChannelEvent {
+  string type = 1;       // "create", "update", "delete"
+  string guild_id = 2;
+  string channel_id = 3;
+  string message_id = 4;
+  string author_id = 5;
+  string content = 6;
+  google.protobuf.Timestamp timestamp = 7;
+}
+
+// === Voice Chat (text in voice channels, all guilds) ===
+
+message StreamVoiceChatRequest {}
+
+message VoiceChatEvent {
+  string type = 1;
+  string guild_id = 2;
+  string channel_id = 3;
+  string message_id = 4;
+  string author_id = 5;
+  string content = 6;
+  google.protobuf.Timestamp timestamp = 7;
+}
+
+// === Guild Events (all guilds, auto-detect) ===
+
+message StreamGuildEventsRequest {}
+
+message GuildEvent {
+  string event = 1;      // "member_add", "member_remove", "update", "delete", "role_create" etc
+  string guild_id = 2;
+  string user_id = 3;
+  string channel_id = 4;
+  string name = 5;
+  google.protobuf.Timestamp timestamp = 6;
+}
+
+// === Voice State (all guilds, auto-detect) ===
+
+message StreamVoiceStateRequest {}
+
+message VoiceStateEvent {
+  string event = 1;      // "join", "leave", "update"
+  string guild_id = 2;
+  string channel_id = 3;
+  string user_id = 4;
+  bool self_mute = 5;
+  bool self_deaf = 6;
+  bool video = 7;
+  bool streaming = 8;
+  google.protobuf.Timestamp timestamp = 9;
+}
+
+// === Typing (all channels, auto-detect) ===
+
+message StreamTypingRequest {}
+
+message TypingEvent {
+  string channel_id = 1;
+  string guild_id = 2;
+  string user_id = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+// === Friend Activity ===
+
+message StreamFriendActivityRequest {}
+
+message FriendActivityEvent {
+  string event = 1;      // "presence_update", "profile_update", "friend_request", "friend_accepted"
+  string user_id = 2;
+  string username = 3;
+  string status = 4;
+  string custom_status = 5;
+  string avatar_url = 6;
+  google.protobuf.Timestamp timestamp = 7;
+}

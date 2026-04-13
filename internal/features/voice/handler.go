@@ -4,25 +4,22 @@ import (
 	"context"
 	"errors"
 
-	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	voicev1 "github.com/ananddub/ndiscord_backend/gen/voice/v1"
-	"github.com/ananddub/ndiscord_backend/internal/shared/event"
 	"github.com/ananddub/ndiscord_backend/internal/shared/middleware"
 )
 
 // Handler implements the VoiceServiceServer gRPC interface.
 type Handler struct {
 	voicev1.UnimplementedVoiceServiceServer
-	service   *Service
-	voiceSubs *event.SubscriptionManager[*voicev1.VoiceStateEvent]
+	service *Service
 }
 
 // NewHandler creates a new voice Handler.
-func NewHandler(service *Service, voiceSubs *event.SubscriptionManager[*voicev1.VoiceStateEvent]) *Handler {
-	return &Handler{service: service, voiceSubs: voiceSubs}
+func NewHandler(service *Service) *Handler {
+	return &Handler{service: service}
 }
 
 // JoinChannel allows a user to join a voice channel.
@@ -105,31 +102,3 @@ func (h *Handler) UpdateVoiceState(ctx context.Context, req *voicev1.UpdateVoice
 	return &voicev1.UpdateVoiceStateResponse{}, nil
 }
 
-// StreamVoiceState streams voice state changes for a channel.
-func (h *Handler) StreamVoiceState(req *voicev1.StreamVoiceStateRequest, stream voicev1.VoiceService_StreamVoiceStateServer) error {
-	userID := middleware.UserIDFromContext(stream.Context())
-	if userID == "" {
-		return status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if req.GetChannelId() == "" {
-		return status.Error(codes.InvalidArgument, "channel_id is required")
-	}
-
-	subID := userID + ":" + uuid.New().String()
-	ch := h.voiceSubs.Subscribe(req.GetChannelId(), subID, 64)
-	defer h.voiceSubs.Unsubscribe(req.GetChannelId(), subID)
-
-	for {
-		select {
-		case <-stream.Context().Done():
-			return nil
-		case evt, ok := <-ch:
-			if !ok {
-				return nil
-			}
-			if err := stream.Send(evt); err != nil {
-				return err
-			}
-		}
-	}
-}

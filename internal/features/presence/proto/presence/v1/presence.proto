@@ -5,6 +5,7 @@ package presence.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/presence/v1;presencev1";
 
 import "google/protobuf/timestamp.proto";
+import "buf/validate/validate.proto";
 
 service PresenceService {
   rpc UpdatePresence(UpdatePresenceRequest) returns (UpdatePresenceResponse);
@@ -28,8 +29,8 @@ message Presence {
 }
 
 message UpdatePresenceRequest {
-  Status status = 1;
-  string custom_status = 2;
+  Status status = 1 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  string custom_status = 2 [(buf.validate.field).string = {max_len: 128}];
 }
 
 message UpdatePresenceResponse {
@@ -37,7 +38,7 @@ message UpdatePresenceResponse {
 }
 
 message GetPresenceRequest {
-  string user_id = 1;
+  string user_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message GetPresenceResponse {
@@ -45,7 +46,7 @@ message GetPresenceResponse {
 }
 
 message GetBulkPresenceRequest {
-  repeated string user_ids = 1;
+  repeated string user_ids = 1 [(buf.validate.field).repeated = {min_items: 1, max_items: 500, items: {string: {uuid: true}}}];
 }
 
 message GetBulkPresenceResponse {

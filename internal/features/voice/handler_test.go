@@ -22,7 +22,6 @@ import (
 
 	voicev1 "github.com/ananddub/ndiscord_backend/gen/voice/v1"
 	"github.com/ananddub/ndiscord_backend/internal/shared/config"
-	"github.com/ananddub/ndiscord_backend/internal/shared/event"
 	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
 	"github.com/ananddub/ndiscord_backend/internal/shared/middleware"
 )
@@ -85,53 +84,19 @@ func setupRedis(t *testing.T) *redis.Client {
 	return rdb
 }
 
-func setupRedpanda(t *testing.T) *event.Producer {
-	t.Helper()
-	ctx := context.Background()
-
-	rpReq := testcontainers.ContainerRequest{
-		Image:        "redpandadata/redpanda:latest",
-		ExposedPorts: []string{"9092/tcp"},
-		Cmd:          []string{"redpanda", "start", "--mode", "dev-container", "--smp", "1", "--memory", "256M"},
-		WaitingFor:   wait.ForLog("Successfully started Redpanda").WithStartupTimeout(60 * time.Second),
-	}
-	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: rpReq,
-		Started:          true,
-	})
-	require.NoError(t, err, "failed to start redpanda")
-
-	host, err := container.Host(ctx)
-	require.NoError(t, err)
-	port, err := container.MappedPort(ctx, "9092")
-	require.NoError(t, err)
-
-	addr := fmt.Sprintf("%s:%s", host, port.Port())
-	producer, err := event.NewProducer(config.RedpandaConfig{Brokers: []string{addr}})
-	require.NoError(t, err, "failed to create redpanda producer")
-
-	t.Cleanup(func() {
-		producer.Close()
-		_ = container.Terminate(ctx)
-	})
-	return producer
-}
-
-// setupVoiceServer spins up Redis + Redpanda, builds the full handler stack,
+// setupVoiceServer spins up Redis, builds the full handler stack,
 // starts a gRPC server with auth interceptor, and returns a connected client.
 func setupVoiceServer(t *testing.T) voicev1.VoiceServiceClient {
 	t.Helper()
 
 	rdb := setupRedis(t)
 
-	var producer *event.Producer
 	voiceCfg := config.VoiceConfig{
 		UDPHost: "127.0.0.1",
 		UDPPort: 50052,
 	}
-	svc := NewService(rdb, producer, voiceCfg)
-	voiceSubs := event.NewSubscriptionManager[*voicev1.VoiceStateEvent]()
-	handler := NewHandler(svc, voiceSubs)
+	svc := NewService(rdb, voiceCfg, nil)
+	handler := NewHandler(svc)
 
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)

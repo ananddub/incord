@@ -6,28 +6,22 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/ananddub/ndiscord_backend/gen/db"
 	guildv1 "github.com/ananddub/ndiscord_backend/gen/guild/v1"
-	event "github.com/ananddub/ndiscord_backend/internal/shared/event"
 	"github.com/ananddub/ndiscord_backend/internal/shared/middleware"
 )
 
 type Handler struct {
 	guildv1.UnimplementedGuildServiceServer
-	svc       *Service
-	guildSubs *event.SubscriptionManager[*guildv1.GuildEvent]
+	svc *Service
 }
 
-func NewHandler(svc *Service, guildSubs *event.SubscriptionManager[*guildv1.GuildEvent]) *Handler {
-	return &Handler{
-		svc:       svc,
-		guildSubs: guildSubs,
-	}
+func NewHandler(svc *Service) *Handler {
+	return &Handler{svc: svc}
 }
 
 func (h *Handler) CreateGuild(ctx context.Context, req *guildv1.CreateGuildRequest) (*guildv1.CreateGuildResponse, error) {
@@ -50,7 +44,7 @@ func (h *Handler) CreateGuild(ctx context.Context, req *guildv1.CreateGuildReque
 	}
 
 	return &guildv1.CreateGuildResponse{
-		Guild: dbGuildToProto(guild, 1),
+		Guild: h.toProto(ctx, guild, 1),
 	}, nil
 }
 
@@ -73,7 +67,53 @@ func (h *Handler) GetGuild(ctx context.Context, req *guildv1.GetGuildRequest) (*
 	}
 
 	return &guildv1.GetGuildResponse{
-		Guild: dbGuildToProto(guild, int32(memberCount)),
+		Guild: h.toProto(ctx, guild, int32(memberCount)),
+	}, nil
+}
+
+func (h *Handler) UploadGuildIcon(ctx context.Context, req *guildv1.UploadGuildIconRequest) (*guildv1.UploadGuildIconResponse, error) {
+	callerID := middleware.UserIDFromContext(ctx)
+	if callerID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+	if req.GetGuildId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "guild_id is required")
+	}
+	if len(req.GetData()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "data is required")
+	}
+	if req.GetContentType() == "" {
+		return nil, status.Error(codes.InvalidArgument, "content_type is required")
+	}
+
+	callerPgID, err := parseUUID(callerID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "invalid caller id")
+	}
+	guildPgID, err := parseUUID(req.GetGuildId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid guild_id")
+	}
+
+	filename := req.GetFilename()
+	if filename == "" {
+		filename = "icon"
+	}
+
+	guild, iconURL, err := h.svc.UploadGuildIcon(ctx, callerPgID, guildPgID, filename, req.GetContentType(), req.GetData())
+	if err != nil {
+		if errors.Is(err, ErrInsufficientPermissions) {
+			return nil, status.Error(codes.PermissionDenied, "cannot manage this guild")
+		}
+		if errors.Is(err, ErrGuildNotFound) {
+			return nil, status.Error(codes.NotFound, "guild not found")
+		}
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &guildv1.UploadGuildIconResponse{
+		IconUrl: iconURL,
+		Guild:   h.toProto(ctx, guild, 0),
 	}, nil
 }
 
@@ -115,7 +155,7 @@ func (h *Handler) UpdateGuild(ctx context.Context, req *guildv1.UpdateGuildReque
 
 	count, _ := h.svc.repo.CountGuildMembers(ctx, guildPgID)
 	return &guildv1.UpdateGuildResponse{
-		Guild: dbGuildToProto(guild, int32(count)),
+		Guild: h.toProto(ctx, guild, int32(count)),
 	}, nil
 }
 
@@ -168,7 +208,7 @@ func (h *Handler) ListUserGuilds(ctx context.Context, req *guildv1.ListUserGuild
 
 	protoGuilds := make([]*guildv1.Guild, len(guilds))
 	for i, g := range guilds {
-		protoGuilds[i] = dbGuildToProto(g, 0)
+		protoGuilds[i] = h.toProto(ctx, g, 0)
 	}
 
 	return &guildv1.ListUserGuildsResponse{
@@ -210,7 +250,7 @@ func (h *Handler) JoinGuild(ctx context.Context, req *guildv1.JoinGuildRequest) 
 
 	count, _ := h.svc.repo.CountGuildMembers(ctx, guild.ID)
 	return &guildv1.JoinGuildResponse{
-		Guild: dbGuildToProto(guild, int32(count)),
+		Guild: h.toProto(ctx, guild, int32(count)),
 	}, nil
 }
 
@@ -666,37 +706,8 @@ func (h *Handler) TransferOwnership(ctx context.Context, req *guildv1.TransferOw
 
 	count, _ := h.svc.repo.CountGuildMembers(ctx, guildPgID)
 	return &guildv1.TransferOwnershipResponse{
-		Guild: dbGuildToProto(guild, int32(count)),
+		Guild: h.toProto(ctx, guild, int32(count)),
 	}, nil
-}
-
-// StreamGuildEvents opens a server-streaming RPC that pushes guild events for a guild.
-func (h *Handler) StreamGuildEvents(req *guildv1.StreamGuildEventsRequest, stream grpc.ServerStreamingServer[guildv1.GuildEvent]) error {
-	userID := middleware.UserIDFromContext(stream.Context())
-	if userID == "" {
-		return status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if req.GetGuildId() == "" {
-		return status.Error(codes.InvalidArgument, "guild_id is required")
-	}
-
-	subID := userID + ":" + uuid.New().String()
-	ch := h.guildSubs.Subscribe(req.GetGuildId(), subID, 64)
-	defer h.guildSubs.Unsubscribe(req.GetGuildId(), subID)
-
-	for {
-		select {
-		case <-stream.Context().Done():
-			return nil
-		case evt, ok := <-ch:
-			if !ok {
-				return nil
-			}
-			if err := stream.Send(evt); err != nil {
-				return err
-			}
-		}
-	}
 }
 
 // helpers
@@ -721,6 +732,14 @@ func dbGuildToProto(g db.Guild, memberCount int32) *guildv1.Guild {
 	if g.CreatedAt.Valid {
 		pg.CreatedAt = timestamppb.New(g.CreatedAt.Time)
 	}
+	return pg
+}
+
+// toProto wraps dbGuildToProto and resolves the stored object key into a fresh
+// presigned URL that external clients can actually reach.
+func (h *Handler) toProto(ctx context.Context, g db.Guild, memberCount int32) *guildv1.Guild {
+	pg := dbGuildToProto(g, memberCount)
+	pg.IconUrl = h.svc.ResolveIconURL(ctx, g.IconUrl)
 	return pg
 }
 

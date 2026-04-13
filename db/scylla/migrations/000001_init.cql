@@ -12,7 +12,9 @@ CREATE TABLE IF NOT EXISTS messages (
     type       INT,
     reply_to_id UUID,
     pinned     BOOLEAN,
+    deleted    BOOLEAN,
     edited_at  TIMESTAMP,
+    updated_at TIMESTAMP,
     created_at TIMESTAMP,
     PRIMARY KEY (channel_id, id)
 ) WITH CLUSTERING ORDER BY (id DESC);

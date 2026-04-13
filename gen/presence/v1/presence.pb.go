@@ -7,6 +7,7 @@
 package presencev1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -421,23 +422,24 @@ var File_presence_v1_presence_proto protoreflect.FileDescriptor
 
 const file_presence_v1_presence_proto_rawDesc = "" +
 	"\n" +
-	"\x1apresence/v1/presence.proto\x12\vpresence.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xae\x01\n" +
+	"\x1apresence/v1/presence.proto\x12\vpresence.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bbuf/validate/validate.proto\"\xae\x01\n" +
 	"\bPresence\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12+\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x13.presence.v1.StatusR\x06status\x12#\n" +
 	"\rcustom_status\x18\x03 \x01(\tR\fcustomStatus\x127\n" +
-	"\tlast_seen\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\blastSeen\"i\n" +
-	"\x15UpdatePresenceRequest\x12+\n" +
-	"\x06status\x18\x01 \x01(\x0e2\x13.presence.v1.StatusR\x06status\x12#\n" +
-	"\rcustom_status\x18\x02 \x01(\tR\fcustomStatus\"K\n" +
+	"\tlast_seen\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\blastSeen\"\x7f\n" +
+	"\x15UpdatePresenceRequest\x127\n" +
+	"\x06status\x18\x01 \x01(\x0e2\x13.presence.v1.StatusB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x06status\x12-\n" +
+	"\rcustom_status\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01R\fcustomStatus\"K\n" +
 	"\x16UpdatePresenceResponse\x121\n" +
-	"\bpresence\x18\x01 \x01(\v2\x15.presence.v1.PresenceR\bpresence\"-\n" +
-	"\x12GetPresenceRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\"H\n" +
+	"\bpresence\x18\x01 \x01(\v2\x15.presence.v1.PresenceR\bpresence\"7\n" +
+	"\x12GetPresenceRequest\x12!\n" +
+	"\auser_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\"H\n" +
 	"\x13GetPresenceResponse\x121\n" +
-	"\bpresence\x18\x01 \x01(\v2\x15.presence.v1.PresenceR\bpresence\"3\n" +
-	"\x16GetBulkPresenceRequest\x12\x19\n" +
-	"\buser_ids\x18\x01 \x03(\tR\auserIds\"N\n" +
+	"\bpresence\x18\x01 \x01(\v2\x15.presence.v1.PresenceR\bpresence\"G\n" +
+	"\x16GetBulkPresenceRequest\x12-\n" +
+	"\buser_ids\x18\x01 \x03(\tB\x12\xbaH\x0f\x92\x01\f\b\x01\x10\xf4\x03\"\x05r\x03\xb0\x01\x01R\auserIds\"N\n" +
 	"\x17GetBulkPresenceResponse\x123\n" +
 	"\tpresences\x18\x01 \x03(\v2\x15.presence.v1.PresenceR\tpresences*h\n" +
 	"\x06Status\x12\x16\n" +

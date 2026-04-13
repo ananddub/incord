@@ -66,3 +66,7 @@ func (r *Repository) RemoveDMChannelMember(ctx context.Context, params db.Remove
 func (r *Repository) IsDMChannelMember(ctx context.Context, params db.IsDMChannelMemberParams) (bool, error) {
 	return r.queries.IsDMChannelMember(ctx, params)
 }
+
+func (r *Repository) GetDMChannelMembers(ctx context.Context, channelID pgtype.UUID) ([]pgtype.UUID, error) {
+	return r.queries.GetDMChannelMembers(ctx, channelID)
+}

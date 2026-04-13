@@ -4,24 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/ananddub/ndiscord_backend/gen/db"
-	"github.com/ananddub/ndiscord_backend/internal/shared/event"
 )
 
 type Service struct {
-	repo     *Repository
-	producer *event.Producer
+	repo *Repository
 }
 
-func NewService(repo *Repository, producer ...*event.Producer) *Service {
-	s := &Service{repo: repo}
-	if len(producer) > 0 {
-		s.producer = producer[0]
-	}
-	return s
+func NewService(repo *Repository) *Service {
+	return &Service{repo: repo}
 }
 
 func (s *Service) GetUser(ctx context.Context, id pgtype.UUID) (db.User, error) {
@@ -45,16 +38,6 @@ func (s *Service) UpdateUser(ctx context.Context, params db.UpdateUserParams) (d
 	if err != nil {
 		return db.User{}, fmt.Errorf("failed to update user: %w", err)
 	}
-
-	// Publish profile update event so friends and guild members get notified
-	userID := uuid.UUID(params.ID.Bytes).String()
-	_ = event.PublishEvent(ctx, s.producer, event.TopicUserUpdate, userID, "", "", userID, map[string]string{
-		"user_id":    userID,
-		"username":   user.Username,
-		"avatar_url": user.AvatarUrl,
-		"bio":        user.Bio,
-		"status":     user.Status,
-	})
 
 	return user, nil
 }

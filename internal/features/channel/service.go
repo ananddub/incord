@@ -8,17 +8,17 @@ import (
 
 	"github.com/ananddub/ndiscord_backend/gen/db"
 	"github.com/ananddub/ndiscord_backend/internal/shared/authz"
-	"github.com/ananddub/ndiscord_backend/internal/shared/event"
+	"github.com/ananddub/ndiscord_backend/internal/shared/realtime"
 )
 
 type Service struct {
-	repo     *Repository
-	producer *event.Producer
-	authz    *authz.Client
+	repo  *Repository
+	authz *authz.Client
+	nats  *realtime.Hub
 }
 
-func NewService(repo *Repository, producer *event.Producer, authzClient ...*authz.Client) *Service {
-	s := &Service{repo: repo, producer: producer}
+func NewService(repo *Repository, nats *realtime.Hub, authzClient ...*authz.Client) *Service {
+	s := &Service{repo: repo, nats: nats}
 	if len(authzClient) > 0 {
 		s.authz = authzClient[0]
 	}
@@ -73,11 +73,10 @@ func (s *Service) CreateChannel(ctx context.Context, userID string, guildID, nam
 		return db.Channel{}, fmt.Errorf("failed to create channel: %w", err)
 	}
 
-	// Write authz tuple: channel belongs to guild
 	_ = s.authz.SetChannelGuild(ctx, ch.ID.String(), guildID)
 
-	_ = event.PublishEvent(ctx, s.producer, event.TopicChannelEvents, guildID, guildID, ch.ID.String(), "", map[string]any{
-		"action":     "create",
+	_ = s.nats.Publish(realtime.GuildEvents(guildID), map[string]any{
+		"event":      "CHANNEL_CREATE",
 		"guild_id":   guildID,
 		"channel_id": ch.ID.String(),
 	})
@@ -104,7 +103,6 @@ func (s *Service) UpdateChannel(ctx context.Context, userID, channelID string, n
 		return db.Channel{}, ErrInvalidUUID
 	}
 
-	// Fetch channel to get guild_id for permission check
 	existing, err := s.repo.GetChannelByID(ctx, id)
 	if err != nil {
 		return db.Channel{}, fmt.Errorf("%w: %v", ErrChannelNotFound, err)
@@ -139,9 +137,10 @@ func (s *Service) UpdateChannel(ctx context.Context, userID, channelID string, n
 	}
 
 	if ch.GuildID.Valid {
-		_ = event.PublishEvent(ctx, s.producer, event.TopicChannelEvents, uuidToString(ch.GuildID), uuidToString(ch.GuildID), uuidToString(ch.ID), "", map[string]any{
-			"action":     "update",
-			"guild_id":   uuidToString(ch.GuildID),
+		gid := uuidToString(ch.GuildID)
+		_ = s.nats.Publish(realtime.GuildEvents(gid), map[string]any{
+			"event":      "CHANNEL_UPDATE",
+			"guild_id":   gid,
 			"channel_id": uuidToString(ch.ID),
 		})
 	}
@@ -172,9 +171,10 @@ func (s *Service) DeleteChannel(ctx context.Context, userID, channelID string) e
 	}
 
 	if ch.GuildID.Valid {
-		_ = event.PublishEvent(ctx, s.producer, event.TopicChannelEvents, uuidToString(ch.GuildID), uuidToString(ch.GuildID), channelID, "", map[string]any{
-			"action":     "delete",
-			"guild_id":   uuidToString(ch.GuildID),
+		gid := uuidToString(ch.GuildID)
+		_ = s.nats.Publish(realtime.GuildEvents(gid), map[string]any{
+			"event":      "CHANNEL_DELETE",
+			"guild_id":   gid,
 			"channel_id": channelID,
 		})
 	}
@@ -392,4 +392,71 @@ func uuidToString(u pgtype.UUID) string {
 	b := u.Bytes
 	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
 		b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
+}
+
+// ── Resolvers (used by message service) ──
+
+// DMResolver implements message.DMChannelResolver.
+type DMResolver struct{ svc *Service }
+
+func NewDMResolver(svc *Service) *DMResolver { return &DMResolver{svc: svc} }
+
+func (r *DMResolver) GetOrCreateDMChannel(ctx context.Context, userID string, recipientIDs []string) (string, error) {
+	ch, err := r.svc.CreateDMChannel(ctx, userID, recipientIDs)
+	if err != nil {
+		return "", err
+	}
+	return uuidToString(ch.ID), nil
+}
+
+// GuildResolver implements message.ChannelGuildResolver.
+type GuildResolver struct{ svc *Service }
+
+func NewGuildResolver(svc *Service) *GuildResolver { return &GuildResolver{svc: svc} }
+
+func (r *GuildResolver) GetChannelGuildID(ctx context.Context, channelID string) string {
+	ch, err := r.svc.GetChannel(ctx, channelID)
+	if err != nil || !ch.GuildID.Valid {
+		return ""
+	}
+	return uuidToString(ch.GuildID)
+}
+
+// DMChannelMembersResolver implements message.DMChannelLister + dispatcher.DMChannelMembers.
+type DMChannelMembersResolver struct{ repo *Repository }
+
+func NewDMChannelMembersResolver(repo *Repository) *DMChannelMembersResolver {
+	return &DMChannelMembersResolver{repo: repo}
+}
+
+func (r *DMChannelMembersResolver) GetDMChannelMemberIDs(ctx context.Context, channelID string) ([]string, error) {
+	chUUID, err := parseUUID(channelID)
+	if err != nil {
+		return nil, err
+	}
+	members, err := r.repo.GetDMChannelMembers(ctx, chUUID)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, len(members))
+	for _, m := range members {
+		ids = append(ids, uuidToString(m))
+	}
+	return ids, nil
+}
+
+func (r *DMChannelMembersResolver) GetUserDMChannelIDs(ctx context.Context, userID string) ([]string, error) {
+	uid, err := parseUUID(userID)
+	if err != nil {
+		return nil, err
+	}
+	channels, err := r.repo.ListDMChannels(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, len(channels))
+	for _, ch := range channels {
+		ids = append(ids, uuidToString(ch.ID))
+	}
+	return ids, nil
 }

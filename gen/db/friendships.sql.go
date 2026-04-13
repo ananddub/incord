@@ -14,7 +14,8 @@ import (
 const createFriendship = `-- name: CreateFriendship :one
 INSERT INTO friendships (user_id, friend_id, status)
 VALUES ($1, $2, $3)
-RETURNING user_id, friend_id, status, created_at
+ON CONFLICT (user_id, friend_id) DO UPDATE SET deleted = FALSE, updated_at = NOW(), status = EXCLUDED.status
+RETURNING user_id, friend_id, status, created_at, deleted, updated_at
 `
 
 type CreateFriendshipParams struct {
@@ -31,12 +32,14 @@ func (q *Queries) CreateFriendship(ctx context.Context, arg CreateFriendshipPara
 		&i.FriendID,
 		&i.Status,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const deleteFriendship = `-- name: DeleteFriendship :exec
-DELETE FROM friendships
+UPDATE friendships SET deleted = TRUE, updated_at = NOW()
 WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)
 `
 
@@ -51,8 +54,9 @@ func (q *Queries) DeleteFriendship(ctx context.Context, arg DeleteFriendshipPara
 }
 
 const getFriendship = `-- name: GetFriendship :one
-SELECT user_id, friend_id, status, created_at FROM friendships
-WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)
+SELECT user_id, friend_id, status, created_at, deleted, updated_at FROM friendships
+WHERE ((user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1))
+  AND deleted = FALSE
 `
 
 type GetFriendshipParams struct {
@@ -68,14 +72,16 @@ func (q *Queries) GetFriendship(ctx context.Context, arg GetFriendshipParams) (F
 		&i.FriendID,
 		&i.Status,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const listBlocked = `-- name: ListBlocked :many
-SELECT u.id, u.username, u.email, u.password_hash, u.avatar_url, u.bio, u.status, u.created_at, u.updated_at, u.verified FROM users u
+SELECT u.id, u.username, u.email, u.password_hash, u.avatar_url, u.bio, u.status, u.created_at, u.updated_at, u.verified, u.deleted FROM users u
 JOIN friendships f ON f.friend_id = u.id
-WHERE f.user_id = $1 AND f.status = 'blocked'
+WHERE f.user_id = $1 AND f.status = 'blocked' AND f.deleted = FALSE
 `
 
 func (q *Queries) ListBlocked(ctx context.Context, userID pgtype.UUID) ([]User, error) {
@@ -98,6 +104,7 @@ func (q *Queries) ListBlocked(ctx context.Context, userID pgtype.UUID) ([]User, 
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Verified,
+			&i.Deleted,
 		); err != nil {
 			return nil, err
 		}
@@ -110,9 +117,9 @@ func (q *Queries) ListBlocked(ctx context.Context, userID pgtype.UUID) ([]User, 
 }
 
 const listFriends = `-- name: ListFriends :many
-SELECT u.id, u.username, u.email, u.password_hash, u.avatar_url, u.bio, u.status, u.created_at, u.updated_at, u.verified FROM users u
+SELECT u.id, u.username, u.email, u.password_hash, u.avatar_url, u.bio, u.status, u.created_at, u.updated_at, u.verified, u.deleted FROM users u
 JOIN friendships f ON (f.friend_id = u.id AND f.user_id = $1) OR (f.user_id = u.id AND f.friend_id = $1)
-WHERE f.status = 'accepted'
+WHERE f.status = 'accepted' AND f.deleted = FALSE
 `
 
 func (q *Queries) ListFriends(ctx context.Context, userID pgtype.UUID) ([]User, error) {
@@ -135,6 +142,7 @@ func (q *Queries) ListFriends(ctx context.Context, userID pgtype.UUID) ([]User, 
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Verified,
+			&i.Deleted,
 		); err != nil {
 			return nil, err
 		}
@@ -147,8 +155,8 @@ func (q *Queries) ListFriends(ctx context.Context, userID pgtype.UUID) ([]User, 
 }
 
 const listPendingIncoming = `-- name: ListPendingIncoming :many
-SELECT user_id, friend_id, status, created_at FROM friendships
-WHERE friend_id = $1 AND status = 'pending'
+SELECT user_id, friend_id, status, created_at, deleted, updated_at FROM friendships
+WHERE friend_id = $1 AND status = 'pending' AND deleted = FALSE
 `
 
 func (q *Queries) ListPendingIncoming(ctx context.Context, friendID pgtype.UUID) ([]Friendship, error) {
@@ -165,6 +173,8 @@ func (q *Queries) ListPendingIncoming(ctx context.Context, friendID pgtype.UUID)
 			&i.FriendID,
 			&i.Status,
 			&i.CreatedAt,
+			&i.Deleted,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -177,8 +187,8 @@ func (q *Queries) ListPendingIncoming(ctx context.Context, friendID pgtype.UUID)
 }
 
 const listPendingOutgoing = `-- name: ListPendingOutgoing :many
-SELECT user_id, friend_id, status, created_at FROM friendships
-WHERE user_id = $1 AND status = 'pending'
+SELECT user_id, friend_id, status, created_at, deleted, updated_at FROM friendships
+WHERE user_id = $1 AND status = 'pending' AND deleted = FALSE
 `
 
 func (q *Queries) ListPendingOutgoing(ctx context.Context, userID pgtype.UUID) ([]Friendship, error) {
@@ -195,6 +205,8 @@ func (q *Queries) ListPendingOutgoing(ctx context.Context, userID pgtype.UUID) (
 			&i.FriendID,
 			&i.Status,
 			&i.CreatedAt,
+			&i.Deleted,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -209,7 +221,7 @@ func (q *Queries) ListPendingOutgoing(ctx context.Context, userID pgtype.UUID) (
 const updateFriendshipStatus = `-- name: UpdateFriendshipStatus :one
 UPDATE friendships SET status = $3
 WHERE user_id = $1 AND friend_id = $2
-RETURNING user_id, friend_id, status, created_at
+RETURNING user_id, friend_id, status, created_at, deleted, updated_at
 `
 
 type UpdateFriendshipStatusParams struct {
@@ -226,6 +238,8 @@ func (q *Queries) UpdateFriendshipStatus(ctx context.Context, arg UpdateFriendsh
 		&i.FriendID,
 		&i.Status,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

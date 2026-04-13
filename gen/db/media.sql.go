@@ -13,7 +13,7 @@ import (
 
 const confirmMediaFile = `-- name: ConfirmMediaFile :one
 UPDATE media_files SET confirmed = TRUE WHERE id = $1
-RETURNING id, uploader_id, filename, content_type, size, bucket_key, confirmed, created_at
+RETURNING id, uploader_id, filename, content_type, size, bucket_key, confirmed, created_at, deleted, updated_at
 `
 
 func (q *Queries) ConfirmMediaFile(ctx context.Context, id pgtype.UUID) (MediaFile, error) {
@@ -28,6 +28,8 @@ func (q *Queries) ConfirmMediaFile(ctx context.Context, id pgtype.UUID) (MediaFi
 		&i.BucketKey,
 		&i.Confirmed,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -35,7 +37,7 @@ func (q *Queries) ConfirmMediaFile(ctx context.Context, id pgtype.UUID) (MediaFi
 const createMediaFile = `-- name: CreateMediaFile :one
 INSERT INTO media_files (uploader_id, filename, content_type, size, bucket_key)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, uploader_id, filename, content_type, size, bucket_key, confirmed, created_at
+RETURNING id, uploader_id, filename, content_type, size, bucket_key, confirmed, created_at, deleted, updated_at
 `
 
 type CreateMediaFileParams struct {
@@ -64,12 +66,14 @@ func (q *Queries) CreateMediaFile(ctx context.Context, arg CreateMediaFileParams
 		&i.BucketKey,
 		&i.Confirmed,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const deleteMediaFile = `-- name: DeleteMediaFile :exec
-DELETE FROM media_files WHERE id = $1
+UPDATE media_files SET deleted = TRUE, updated_at = NOW() WHERE id = $1
 `
 
 func (q *Queries) DeleteMediaFile(ctx context.Context, id pgtype.UUID) error {
@@ -78,7 +82,7 @@ func (q *Queries) DeleteMediaFile(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getMediaFile = `-- name: GetMediaFile :one
-SELECT id, uploader_id, filename, content_type, size, bucket_key, confirmed, created_at FROM media_files WHERE id = $1
+SELECT id, uploader_id, filename, content_type, size, bucket_key, confirmed, created_at, deleted, updated_at FROM media_files WHERE id = $1 AND deleted = FALSE
 `
 
 func (q *Queries) GetMediaFile(ctx context.Context, id pgtype.UUID) (MediaFile, error) {
@@ -93,6 +97,8 @@ func (q *Queries) GetMediaFile(ctx context.Context, id pgtype.UUID) (MediaFile, 
 		&i.BucketKey,
 		&i.Confirmed,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

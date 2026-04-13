@@ -5,6 +5,7 @@ package voice.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/voice/v1;voicev1";
 
 import "google/protobuf/timestamp.proto";
+import "buf/validate/validate.proto";
 
 service VoiceService {
   // Client requests to join a voice channel, gets UDP endpoint info
@@ -13,13 +14,11 @@ service VoiceService {
   rpc GetChannelParticipants(GetChannelParticipantsRequest) returns (GetChannelParticipantsResponse);
   rpc UpdateVoiceState(UpdateVoiceStateRequest) returns (UpdateVoiceStateResponse);
 
-  // Stream: voice state changes in a channel (join/leave/mute/unmute)
-  rpc StreamVoiceState(StreamVoiceStateRequest) returns (stream VoiceStateEvent);
 }
 
 message JoinChannelRequest {
-  string guild_id = 1;
-  string channel_id = 2;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string channel_id = 2 [(buf.validate.field).string.uuid = true];
 }
 
 message JoinChannelResponse {
@@ -31,8 +30,8 @@ message JoinChannelResponse {
 }
 
 message LeaveChannelRequest {
-  string guild_id = 1;
-  string channel_id = 2;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string channel_id = 2 [(buf.validate.field).string.uuid = true];
 }
 
 message LeaveChannelResponse {}
@@ -50,7 +49,7 @@ message VoiceParticipant {
 }
 
 message GetChannelParticipantsRequest {
-  string channel_id = 1;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message GetChannelParticipantsResponse {
@@ -58,7 +57,7 @@ message GetChannelParticipantsResponse {
 }
 
 message UpdateVoiceStateRequest {
-  string channel_id = 1;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
   bool self_mute = 2;
   bool self_deaf = 3;
   bool video = 4;
@@ -67,21 +66,3 @@ message UpdateVoiceStateRequest {
 
 message UpdateVoiceStateResponse {}
 
-// Stream: voice state changes
-message StreamVoiceStateRequest {
-  string channel_id = 1;
-}
-
-enum VoiceStateEventType {
-  VOICE_STATE_EVENT_TYPE_UNSPECIFIED = 0;
-  VOICE_STATE_EVENT_TYPE_JOIN = 1;
-  VOICE_STATE_EVENT_TYPE_LEAVE = 2;
-  VOICE_STATE_EVENT_TYPE_UPDATE = 3;
-}
-
-message VoiceStateEvent {
-  VoiceStateEventType type = 1;
-  string channel_id = 2;
-  VoiceParticipant participant = 3;
-  google.protobuf.Timestamp timestamp = 4;
-}

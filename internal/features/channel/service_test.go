@@ -18,7 +18,7 @@ func setupChannelTest(t *testing.T) (*Repository, *Service, *testutil.TestInfra)
 	t.Helper()
 	infra := testutil.SetupTestInfra(t)
 	repo := NewRepository(infra.Pool)
-	svc := NewService(repo, nil) // nil producer -- only use svc for non-publishing paths
+	svc := NewService(repo, nil)
 	return repo, svc, infra
 }
 

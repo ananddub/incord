@@ -5,6 +5,7 @@ package auth.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/auth/v1;authv1";
 
 import "google/protobuf/timestamp.proto";
+import "buf/validate/validate.proto";
 
 service AuthService {
   // Register sends OTP to email. Account is NOT active until VerifyOTP.
@@ -20,9 +21,9 @@ service AuthService {
 }
 
 message RegisterRequest {
-  string username = 1;
-  string email = 2;
-  string password = 3;
+  string username = 1 [(buf.validate.field).string = {min_len: 2, max_len: 32}];
+  string email = 2 [(buf.validate.field).string = {email: true, max_len: 255}];
+  string password = 3 [(buf.validate.field).string = {min_len: 6, max_len: 128}];
 }
 
 // Register now returns user_id + message. NO tokens until OTP verified.
@@ -32,8 +33,8 @@ message RegisterResponse {
 }
 
 message VerifyOTPRequest {
-  string email = 1;
-  string otp = 2;
+  string email = 1 [(buf.validate.field).string = {email: true, max_len: 255}];
+  string otp = 2 [(buf.validate.field).string = {min_len: 4, max_len: 10, pattern: "^[0-9]+$"}];
 }
 
 message VerifyOTPResponse {
@@ -43,7 +44,7 @@ message VerifyOTPResponse {
 }
 
 message ResendOTPRequest {
-  string email = 1;
+  string email = 1 [(buf.validate.field).string = {email: true, max_len: 255}];
 }
 
 message ResendOTPResponse {
@@ -51,8 +52,8 @@ message ResendOTPResponse {
 }
 
 message LoginRequest {
-  string email = 1;
-  string password = 2;
+  string email = 1 [(buf.validate.field).string = {email: true, max_len: 255}];
+  string password = 2 [(buf.validate.field).string = {min_len: 6, max_len: 128}];
 }
 
 message LoginResponse {
@@ -62,7 +63,7 @@ message LoginResponse {
 }
 
 message RefreshTokenRequest {
-  string refresh_token = 1;
+  string refresh_token = 1 [(buf.validate.field).string.min_len = 1];
 }
 
 message RefreshTokenResponse {
@@ -71,13 +72,13 @@ message RefreshTokenResponse {
 }
 
 message LogoutRequest {
-  string refresh_token = 1;
+  string refresh_token = 1 [(buf.validate.field).string.min_len = 1];
 }
 
 message LogoutResponse {}
 
 message ValidateTokenRequest {
-  string access_token = 1;
+  string access_token = 1 [(buf.validate.field).string.min_len = 1];
 }
 
 message ValidateTokenResponse {

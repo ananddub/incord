@@ -17,8 +17,6 @@ import (
 	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
 	"github.com/gocql/gocql"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/twmb/franz-go/pkg/kadm"
-	"github.com/twmb/franz-go/pkg/kgo"
 )
 
 func main() {
@@ -29,29 +27,22 @@ func main() {
 
 	log.Info().Msg("=== ndiscord init ===")
 
-	// [1/4] TimescaleDB
-	log.Info().Msg("[1/4] Running TimescaleDB migrations...")
+	// [1/3] TimescaleDB
+	log.Info().Msg("[1/3] Running TimescaleDB migrations...")
 	if err := migratePG(ctx, cfg.Database); err != nil {
 		log.Fatal().Err(err).Msg("TimescaleDB migration failed")
 	}
 	log.Info().Msg("  TimescaleDB: done")
 
-	// [2/4] ScyllaDB
-	log.Info().Msg("[2/4] Setting up ScyllaDB...")
+	// [2/3] ScyllaDB
+	log.Info().Msg("[2/3] Setting up ScyllaDB...")
 	if err := migrateScylla(cfg.ScyllaDB); err != nil {
 		log.Fatal().Err(err).Msg("ScyllaDB setup failed")
 	}
 	log.Info().Msg("  ScyllaDB: done")
 
-	// [3/4] Redpanda topics
-	log.Info().Msg("[3/4] Creating Redpanda topics...")
-	if err := createTopics(cfg.Redpanda); err != nil {
-		log.Warn().Err(err).Msg("Redpanda topic creation had errors (may already exist)")
-	}
-	log.Info().Msg("  Redpanda: done")
-
-	// [4/4] OpenFGA
-	log.Info().Msg("[4/4] Setting up OpenFGA...")
+	// [3/3] OpenFGA
+	log.Info().Msg("[3/3] Setting up OpenFGA...")
 	if err := setupOpenFGA(cfg.OpenFGA); err != nil {
 		log.Warn().Err(err).Msg("OpenFGA setup failed (auth will be permissive)")
 	} else {
@@ -177,31 +168,6 @@ func migrateScylla(cfg config.ScyllaDBConfig) error {
 			}
 		}
 		logger.Log.Info().Str("file", filepath.Base(f)).Msg("  applied")
-	}
-
-	return nil
-}
-
-func createTopics(cfg config.RedpandaConfig) error {
-	client, err := kgo.NewClient(kgo.SeedBrokers(cfg.Brokers...))
-	if err != nil {
-		return err
-	}
-	defer client.Close()
-
-	admin := kadm.NewClient(client)
-
-	topics := []string{
-		"message.create", "message.update", "message.delete",
-		"guild.events", "channel.events",
-		"presence.update", "typing.start", "voice.state", "user.update",
-	}
-
-	for _, topic := range topics {
-		_, err := admin.CreateTopic(context.Background(), 1, 1, nil, topic)
-		if err != nil {
-			logger.Log.Debug().Err(err).Str("topic", topic).Msg("topic create (may already exist)")
-		}
 	}
 
 	return nil

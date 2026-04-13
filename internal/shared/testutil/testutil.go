@@ -3,6 +3,10 @@ package testutil
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -99,6 +103,43 @@ func runMigrations(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 	ctx := context.Background()
 
+	// Read migration files from disk (same as init tool)
+	files, err := filepath.Glob("db/timescale/migrations/*.up.sql")
+	if err != nil || len(files) == 0 {
+		// Try relative paths from different test directories
+		for _, prefix := range []string{"", "../", "../../", "../../../", "../../../../"} {
+			files, _ = filepath.Glob(prefix + "db/timescale/migrations/*.up.sql")
+			if len(files) > 0 {
+				break
+			}
+		}
+	}
+
+	if len(files) > 0 {
+		sort.Strings(files)
+		for _, f := range files {
+			data, err := os.ReadFile(f)
+			if err != nil {
+				t.Fatalf("failed to read migration %s: %v", f, err)
+			}
+			stmts := strings.Split(string(data), ";")
+			for _, stmt := range stmts {
+				stmt = strings.TrimSpace(stmt)
+				if stmt == "" {
+					continue
+				}
+				if _, err := pool.Exec(ctx, stmt); err != nil {
+					// Ignore "already exists" errors
+					if !strings.Contains(err.Error(), "already exists") {
+						t.Logf("migration warning: %v", err)
+					}
+				}
+			}
+		}
+		return
+	}
+
+	// Fallback: inline migration (keep in sync with db/timescale/migrations/)
 	migration := `
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 

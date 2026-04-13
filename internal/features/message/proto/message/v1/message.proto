@@ -5,6 +5,7 @@ package message.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/message/v1;messagev1";
 
 import "google/protobuf/timestamp.proto";
+import "buf/validate/validate.proto";
 
 service MessageService {
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
@@ -37,9 +38,6 @@ service MessageService {
   // Edit history
   rpc GetEditHistory(GetEditHistoryRequest) returns (GetEditHistoryResponse);
 
-  // Streams
-  rpc StreamMessages(StreamMessagesRequest) returns (stream MessageEvent);
-  rpc StreamTyping(StreamTypingRequest) returns (stream TypingEvent);
 }
 
 enum MessageType {
@@ -78,11 +76,11 @@ message Message {
 }
 
 message SendMessageRequest {
-  string channel_id = 1;
-  string content = 2;
-  MessageType type = 3;
-  string reply_to_id = 4;
-  repeated string attachment_ids = 5;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string content = 2 [(buf.validate.field).string = {max_len: 4000}];
+  MessageType type = 3 [(buf.validate.field).enum.defined_only = true];
+  string reply_to_id = 4 [(buf.validate.field).string = {max_len: 64}];
+  repeated string attachment_ids = 5 [(buf.validate.field).repeated = {max_items: 10, items: {string: {max_len: 64}}}];
 }
 
 message SendMessageResponse {
@@ -90,8 +88,8 @@ message SendMessageResponse {
 }
 
 message GetMessageRequest {
-  string channel_id = 1;
-  string message_id = 2;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string message_id = 2 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
 }
 
 message GetMessageResponse {
@@ -99,9 +97,9 @@ message GetMessageResponse {
 }
 
 message EditMessageRequest {
-  string channel_id = 1;
-  string message_id = 2;
-  string content = 3;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string message_id = 2 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
+  string content = 3 [(buf.validate.field).string = {min_len: 1, max_len: 4000}];
 }
 
 message EditMessageResponse {
@@ -109,17 +107,17 @@ message EditMessageResponse {
 }
 
 message DeleteMessageRequest {
-  string channel_id = 1;
-  string message_id = 2;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string message_id = 2 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
 }
 
 message DeleteMessageResponse {}
 
 message ListMessagesRequest {
-  string channel_id = 1;
-  string before = 2;
-  string after = 3;
-  int32 limit = 4;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string before = 2 [(buf.validate.field).string = {max_len: 64}];
+  string after = 3 [(buf.validate.field).string = {max_len: 64}];
+  int32 limit = 4 [(buf.validate.field).int32 = {gte: 0, lte: 200}];
 }
 
 message ListMessagesResponse {
@@ -127,89 +125,52 @@ message ListMessagesResponse {
 }
 
 message PinMessageRequest {
-  string channel_id = 1;
-  string message_id = 2;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string message_id = 2 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
 }
 
 message PinMessageResponse {}
 
 message UnpinMessageRequest {
-  string channel_id = 1;
-  string message_id = 2;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string message_id = 2 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
 }
 
 message UnpinMessageResponse {}
 
 message AddReactionRequest {
-  string channel_id = 1;
-  string message_id = 2;
-  string emoji = 3;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string message_id = 2 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
+  string emoji = 3 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
 }
 
 message AddReactionResponse {}
 
 message RemoveReactionRequest {
-  string channel_id = 1;
-  string message_id = 2;
-  string emoji = 3;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string message_id = 2 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
+  string emoji = 3 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
 }
 
 message RemoveReactionResponse {}
 
 message AckMessageRequest {
-  string channel_id = 1;
-  string message_id = 2;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string message_id = 2 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
 }
 
 message AckMessageResponse {}
 
 message StartTypingRequest {
-  string channel_id = 1;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message StartTypingResponse {}
 
-// Stream: real-time messages for a channel
-message StreamMessagesRequest {
-  string channel_id = 1;
-}
-
-enum MessageEventType {
-  MESSAGE_EVENT_TYPE_UNSPECIFIED = 0;
-  MESSAGE_EVENT_TYPE_CREATE = 1;
-  MESSAGE_EVENT_TYPE_UPDATE = 2;
-  MESSAGE_EVENT_TYPE_DELETE = 3;
-  MESSAGE_EVENT_TYPE_PIN = 4;
-  MESSAGE_EVENT_TYPE_UNPIN = 5;
-  MESSAGE_EVENT_TYPE_REACTION_ADD = 6;
-  MESSAGE_EVENT_TYPE_REACTION_REMOVE = 7;
-}
-
-message MessageEvent {
-  MessageEventType type = 1;
-  Message message = 2;
-  string channel_id = 3;
-  string message_id = 4;
-  string emoji = 5;
-  string user_id = 6;
-  google.protobuf.Timestamp timestamp = 7;
-}
-
-// Stream: typing indicators for a channel
-message StreamTypingRequest {
-  string channel_id = 1;
-}
-
-message TypingEvent {
-  string channel_id = 1;
-  string user_id = 2;
-  google.protobuf.Timestamp timestamp = 3;
-}
-
 // DM: send directly to a user without manually creating DM channel
 message SendDirectMessageRequest {
-  string recipient_id = 1;
-  string content = 2;
+  string recipient_id = 1 [(buf.validate.field).string.uuid = true];
+  string content = 2 [(buf.validate.field).string = {min_len: 1, max_len: 4000}];
 }
 
 message SendDirectMessageResponse {
@@ -217,27 +178,40 @@ message SendDirectMessageResponse {
   Message message = 2;
 }
 
-// Unread: pending messages per channel
+// Unread messages
 message GetUnreadCountsRequest {}
 
-message UnreadChannel {
+message UnreadDM {
   string channel_id = 1;
-  string last_read_message_id = 2;
-  int32 unread_count = 3;
-  string last_message_id = 4;
-  google.protobuf.Timestamp last_message_at = 5;
+  string sender_id = 2;
+  string sender_name = 3;
+  int32 unread_count = 4;
+  string last_read_message_id = 5;
+  repeated Message messages = 6;
+  google.protobuf.Timestamp last_message_at = 7;
+}
+
+message UnreadChannelMessage {
+  string channel_id = 1;
+  string guild_id = 2;
+  string channel_name = 3;
+  int32 unread_count = 4;
+  string last_read_message_id = 5;
+  repeated Message messages = 6;
+  google.protobuf.Timestamp last_message_at = 7;
 }
 
 message GetUnreadCountsResponse {
-  repeated UnreadChannel channels = 1;
-  int32 total_unread = 2;
+  repeated UnreadDM dm_messages = 1;
+  repeated UnreadChannelMessage channel_messages = 2;
+  int32 total_unread = 3;
 }
 
 // Search messages by content
 message SearchMessagesRequest {
-  string channel_id = 1;
-  string query = 2;
-  int32 limit = 3;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string query = 2 [(buf.validate.field).string = {min_len: 1, max_len: 256}];
+  int32 limit = 3 [(buf.validate.field).int32 = {gte: 0, lte: 200}];
 }
 
 message SearchMessagesResponse {
@@ -247,9 +221,9 @@ message SearchMessagesResponse {
 
 // Get thread (replies to a message)
 message GetThreadMessagesRequest {
-  string channel_id = 1;
-  string parent_message_id = 2;
-  int32 limit = 3;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string parent_message_id = 2 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
+  int32 limit = 3 [(buf.validate.field).int32 = {gte: 0, lte: 200}];
 }
 
 message GetThreadMessagesResponse {
@@ -258,8 +232,8 @@ message GetThreadMessagesResponse {
 
 // Bulk delete messages
 message BulkDeleteMessagesRequest {
-  string channel_id = 1;
-  repeated string message_ids = 2;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  repeated string message_ids = 2 [(buf.validate.field).repeated = {min_items: 1, max_items: 100, items: {string: {min_len: 1, max_len: 64}}}];
 }
 
 message BulkDeleteMessagesResponse {
@@ -273,8 +247,8 @@ message MessageEdit {
 }
 
 message GetEditHistoryRequest {
-  string channel_id = 1;
-  string message_id = 2;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string message_id = 2 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
 }
 
 message GetEditHistoryResponse {

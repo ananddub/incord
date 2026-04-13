@@ -115,7 +115,7 @@ func TestFullDiscordFlow(t *testing.T) {
 
 		// Update bio
 		updateResp, err := c.user.UpdateUser(alice.ctx(), &userv1.UpdateUserRequest{
-			UserId: alice.ID, Bio: strPtr("Discord clone tester"),
+			Bio: strPtr("Discord clone tester"),
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "Discord clone tester", updateResp.User.Bio)

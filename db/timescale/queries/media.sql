@@ -4,11 +4,11 @@ VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: GetMediaFile :one
-SELECT * FROM media_files WHERE id = $1;
+SELECT * FROM media_files WHERE id = $1 AND deleted = FALSE;
 
 -- name: ConfirmMediaFile :one
 UPDATE media_files SET confirmed = TRUE WHERE id = $1
 RETURNING *;
 
 -- name: DeleteMediaFile :exec
-DELETE FROM media_files WHERE id = $1;
+UPDATE media_files SET deleted = TRUE, updated_at = NOW() WHERE id = $1;

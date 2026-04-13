@@ -16,7 +16,7 @@ func setupGuildService(t *testing.T) (*Service, *testutil.TestInfra) {
 	t.Helper()
 	infra := testutil.SetupTestInfra(t)
 	repo := NewRepository(infra.Pool, infra.Redis)
-	svc := NewService(repo, nil)
+	svc := NewService(repo, nil, nil)
 	return svc, infra
 }
 

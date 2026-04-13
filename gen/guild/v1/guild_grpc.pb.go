@@ -22,6 +22,7 @@ const (
 	GuildService_CreateGuild_FullMethodName        = "/guild.v1.GuildService/CreateGuild"
 	GuildService_GetGuild_FullMethodName           = "/guild.v1.GuildService/GetGuild"
 	GuildService_UpdateGuild_FullMethodName        = "/guild.v1.GuildService/UpdateGuild"
+	GuildService_UploadGuildIcon_FullMethodName    = "/guild.v1.GuildService/UploadGuildIcon"
 	GuildService_DeleteGuild_FullMethodName        = "/guild.v1.GuildService/DeleteGuild"
 	GuildService_ListUserGuilds_FullMethodName     = "/guild.v1.GuildService/ListUserGuilds"
 	GuildService_JoinGuild_FullMethodName          = "/guild.v1.GuildService/JoinGuild"
@@ -40,7 +41,6 @@ const (
 	GuildService_GrantPermission_FullMethodName    = "/guild.v1.GuildService/GrantPermission"
 	GuildService_RevokePermission_FullMethodName   = "/guild.v1.GuildService/RevokePermission"
 	GuildService_GetUserPermissions_FullMethodName = "/guild.v1.GuildService/GetUserPermissions"
-	GuildService_StreamGuildEvents_FullMethodName  = "/guild.v1.GuildService/StreamGuildEvents"
 )
 
 // GuildServiceClient is the client API for GuildService service.
@@ -50,6 +50,7 @@ type GuildServiceClient interface {
 	CreateGuild(ctx context.Context, in *CreateGuildRequest, opts ...grpc.CallOption) (*CreateGuildResponse, error)
 	GetGuild(ctx context.Context, in *GetGuildRequest, opts ...grpc.CallOption) (*GetGuildResponse, error)
 	UpdateGuild(ctx context.Context, in *UpdateGuildRequest, opts ...grpc.CallOption) (*UpdateGuildResponse, error)
+	UploadGuildIcon(ctx context.Context, in *UploadGuildIconRequest, opts ...grpc.CallOption) (*UploadGuildIconResponse, error)
 	DeleteGuild(ctx context.Context, in *DeleteGuildRequest, opts ...grpc.CallOption) (*DeleteGuildResponse, error)
 	ListUserGuilds(ctx context.Context, in *ListUserGuildsRequest, opts ...grpc.CallOption) (*ListUserGuildsResponse, error)
 	JoinGuild(ctx context.Context, in *JoinGuildRequest, opts ...grpc.CallOption) (*JoinGuildResponse, error)
@@ -70,8 +71,6 @@ type GuildServiceClient interface {
 	GrantPermission(ctx context.Context, in *GrantPermissionRequest, opts ...grpc.CallOption) (*GrantPermissionResponse, error)
 	RevokePermission(ctx context.Context, in *RevokePermissionRequest, opts ...grpc.CallOption) (*RevokePermissionResponse, error)
 	GetUserPermissions(ctx context.Context, in *GetUserPermissionsRequest, opts ...grpc.CallOption) (*GetUserPermissionsResponse, error)
-	// Stream
-	StreamGuildEvents(ctx context.Context, in *StreamGuildEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GuildEvent], error)
 }
 
 type guildServiceClient struct {
@@ -106,6 +105,16 @@ func (c *guildServiceClient) UpdateGuild(ctx context.Context, in *UpdateGuildReq
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateGuildResponse)
 	err := c.cc.Invoke(ctx, GuildService_UpdateGuild_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *guildServiceClient) UploadGuildIcon(ctx context.Context, in *UploadGuildIconRequest, opts ...grpc.CallOption) (*UploadGuildIconResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UploadGuildIconResponse)
+	err := c.cc.Invoke(ctx, GuildService_UploadGuildIcon_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -292,25 +301,6 @@ func (c *guildServiceClient) GetUserPermissions(ctx context.Context, in *GetUser
 	return out, nil
 }
 
-func (c *guildServiceClient) StreamGuildEvents(ctx context.Context, in *StreamGuildEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GuildEvent], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &GuildService_ServiceDesc.Streams[0], GuildService_StreamGuildEvents_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[StreamGuildEventsRequest, GuildEvent]{ClientStream: stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type GuildService_StreamGuildEventsClient = grpc.ServerStreamingClient[GuildEvent]
-
 // GuildServiceServer is the server API for GuildService service.
 // All implementations must embed UnimplementedGuildServiceServer
 // for forward compatibility.
@@ -318,6 +308,7 @@ type GuildServiceServer interface {
 	CreateGuild(context.Context, *CreateGuildRequest) (*CreateGuildResponse, error)
 	GetGuild(context.Context, *GetGuildRequest) (*GetGuildResponse, error)
 	UpdateGuild(context.Context, *UpdateGuildRequest) (*UpdateGuildResponse, error)
+	UploadGuildIcon(context.Context, *UploadGuildIconRequest) (*UploadGuildIconResponse, error)
 	DeleteGuild(context.Context, *DeleteGuildRequest) (*DeleteGuildResponse, error)
 	ListUserGuilds(context.Context, *ListUserGuildsRequest) (*ListUserGuildsResponse, error)
 	JoinGuild(context.Context, *JoinGuildRequest) (*JoinGuildResponse, error)
@@ -338,8 +329,6 @@ type GuildServiceServer interface {
 	GrantPermission(context.Context, *GrantPermissionRequest) (*GrantPermissionResponse, error)
 	RevokePermission(context.Context, *RevokePermissionRequest) (*RevokePermissionResponse, error)
 	GetUserPermissions(context.Context, *GetUserPermissionsRequest) (*GetUserPermissionsResponse, error)
-	// Stream
-	StreamGuildEvents(*StreamGuildEventsRequest, grpc.ServerStreamingServer[GuildEvent]) error
 	mustEmbedUnimplementedGuildServiceServer()
 }
 
@@ -358,6 +347,9 @@ func (UnimplementedGuildServiceServer) GetGuild(context.Context, *GetGuildReques
 }
 func (UnimplementedGuildServiceServer) UpdateGuild(context.Context, *UpdateGuildRequest) (*UpdateGuildResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateGuild not implemented")
+}
+func (UnimplementedGuildServiceServer) UploadGuildIcon(context.Context, *UploadGuildIconRequest) (*UploadGuildIconResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UploadGuildIcon not implemented")
 }
 func (UnimplementedGuildServiceServer) DeleteGuild(context.Context, *DeleteGuildRequest) (*DeleteGuildResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteGuild not implemented")
@@ -412,9 +404,6 @@ func (UnimplementedGuildServiceServer) RevokePermission(context.Context, *Revoke
 }
 func (UnimplementedGuildServiceServer) GetUserPermissions(context.Context, *GetUserPermissionsRequest) (*GetUserPermissionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUserPermissions not implemented")
-}
-func (UnimplementedGuildServiceServer) StreamGuildEvents(*StreamGuildEventsRequest, grpc.ServerStreamingServer[GuildEvent]) error {
-	return status.Error(codes.Unimplemented, "method StreamGuildEvents not implemented")
 }
 func (UnimplementedGuildServiceServer) mustEmbedUnimplementedGuildServiceServer() {}
 func (UnimplementedGuildServiceServer) testEmbeddedByValue()                      {}
@@ -487,6 +476,24 @@ func _GuildService_UpdateGuild_Handler(srv interface{}, ctx context.Context, dec
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(GuildServiceServer).UpdateGuild(ctx, req.(*UpdateGuildRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GuildService_UploadGuildIcon_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UploadGuildIconRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuildServiceServer).UploadGuildIcon(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GuildService_UploadGuildIcon_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuildServiceServer).UploadGuildIcon(ctx, req.(*UploadGuildIconRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -815,17 +822,6 @@ func _GuildService_GetUserPermissions_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _GuildService_StreamGuildEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(StreamGuildEventsRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(GuildServiceServer).StreamGuildEvents(m, &grpc.GenericServerStream[StreamGuildEventsRequest, GuildEvent]{ServerStream: stream})
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type GuildService_StreamGuildEventsServer = grpc.ServerStreamingServer[GuildEvent]
-
 // GuildService_ServiceDesc is the grpc.ServiceDesc for GuildService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -844,6 +840,10 @@ var GuildService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateGuild",
 			Handler:    _GuildService_UpdateGuild_Handler,
+		},
+		{
+			MethodName: "UploadGuildIcon",
+			Handler:    _GuildService_UploadGuildIcon_Handler,
 		},
 		{
 			MethodName: "DeleteGuild",
@@ -918,12 +918,6 @@ var GuildService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _GuildService_GetUserPermissions_Handler,
 		},
 	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "StreamGuildEvents",
-			Handler:       _GuildService_StreamGuildEvents_Handler,
-			ServerStreams: true,
-		},
-	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "guild/v1/guild.proto",
 }

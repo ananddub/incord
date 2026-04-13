@@ -7,6 +7,7 @@
 package mediav1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -410,28 +411,33 @@ var File_media_v1_media_proto protoreflect.FileDescriptor
 
 const file_media_v1_media_proto_rawDesc = "" +
 	"\n" +
-	"\x14media/v1/media.proto\x12\bmedia.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"i\n" +
-	"\x14RequestUploadRequest\x12\x1a\n" +
-	"\bfilename\x18\x01 \x01(\tR\bfilename\x12!\n" +
-	"\fcontent_type\x18\x02 \x01(\tR\vcontentType\x12\x12\n" +
-	"\x04size\x18\x03 \x01(\x03R\x04size\"S\n" +
+	"\x14media/v1/media.proto\x12\bmedia.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bbuf/validate/validate.proto\"\x8f\x01\n" +
+	"\x14RequestUploadRequest\x12&\n" +
+	"\bfilename\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\bfilename\x12-\n" +
+	"\fcontent_type\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\vcontentType\x12 \n" +
+	"\x04size\x18\x03 \x01(\x03B\f\xbaH\t\"\a\x18\x80\x80\xc0\f \x00R\x04size\"S\n" +
 	"\x15RequestUploadResponse\x12\x1b\n" +
 	"\tupload_id\x18\x01 \x01(\tR\buploadId\x12\x1d\n" +
 	"\n" +
-	"upload_url\x18\x02 \x01(\tR\tuploadUrl\"3\n" +
-	"\x14ConfirmUploadRequest\x12\x1b\n" +
-	"\tupload_id\x18\x01 \x01(\tR\buploadId\"B\n" +
+	"upload_url\x18\x02 \x01(\tR\tuploadUrl\"?\n" +
+	"\x14ConfirmUploadRequest\x12'\n" +
+	"\tupload_id\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\buploadId\"B\n" +
 	"\x15ConfirmUploadResponse\x12\x17\n" +
 	"\afile_id\x18\x01 \x01(\tR\x06fileId\x12\x10\n" +
-	"\x03url\x18\x02 \x01(\tR\x03url\"0\n" +
-	"\x15GetDownloadURLRequest\x12\x17\n" +
-	"\afile_id\x18\x01 \x01(\tR\x06fileId\"e\n" +
+	"\x03url\x18\x02 \x01(\tR\x03url\"<\n" +
+	"\x15GetDownloadURLRequest\x12#\n" +
+	"\afile_id\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\x06fileId\"e\n" +
 	"\x16GetDownloadURLResponse\x12\x10\n" +
 	"\x03url\x18\x01 \x01(\tR\x03url\x129\n" +
 	"\n" +
-	"expires_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\",\n" +
-	"\x11DeleteFileRequest\x12\x17\n" +
-	"\afile_id\x18\x01 \x01(\tR\x06fileId\"\x14\n" +
+	"expires_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"8\n" +
+	"\x11DeleteFileRequest\x12#\n" +
+	"\afile_id\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\x06fileId\"\x14\n" +
 	"\x12DeleteFileResponse2\xd0\x02\n" +
 	"\fMediaService\x12P\n" +
 	"\rRequestUpload\x12\x1e.media.v1.RequestUploadRequest\x1a\x1f.media.v1.RequestUploadResponse\x12P\n" +

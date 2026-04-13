@@ -5,6 +5,7 @@ package channel.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/channel/v1;channelv1";
 
 import "google/protobuf/timestamp.proto";
+import "buf/validate/validate.proto";
 
 service ChannelService {
   rpc CreateChannel(CreateChannelRequest) returns (CreateChannelResponse);
@@ -26,6 +27,9 @@ enum ChannelType {
   CHANNEL_TYPE_CATEGORY = 4;
   CHANNEL_TYPE_DM = 5;
   CHANNEL_TYPE_GROUP_DM = 6;
+  CHANNEL_TYPE_ANNOUNCEMENT = 7;
+  CHANNEL_TYPE_FORUM = 8;
+  CHANNEL_TYPE_STAGE = 9;
 }
 
 message Channel {
@@ -40,11 +44,11 @@ message Channel {
 }
 
 message CreateChannelRequest {
-  string guild_id = 1;
-  string name = 2;
-  ChannelType type = 3;
-  string topic = 4;
-  string parent_id = 5;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string name = 2 [(buf.validate.field).string = {min_len: 1, max_len: 100}];
+  ChannelType type = 3 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  string topic = 4 [(buf.validate.field).string = {max_len: 1024}];
+  string parent_id = 5 [(buf.validate.field).string = {max_len: 64}];
 }
 
 message CreateChannelResponse {
@@ -52,7 +56,7 @@ message CreateChannelResponse {
 }
 
 message GetChannelRequest {
-  string channel_id = 1;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message GetChannelResponse {
@@ -60,11 +64,11 @@ message GetChannelResponse {
 }
 
 message UpdateChannelRequest {
-  string channel_id = 1;
-  optional string name = 2;
-  optional string topic = 3;
-  optional int32 position = 4;
-  optional string parent_id = 5;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  optional string name = 2 [(buf.validate.field).string = {min_len: 1, max_len: 100}];
+  optional string topic = 3 [(buf.validate.field).string = {max_len: 1024}];
+  optional int32 position = 4 [(buf.validate.field).int32.gte = 0];
+  optional string parent_id = 5 [(buf.validate.field).string = {max_len: 64}];
 }
 
 message UpdateChannelResponse {
@@ -72,13 +76,13 @@ message UpdateChannelResponse {
 }
 
 message DeleteChannelRequest {
-  string channel_id = 1;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message DeleteChannelResponse {}
 
 message ListGuildChannelsRequest {
-  string guild_id = 1;
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
 message ListGuildChannelsResponse {
@@ -86,7 +90,7 @@ message ListGuildChannelsResponse {
 }
 
 message CreateDMChannelRequest {
-  repeated string recipient_ids = 1;
+  repeated string recipient_ids = 1 [(buf.validate.field).repeated = {min_items: 1, max_items: 10, items: {string: {uuid: true}}}];
 }
 
 message CreateDMChannelResponse {
@@ -100,15 +104,15 @@ message ListDMChannelsResponse {
 }
 
 message AddDMGroupMemberRequest {
-  string channel_id = 1;
-  string user_id = 2;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.uuid = true];
 }
 
 message AddDMGroupMemberResponse {}
 
 message RemoveDMGroupMemberRequest {
-  string channel_id = 1;
-  string user_id = 2;
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.uuid = true];
 }
 
 message RemoveDMGroupMemberResponse {}

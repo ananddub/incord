@@ -1,33 +1,123 @@
 package guild
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/minio/minio-go/v7"
 
 	"github.com/google/uuid"
 
 	"github.com/ananddub/ndiscord_backend/gen/db"
 	"github.com/ananddub/ndiscord_backend/internal/shared/authz"
-	"github.com/ananddub/ndiscord_backend/internal/shared/event"
+	"github.com/ananddub/ndiscord_backend/internal/shared/realtime"
 )
 
 type Service struct {
-	repo     *Repository
-	producer *event.Producer
-	authz    *authz.Client
+	repo   *Repository
+	authz  *authz.Client
+	nats   *realtime.Hub
+	minio  *minio.Client
+	signer *minio.Client
+	bucket string
 }
 
-func NewService(repo *Repository, producer *event.Producer, authzClient ...*authz.Client) *Service {
-	s := &Service{repo: repo, producer: producer}
+func NewService(repo *Repository, nats *realtime.Hub, authzClient ...*authz.Client) *Service {
+	s := &Service{repo: repo, nats: nats}
 	if len(authzClient) > 0 {
 		s.authz = authzClient[0]
 	}
 	return s
+}
+
+// SetStorage wires the MinIO clients used for guild icon uploads.
+// `client` is the internal client used to upload bytes; `signer` is the
+// public-endpoint client used to generate presigned URLs for clients.
+func (s *Service) SetStorage(client, signer *minio.Client, bucket string) {
+	s.minio = client
+	s.signer = signer
+	s.bucket = bucket
+}
+
+// ResolveIconURL generates a fresh presigned GET URL for a stored object key.
+// If the key is empty it returns empty string. If the key looks like a full URL
+// (legacy data), it is returned as-is.
+func (s *Service) ResolveIconURL(ctx context.Context, key string) string {
+	if key == "" {
+		return ""
+	}
+	if len(key) >= 7 && (key[:7] == "http://" || (len(key) >= 8 && key[:8] == "https://")) {
+		return key
+	}
+	if s.signer == nil {
+		return ""
+	}
+	u, err := s.signer.PresignedGetObject(ctx, s.bucket, key, guildIconDownloadTTL, url.Values{})
+	if err != nil {
+		return ""
+	}
+	return u.String()
+}
+
+const (
+	maxGuildIconSize     = 5 * 1024 * 1024
+	guildIconDownloadTTL = 7 * 24 * time.Hour
+)
+
+var allowedIconContentTypes = map[string]bool{
+	"image/jpeg": true,
+	"image/png":  true,
+	"image/gif":  true,
+	"image/webp": true,
+}
+
+// UploadGuildIcon uploads raw icon bytes to object storage and updates the guild's icon_url.
+func (s *Service) UploadGuildIcon(ctx context.Context, callerID, guildID pgtype.UUID, filename, contentType string, data []byte) (db.Guild, string, error) {
+	if s.minio == nil {
+		return db.Guild{}, "", fmt.Errorf("storage not configured")
+	}
+	if !s.authz.CanManageGuild(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return db.Guild{}, "", ErrInsufficientPermissions
+	}
+	if len(data) == 0 {
+		return db.Guild{}, "", fmt.Errorf("empty file")
+	}
+	if len(data) > maxGuildIconSize {
+		return db.Guild{}, "", fmt.Errorf("icon too large (max %d bytes)", maxGuildIconSize)
+	}
+	if !allowedIconContentTypes[contentType] {
+		return db.Guild{}, "", fmt.Errorf("unsupported content type: %s", contentType)
+	}
+
+	objectKey := fmt.Sprintf("guilds/%s/icon_%s_%s", pgToStr(guildID), uuid.New().String(), filename)
+
+	_, err := s.minio.PutObject(ctx, s.bucket, objectKey, bytes.NewReader(data), int64(len(data)), minio.PutObjectOptions{
+		ContentType: contentType,
+	})
+	if err != nil {
+		return db.Guild{}, "", fmt.Errorf("failed to upload icon: %w", err)
+	}
+
+	// Store only the object key; a fresh presigned URL is generated on every
+	// read via ResolveIconURL so clients always get a working, public-facing URL.
+	updated, err := s.repo.UpdateGuild(ctx, db.UpdateGuildParams{
+		ID:      guildID,
+		IconUrl: &objectKey,
+	})
+	if err != nil {
+		return db.Guild{}, "", fmt.Errorf("failed to update guild icon: %w", err)
+	}
+
+	iconURL := s.ResolveIconURL(ctx, objectKey)
+	s.publishGuildEvent(ctx, guildID, "update", map[string]string{"icon_url": iconURL})
+
+	return updated, iconURL, nil
 }
 
 // pgToStr converts a pgtype.UUID to its string representation for authz calls.
@@ -41,7 +131,7 @@ func (s *Service) publishGuildEvent(ctx context.Context, guildID pgtype.UUID, ac
 	for k, v := range extra {
 		data[k] = v
 	}
-	_ = event.PublishEvent(ctx, s.producer, event.TopicGuildEvents, gid, gid, "", "", data)
+	_ = s.nats.Publish(realtime.GuildEvents(gid), data)
 }
 
 func (s *Service) CreateGuild(ctx context.Context, ownerID pgtype.UUID, name, description, iconURL string) (db.Guild, error) {

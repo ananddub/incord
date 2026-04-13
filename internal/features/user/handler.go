@@ -12,19 +12,17 @@ import (
 
 	"github.com/ananddub/ndiscord_backend/gen/db"
 	userv1 "github.com/ananddub/ndiscord_backend/gen/user/v1"
-	"github.com/ananddub/ndiscord_backend/internal/shared/event"
 	"github.com/ananddub/ndiscord_backend/internal/shared/middleware"
 )
 
 type Handler struct {
 	userv1.UnimplementedUserServiceServer
 	svc          *Service
-	friendSubs   *event.SubscriptionManager[*userv1.FriendActivityEvent]
 	blockChecker *BlockChecker
 }
 
-func NewHandler(svc *Service, friendSubs *event.SubscriptionManager[*userv1.FriendActivityEvent]) *Handler {
-	return &Handler{svc: svc, friendSubs: friendSubs}
+func NewHandler(svc *Service) *Handler {
+	return &Handler{svc: svc}
 }
 
 // SetBlockChecker sets the block checker used to hide profiles from blocked callers.
@@ -427,32 +425,6 @@ func (h *Handler) ListBlocked(ctx context.Context, req *userv1.ListBlockedReques
 	return &userv1.ListBlockedResponse{
 		Blocked: protoUsers,
 	}, nil
-}
-
-func (h *Handler) StreamFriendActivity(req *userv1.StreamFriendActivityRequest, stream userv1.UserService_StreamFriendActivityServer) error {
-	userID := middleware.UserIDFromContext(stream.Context())
-	if userID == "" {
-		return status.Error(codes.Unauthenticated, "not authenticated")
-	}
-
-	subID := userID + ":" + uuid.New().String()
-	// Subscribe to own user_id - events for this user's friends
-	ch := h.friendSubs.Subscribe(userID, subID, 64)
-	defer h.friendSubs.Unsubscribe(userID, subID)
-
-	for {
-		select {
-		case <-stream.Context().Done():
-			return nil
-		case evt, ok := <-ch:
-			if !ok {
-				return nil
-			}
-			if err := stream.Send(evt); err != nil {
-				return err
-			}
-		}
-	}
 }
 
 // helpers

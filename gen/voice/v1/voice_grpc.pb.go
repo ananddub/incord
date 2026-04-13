@@ -23,7 +23,6 @@ const (
 	VoiceService_LeaveChannel_FullMethodName           = "/voice.v1.VoiceService/LeaveChannel"
 	VoiceService_GetChannelParticipants_FullMethodName = "/voice.v1.VoiceService/GetChannelParticipants"
 	VoiceService_UpdateVoiceState_FullMethodName       = "/voice.v1.VoiceService/UpdateVoiceState"
-	VoiceService_StreamVoiceState_FullMethodName       = "/voice.v1.VoiceService/StreamVoiceState"
 )
 
 // VoiceServiceClient is the client API for VoiceService service.
@@ -35,8 +34,6 @@ type VoiceServiceClient interface {
 	LeaveChannel(ctx context.Context, in *LeaveChannelRequest, opts ...grpc.CallOption) (*LeaveChannelResponse, error)
 	GetChannelParticipants(ctx context.Context, in *GetChannelParticipantsRequest, opts ...grpc.CallOption) (*GetChannelParticipantsResponse, error)
 	UpdateVoiceState(ctx context.Context, in *UpdateVoiceStateRequest, opts ...grpc.CallOption) (*UpdateVoiceStateResponse, error)
-	// Stream: voice state changes in a channel (join/leave/mute/unmute)
-	StreamVoiceState(ctx context.Context, in *StreamVoiceStateRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[VoiceStateEvent], error)
 }
 
 type voiceServiceClient struct {
@@ -87,25 +84,6 @@ func (c *voiceServiceClient) UpdateVoiceState(ctx context.Context, in *UpdateVoi
 	return out, nil
 }
 
-func (c *voiceServiceClient) StreamVoiceState(ctx context.Context, in *StreamVoiceStateRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[VoiceStateEvent], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &VoiceService_ServiceDesc.Streams[0], VoiceService_StreamVoiceState_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[StreamVoiceStateRequest, VoiceStateEvent]{ClientStream: stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type VoiceService_StreamVoiceStateClient = grpc.ServerStreamingClient[VoiceStateEvent]
-
 // VoiceServiceServer is the server API for VoiceService service.
 // All implementations must embed UnimplementedVoiceServiceServer
 // for forward compatibility.
@@ -115,8 +93,6 @@ type VoiceServiceServer interface {
 	LeaveChannel(context.Context, *LeaveChannelRequest) (*LeaveChannelResponse, error)
 	GetChannelParticipants(context.Context, *GetChannelParticipantsRequest) (*GetChannelParticipantsResponse, error)
 	UpdateVoiceState(context.Context, *UpdateVoiceStateRequest) (*UpdateVoiceStateResponse, error)
-	// Stream: voice state changes in a channel (join/leave/mute/unmute)
-	StreamVoiceState(*StreamVoiceStateRequest, grpc.ServerStreamingServer[VoiceStateEvent]) error
 	mustEmbedUnimplementedVoiceServiceServer()
 }
 
@@ -138,9 +114,6 @@ func (UnimplementedVoiceServiceServer) GetChannelParticipants(context.Context, *
 }
 func (UnimplementedVoiceServiceServer) UpdateVoiceState(context.Context, *UpdateVoiceStateRequest) (*UpdateVoiceStateResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateVoiceState not implemented")
-}
-func (UnimplementedVoiceServiceServer) StreamVoiceState(*StreamVoiceStateRequest, grpc.ServerStreamingServer[VoiceStateEvent]) error {
-	return status.Error(codes.Unimplemented, "method StreamVoiceState not implemented")
 }
 func (UnimplementedVoiceServiceServer) mustEmbedUnimplementedVoiceServiceServer() {}
 func (UnimplementedVoiceServiceServer) testEmbeddedByValue()                      {}
@@ -235,17 +208,6 @@ func _VoiceService_UpdateVoiceState_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _VoiceService_StreamVoiceState_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(StreamVoiceStateRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(VoiceServiceServer).StreamVoiceState(m, &grpc.GenericServerStream[StreamVoiceStateRequest, VoiceStateEvent]{ServerStream: stream})
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type VoiceService_StreamVoiceStateServer = grpc.ServerStreamingServer[VoiceStateEvent]
-
 // VoiceService_ServiceDesc is the grpc.ServiceDesc for VoiceService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -270,12 +232,6 @@ var VoiceService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _VoiceService_UpdateVoiceState_Handler,
 		},
 	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "StreamVoiceState",
-			Handler:       _VoiceService_StreamVoiceState_Handler,
-			ServerStreams: true,
-		},
-	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "voice/v1/voice.proto",
 }

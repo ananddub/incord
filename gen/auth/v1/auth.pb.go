@@ -7,6 +7,7 @@
 package authv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/known/timestamppb"
@@ -723,42 +724,49 @@ var File_auth_v1_auth_proto protoreflect.FileDescriptor
 
 const file_auth_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x12auth/v1/auth.proto\x12\aauth.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"_\n" +
-	"\x0fRegisterRequest\x12\x1a\n" +
-	"\busername\x18\x01 \x01(\tR\busername\x12\x14\n" +
-	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n" +
-	"\bpassword\x18\x03 \x01(\tR\bpassword\"E\n" +
+	"\x12auth/v1/auth.proto\x12\aauth.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bbuf/validate/validate.proto\"\x82\x01\n" +
+	"\x0fRegisterRequest\x12%\n" +
+	"\busername\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x02\x18 R\busername\x12 \n" +
+	"\x05email\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x18\xff\x01`\x01R\x05email\x12&\n" +
+	"\bpassword\x18\x03 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x06\x18\x80\x01R\bpassword\"E\n" +
 	"\x10RegisterResponse\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\":\n" +
-	"\x10VerifyOTPRequest\x12\x14\n" +
-	"\x05email\x18\x01 \x01(\tR\x05email\x12\x10\n" +
-	"\x03otp\x18\x02 \x01(\tR\x03otp\"t\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"[\n" +
+	"\x10VerifyOTPRequest\x12 \n" +
+	"\x05email\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x18\xff\x01`\x01R\x05email\x12%\n" +
+	"\x03otp\x18\x02 \x01(\tB\x13\xbaH\x10r\x0e\x10\x04\x18\n" +
+	"2\b^[0-9]+$R\x03otp\"t\n" +
 	"\x11VerifyOTPResponse\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12!\n" +
 	"\faccess_token\x18\x02 \x01(\tR\vaccessToken\x12#\n" +
-	"\rrefresh_token\x18\x03 \x01(\tR\frefreshToken\"(\n" +
-	"\x10ResendOTPRequest\x12\x14\n" +
-	"\x05email\x18\x01 \x01(\tR\x05email\"-\n" +
+	"\rrefresh_token\x18\x03 \x01(\tR\frefreshToken\"4\n" +
+	"\x10ResendOTPRequest\x12 \n" +
+	"\x05email\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x18\xff\x01`\x01R\x05email\"-\n" +
 	"\x11ResendOTPResponse\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage\"@\n" +
-	"\fLoginRequest\x12\x14\n" +
-	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\"p\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\"X\n" +
+	"\fLoginRequest\x12 \n" +
+	"\x05email\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x18\xff\x01`\x01R\x05email\x12&\n" +
+	"\bpassword\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x06\x18\x80\x01R\bpassword\"p\n" +
 	"\rLoginResponse\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12!\n" +
 	"\faccess_token\x18\x02 \x01(\tR\vaccessToken\x12#\n" +
-	"\rrefresh_token\x18\x03 \x01(\tR\frefreshToken\":\n" +
-	"\x13RefreshTokenRequest\x12#\n" +
-	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\"^\n" +
+	"\rrefresh_token\x18\x03 \x01(\tR\frefreshToken\"C\n" +
+	"\x13RefreshTokenRequest\x12,\n" +
+	"\rrefresh_token\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\frefreshToken\"^\n" +
 	"\x14RefreshTokenResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
-	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\"4\n" +
-	"\rLogoutRequest\x12#\n" +
-	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\"\x10\n" +
-	"\x0eLogoutResponse\"9\n" +
-	"\x14ValidateTokenRequest\x12!\n" +
-	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\"F\n" +
+	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\"=\n" +
+	"\rLogoutRequest\x12,\n" +
+	"\rrefresh_token\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\frefreshToken\"\x10\n" +
+	"\x0eLogoutResponse\"B\n" +
+	"\x14ValidateTokenRequest\x12*\n" +
+	"\faccess_token\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vaccessToken\"F\n" +
 	"\x15ValidateTokenResponse\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
 	"\x05valid\x18\x02 \x01(\bR\x05valid2\xe6\x03\n" +

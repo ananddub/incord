@@ -20,7 +20,6 @@ import (
 	"github.com/ananddub/ndiscord_backend/internal/features/auth"
 	"github.com/ananddub/ndiscord_backend/internal/features/user"
 	"github.com/ananddub/ndiscord_backend/internal/shared/config"
-	"github.com/ananddub/ndiscord_backend/internal/shared/event"
 	"github.com/ananddub/ndiscord_backend/internal/shared/middleware"
 	"github.com/ananddub/ndiscord_backend/internal/shared/testutil"
 )
@@ -50,8 +49,7 @@ func setupUserGRPCServer(t *testing.T) *testClients {
 	// User stack
 	userRepo := user.NewRepository(infra.Pool, infra.Redis)
 	userSvc := user.NewService(userRepo)
-	friendSubs := event.NewSubscriptionManager[*userv1.FriendActivityEvent]()
-	userHandler := user.NewHandler(userSvc, friendSubs)
+	userHandler := user.NewHandler(userSvc)
 
 	lis, err := net.Listen("tcp", "localhost:0")
 	require.NoError(t, err)
@@ -171,12 +169,11 @@ func TestUserGRPC_GetUser_Unauthenticated(t *testing.T) {
 
 func TestUserGRPC_UpdateUser(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	userID, token := createUser(t, c, "alice", "alice@example.com", "password123")
+	_, token := createUser(t, c, "alice", "alice@example.com", "password123")
 
 	newUsername := "alice_updated"
 	newBio := "Hello, world!"
 	resp, err := c.user.UpdateUser(authedCtx(token), &userv1.UpdateUserRequest{
-		UserId:   userID,
 		Username: &newUsername,
 		Bio:      &newBio,
 	})
@@ -190,7 +187,6 @@ func TestUserGRPC_UpdateUser_Unauthenticated(t *testing.T) {
 
 	newUsername := "hacker"
 	_, err := c.user.UpdateUser(context.Background(), &userv1.UpdateUserRequest{
-		UserId:   "00000000-0000-0000-0000-000000000000",
 		Username: &newUsername,
 	})
 	require.Error(t, err)

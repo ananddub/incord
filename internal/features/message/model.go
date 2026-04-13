@@ -30,6 +30,8 @@ type Message struct {
 	Pinned    bool
 	EditedAt  *time.Time
 	CreatedAt time.Time
+	Deleted   bool
+	UpdatedAt *time.Time
 }
 
 // Reaction represents a single user reaction on a message.

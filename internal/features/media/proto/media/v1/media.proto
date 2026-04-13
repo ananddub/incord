@@ -5,6 +5,7 @@ package media.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/media/v1;mediav1";
 
 import "google/protobuf/timestamp.proto";
+import "buf/validate/validate.proto";
 
 service MediaService {
   rpc RequestUpload(RequestUploadRequest) returns (RequestUploadResponse);
@@ -14,9 +15,9 @@ service MediaService {
 }
 
 message RequestUploadRequest {
-  string filename = 1;
-  string content_type = 2;
-  int64 size = 3;
+  string filename = 1 [(buf.validate.field).string = {min_len: 1, max_len: 255}];
+  string content_type = 2 [(buf.validate.field).string = {min_len: 1, max_len: 128}];
+  int64 size = 3 [(buf.validate.field).int64 = {gt: 0, lte: 26214400}];
 }
 
 message RequestUploadResponse {
@@ -25,7 +26,7 @@ message RequestUploadResponse {
 }
 
 message ConfirmUploadRequest {
-  string upload_id = 1;
+  string upload_id = 1 [(buf.validate.field).string = {min_len: 1, max_len: 128}];
 }
 
 message ConfirmUploadResponse {
@@ -34,7 +35,7 @@ message ConfirmUploadResponse {
 }
 
 message GetDownloadURLRequest {
-  string file_id = 1;
+  string file_id = 1 [(buf.validate.field).string = {min_len: 1, max_len: 128}];
 }
 
 message GetDownloadURLResponse {
@@ -43,7 +44,7 @@ message GetDownloadURLResponse {
 }
 
 message DeleteFileRequest {
-  string file_id = 1;
+  string file_id = 1 [(buf.validate.field).string = {min_len: 1, max_len: 128}];
 }
 
 message DeleteFileResponse {}

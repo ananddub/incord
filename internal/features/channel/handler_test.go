@@ -18,8 +18,6 @@ import (
 
 	channelv1 "github.com/ananddub/ndiscord_backend/gen/channel/v1"
 	"github.com/ananddub/ndiscord_backend/internal/features/channel"
-	"github.com/ananddub/ndiscord_backend/internal/shared/config"
-	"github.com/ananddub/ndiscord_backend/internal/shared/event"
 	"github.com/ananddub/ndiscord_backend/internal/shared/middleware"
 	"github.com/ananddub/ndiscord_backend/internal/shared/testutil"
 )
@@ -42,27 +40,12 @@ func authCtx(userID string) context.Context {
 	return metadata.NewOutgoingContext(context.Background(), md)
 }
 
-// newNoopProducer creates an event.Producer that connects to a non-existent broker.
-// franz-go uses lazy connections, so NewProducer succeeds. Publish calls fail
-// asynchronously via callback, which the channel service ignores (return value
-// is discarded with _ =).
-func newNoopProducer(t *testing.T) *event.Producer {
-	t.Helper()
-	p, err := event.NewProducer(config.RedpandaConfig{
-		Brokers: []string{"127.0.0.1:19092"},
-	})
-	require.NoError(t, err)
-	t.Cleanup(p.Close)
-	return p
-}
-
 // setupChannelServer starts a real gRPC server with the channel handler and returns a client.
 func setupChannelServer(t *testing.T, infra *testutil.TestInfra) channelv1.ChannelServiceClient {
 	t.Helper()
 
-	producer := newNoopProducer(t)
 	repo := channel.NewRepository(infra.Pool)
-	svc := channel.NewService(repo, producer)
+	svc := channel.NewService(repo, nil)
 	handler := channel.NewHandler(svc)
 
 	srv := grpc.NewServer(

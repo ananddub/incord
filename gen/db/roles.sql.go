@@ -13,7 +13,7 @@ import (
 
 const assignRole = `-- name: AssignRole :exec
 INSERT INTO role_members (role_id, user_id) VALUES ($1, $2)
-ON CONFLICT DO NOTHING
+ON CONFLICT (role_id, user_id) DO UPDATE SET deleted = FALSE, updated_at = NOW()
 `
 
 type AssignRoleParams struct {
@@ -29,7 +29,7 @@ func (q *Queries) AssignRole(ctx context.Context, arg AssignRoleParams) error {
 const createRole = `-- name: CreateRole :one
 INSERT INTO roles (guild_id, name, color, position)
 VALUES ($1, $2, $3, $4)
-RETURNING id, guild_id, name, color, position, created_at
+RETURNING id, guild_id, name, color, position, created_at, deleted, updated_at
 `
 
 type CreateRoleParams struct {
@@ -54,12 +54,14 @@ func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) (Role, e
 		&i.Color,
 		&i.Position,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const deleteRole = `-- name: DeleteRole :exec
-DELETE FROM roles WHERE id = $1
+UPDATE roles SET deleted = TRUE, updated_at = NOW() WHERE id = $1
 `
 
 func (q *Queries) DeleteRole(ctx context.Context, id pgtype.UUID) error {
@@ -68,7 +70,7 @@ func (q *Queries) DeleteRole(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getRoleByID = `-- name: GetRoleByID :one
-SELECT id, guild_id, name, color, position, created_at FROM roles WHERE id = $1
+SELECT id, guild_id, name, color, position, created_at, deleted, updated_at FROM roles WHERE id = $1 AND deleted = FALSE
 `
 
 func (q *Queries) GetRoleByID(ctx context.Context, id pgtype.UUID) (Role, error) {
@@ -81,12 +83,14 @@ func (q *Queries) GetRoleByID(ctx context.Context, id pgtype.UUID) (Role, error)
 		&i.Color,
 		&i.Position,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const listGuildRoles = `-- name: ListGuildRoles :many
-SELECT id, guild_id, name, color, position, created_at FROM roles WHERE guild_id = $1 ORDER BY position
+SELECT id, guild_id, name, color, position, created_at, deleted, updated_at FROM roles WHERE guild_id = $1 AND deleted = FALSE ORDER BY position
 `
 
 func (q *Queries) ListGuildRoles(ctx context.Context, guildID pgtype.UUID) ([]Role, error) {
@@ -105,6 +109,8 @@ func (q *Queries) ListGuildRoles(ctx context.Context, guildID pgtype.UUID) ([]Ro
 			&i.Color,
 			&i.Position,
 			&i.CreatedAt,
+			&i.Deleted,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -117,9 +123,9 @@ func (q *Queries) ListGuildRoles(ctx context.Context, guildID pgtype.UUID) ([]Ro
 }
 
 const listUserRoles = `-- name: ListUserRoles :many
-SELECT r.id, r.guild_id, r.name, r.color, r.position, r.created_at FROM roles r
+SELECT r.id, r.guild_id, r.name, r.color, r.position, r.created_at, r.deleted, r.updated_at FROM roles r
 JOIN role_members rm ON rm.role_id = r.id
-WHERE rm.user_id = $1 AND r.guild_id = $2
+WHERE rm.user_id = $1 AND r.guild_id = $2 AND rm.deleted = FALSE AND r.deleted = FALSE
 `
 
 type ListUserRolesParams struct {
@@ -143,6 +149,8 @@ func (q *Queries) ListUserRoles(ctx context.Context, arg ListUserRolesParams) ([
 			&i.Color,
 			&i.Position,
 			&i.CreatedAt,
+			&i.Deleted,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -155,7 +163,7 @@ func (q *Queries) ListUserRoles(ctx context.Context, arg ListUserRolesParams) ([
 }
 
 const removeRole = `-- name: RemoveRole :exec
-DELETE FROM role_members WHERE role_id = $1 AND user_id = $2
+UPDATE role_members SET deleted = TRUE, updated_at = NOW() WHERE role_id = $1 AND user_id = $2
 `
 
 type RemoveRoleParams struct {
@@ -174,7 +182,7 @@ UPDATE roles SET
     color = COALESCE($3, color),
     position = COALESCE($4, position)
 WHERE id = $1
-RETURNING id, guild_id, name, color, position, created_at
+RETURNING id, guild_id, name, color, position, created_at, deleted, updated_at
 `
 
 type UpdateRoleParams struct {
@@ -199,6 +207,8 @@ func (q *Queries) UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, e
 		&i.Color,
 		&i.Position,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

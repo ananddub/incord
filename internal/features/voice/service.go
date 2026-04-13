@@ -15,8 +15,7 @@ import (
 	voicev1 "github.com/ananddub/ndiscord_backend/gen/voice/v1"
 	"github.com/ananddub/ndiscord_backend/internal/shared/authz"
 	"github.com/ananddub/ndiscord_backend/internal/shared/config"
-	"github.com/ananddub/ndiscord_backend/internal/shared/event"
-	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
+	"github.com/ananddub/ndiscord_backend/internal/shared/realtime"
 )
 
 const (
@@ -32,17 +31,17 @@ var (
 // Service contains the business logic for the voice feature.
 type Service struct {
 	redis    *redis.Client
-	producer *event.Producer
 	voiceCfg config.VoiceConfig
 	authz    *authz.Client
+	nats     *realtime.Hub
 }
 
 // NewService creates a new voice Service.
-func NewService(rdb *redis.Client, producer *event.Producer, voiceCfg config.VoiceConfig, authzClient ...*authz.Client) *Service {
+func NewService(rdb *redis.Client, voiceCfg config.VoiceConfig, nats *realtime.Hub, authzClient ...*authz.Client) *Service {
 	s := &Service{
 		redis:    rdb,
-		producer: producer,
 		voiceCfg: voiceCfg,
+		nats:     nats,
 	}
 	if len(authzClient) > 0 {
 		s.authz = authzClient[0]
@@ -106,14 +105,13 @@ func (s *Service) JoinChannel(ctx context.Context, userID, guildID, channelID st
 	s.redis.Expire(ctx, stateKey, voiceStateTTL)
 
 	// Publish voice state event
-	if err := event.PublishEvent(ctx, s.producer, event.TopicVoiceState, channelID, "", channelID, userID, map[string]string{
+	_ = s.nats.Publish(realtime.GuildChannelVoice(guildID, channelID), map[string]any{
+		"event":      "VOICE_STATE_UPDATE",
 		"action":     "join",
 		"user_id":    userID,
 		"channel_id": channelID,
 		"session_id": sessionID,
-	}); err != nil {
-		logger.Log.Error().Err(err).Msg("failed to publish voice join event")
-	}
+	})
 
 	return &JoinChannelResult{
 		SessionID:     sessionID,
@@ -140,19 +138,21 @@ func (s *Service) LeaveChannel(ctx context.Context, userID, channelID string) er
 			continue
 		}
 		if storedUserID == userID {
+			// Read guild_id before deleting state
+			guildID, _ := s.redis.HGet(ctx, stateKey, "guild_id").Result()
+
 			// Remove from channel set and delete state
 			s.redis.SRem(ctx, channelKey, sid)
 			s.redis.Del(ctx, stateKey)
 
 			// Publish voice state event
-			if pubErr := event.PublishEvent(ctx, s.producer, event.TopicVoiceState, channelID, "", channelID, userID, map[string]string{
+			_ = s.nats.Publish(realtime.GuildChannelVoice(guildID, channelID), map[string]any{
+				"event":      "VOICE_STATE_UPDATE",
 				"action":     "leave",
 				"user_id":    userID,
 				"channel_id": channelID,
 				"session_id": sid,
-			}); pubErr != nil {
-				logger.Log.Error().Err(pubErr).Msg("failed to publish voice leave event")
-			}
+			})
 			break
 		}
 	}
@@ -227,8 +227,12 @@ func (s *Service) UpdateVoiceState(ctx context.Context, userID, channelID string
 				return fmt.Errorf("failed to update voice state: %w", err)
 			}
 
+			// Read guild_id for subject routing
+			guildID, _ := s.redis.HGet(ctx, stateKey, "guild_id").Result()
+
 			// Publish update event
-			if pubErr := event.PublishEvent(ctx, s.producer, event.TopicVoiceState, channelID, "", channelID, userID, map[string]interface{}{
+			_ = s.nats.Publish(realtime.GuildChannelVoice(guildID, channelID), map[string]any{
+				"event":         "VOICE_STATE_UPDATE",
 				"action":        "update",
 				"user_id":       userID,
 				"channel_id":    channelID,
@@ -237,9 +241,7 @@ func (s *Service) UpdateVoiceState(ctx context.Context, userID, channelID string
 				"self_deafened": selfDeaf,
 				"video":         video,
 				"streaming":     stream,
-			}); pubErr != nil {
-				logger.Log.Error().Err(pubErr).Msg("failed to publish voice state update event")
-			}
+			})
 			return nil
 		}
 	}

@@ -14,7 +14,8 @@ import (
 const addGuildMember = `-- name: AddGuildMember :one
 INSERT INTO guild_members (guild_id, user_id, nickname)
 VALUES ($1, $2, $3)
-RETURNING guild_id, user_id, nickname, joined_at
+ON CONFLICT (guild_id, user_id) DO UPDATE SET deleted = FALSE, updated_at = NOW(), nickname = EXCLUDED.nickname
+RETURNING guild_id, user_id, nickname, joined_at, deleted, updated_at
 `
 
 type AddGuildMemberParams struct {
@@ -31,12 +32,14 @@ func (q *Queries) AddGuildMember(ctx context.Context, arg AddGuildMemberParams) 
 		&i.UserID,
 		&i.Nickname,
 		&i.JoinedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const countGuildMembers = `-- name: CountGuildMembers :one
-SELECT COUNT(*) FROM guild_members WHERE guild_id = $1
+SELECT COUNT(*) FROM guild_members WHERE guild_id = $1 AND deleted = FALSE
 `
 
 func (q *Queries) CountGuildMembers(ctx context.Context, guildID pgtype.UUID) (int64, error) {
@@ -49,7 +52,8 @@ func (q *Queries) CountGuildMembers(ctx context.Context, guildID pgtype.UUID) (i
 const createBan = `-- name: CreateBan :one
 INSERT INTO bans (guild_id, user_id, reason)
 VALUES ($1, $2, $3)
-RETURNING guild_id, user_id, reason, created_at
+ON CONFLICT (guild_id, user_id) DO UPDATE SET deleted = FALSE, updated_at = NOW(), reason = EXCLUDED.reason
+RETURNING guild_id, user_id, reason, created_at, deleted, updated_at
 `
 
 type CreateBanParams struct {
@@ -66,6 +70,8 @@ func (q *Queries) CreateBan(ctx context.Context, arg CreateBanParams) (Ban, erro
 		&i.UserID,
 		&i.Reason,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -73,7 +79,7 @@ func (q *Queries) CreateBan(ctx context.Context, arg CreateBanParams) (Ban, erro
 const createGuild = `-- name: CreateGuild :one
 INSERT INTO guilds (name, description, icon_url, owner_id)
 VALUES ($1, $2, $3, $4)
-RETURNING id, name, description, icon_url, owner_id, created_at
+RETURNING id, name, description, icon_url, owner_id, created_at, deleted, updated_at
 `
 
 type CreateGuildParams struct {
@@ -98,6 +104,8 @@ func (q *Queries) CreateGuild(ctx context.Context, arg CreateGuildParams) (Guild
 		&i.IconUrl,
 		&i.OwnerID,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -105,7 +113,7 @@ func (q *Queries) CreateGuild(ctx context.Context, arg CreateGuildParams) (Guild
 const createInvite = `-- name: CreateInvite :one
 INSERT INTO invites (code, guild_id, channel_id, creator_id, max_uses, expires_at)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING code, guild_id, channel_id, creator_id, max_uses, uses, expires_at, created_at
+RETURNING code, guild_id, channel_id, creator_id, max_uses, uses, expires_at, created_at, deleted, updated_at
 `
 
 type CreateInviteParams struct {
@@ -136,12 +144,14 @@ func (q *Queries) CreateInvite(ctx context.Context, arg CreateInviteParams) (Inv
 		&i.Uses,
 		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const deleteBan = `-- name: DeleteBan :exec
-DELETE FROM bans WHERE guild_id = $1 AND user_id = $2
+UPDATE bans SET deleted = TRUE, updated_at = NOW() WHERE guild_id = $1 AND user_id = $2
 `
 
 type DeleteBanParams struct {
@@ -155,7 +165,7 @@ func (q *Queries) DeleteBan(ctx context.Context, arg DeleteBanParams) error {
 }
 
 const deleteGuild = `-- name: DeleteGuild :exec
-DELETE FROM guilds WHERE id = $1
+UPDATE guilds SET deleted = TRUE, updated_at = NOW() WHERE id = $1
 `
 
 func (q *Queries) DeleteGuild(ctx context.Context, id pgtype.UUID) error {
@@ -164,7 +174,7 @@ func (q *Queries) DeleteGuild(ctx context.Context, id pgtype.UUID) error {
 }
 
 const deleteInvite = `-- name: DeleteInvite :exec
-DELETE FROM invites WHERE code = $1
+UPDATE invites SET deleted = TRUE, updated_at = NOW() WHERE code = $1
 `
 
 func (q *Queries) DeleteInvite(ctx context.Context, code string) error {
@@ -173,7 +183,7 @@ func (q *Queries) DeleteInvite(ctx context.Context, code string) error {
 }
 
 const getBan = `-- name: GetBan :one
-SELECT guild_id, user_id, reason, created_at FROM bans WHERE guild_id = $1 AND user_id = $2
+SELECT guild_id, user_id, reason, created_at, deleted, updated_at FROM bans WHERE guild_id = $1 AND user_id = $2 AND deleted = FALSE
 `
 
 type GetBanParams struct {
@@ -189,12 +199,14 @@ func (q *Queries) GetBan(ctx context.Context, arg GetBanParams) (Ban, error) {
 		&i.UserID,
 		&i.Reason,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getGuildByID = `-- name: GetGuildByID :one
-SELECT id, name, description, icon_url, owner_id, created_at FROM guilds WHERE id = $1
+SELECT id, name, description, icon_url, owner_id, created_at, deleted, updated_at FROM guilds WHERE id = $1 AND deleted = FALSE
 `
 
 func (q *Queries) GetGuildByID(ctx context.Context, id pgtype.UUID) (Guild, error) {
@@ -207,12 +219,14 @@ func (q *Queries) GetGuildByID(ctx context.Context, id pgtype.UUID) (Guild, erro
 		&i.IconUrl,
 		&i.OwnerID,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getGuildMember = `-- name: GetGuildMember :one
-SELECT guild_id, user_id, nickname, joined_at FROM guild_members WHERE guild_id = $1 AND user_id = $2
+SELECT guild_id, user_id, nickname, joined_at, deleted, updated_at FROM guild_members WHERE guild_id = $1 AND user_id = $2 AND deleted = FALSE
 `
 
 type GetGuildMemberParams struct {
@@ -228,12 +242,14 @@ func (q *Queries) GetGuildMember(ctx context.Context, arg GetGuildMemberParams) 
 		&i.UserID,
 		&i.Nickname,
 		&i.JoinedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getInvite = `-- name: GetInvite :one
-SELECT code, guild_id, channel_id, creator_id, max_uses, uses, expires_at, created_at FROM invites WHERE code = $1
+SELECT code, guild_id, channel_id, creator_id, max_uses, uses, expires_at, created_at, deleted, updated_at FROM invites WHERE code = $1 AND deleted = FALSE
 `
 
 func (q *Queries) GetInvite(ctx context.Context, code string) (Invite, error) {
@@ -248,6 +264,8 @@ func (q *Queries) GetInvite(ctx context.Context, code string) (Invite, error) {
 		&i.Uses,
 		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -262,8 +280,8 @@ func (q *Queries) IncrementInviteUses(ctx context.Context, code string) error {
 }
 
 const listGuildMembers = `-- name: ListGuildMembers :many
-SELECT guild_id, user_id, nickname, joined_at FROM guild_members
-WHERE guild_id = $1
+SELECT guild_id, user_id, nickname, joined_at, deleted, updated_at FROM guild_members
+WHERE guild_id = $1 AND deleted = FALSE
 ORDER BY joined_at
 LIMIT $2 OFFSET $3
 `
@@ -288,6 +306,8 @@ func (q *Queries) ListGuildMembers(ctx context.Context, arg ListGuildMembersPara
 			&i.UserID,
 			&i.Nickname,
 			&i.JoinedAt,
+			&i.Deleted,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -300,9 +320,9 @@ func (q *Queries) ListGuildMembers(ctx context.Context, arg ListGuildMembersPara
 }
 
 const listUserGuilds = `-- name: ListUserGuilds :many
-SELECT g.id, g.name, g.description, g.icon_url, g.owner_id, g.created_at FROM guilds g
+SELECT g.id, g.name, g.description, g.icon_url, g.owner_id, g.created_at, g.deleted, g.updated_at FROM guilds g
 JOIN guild_members gm ON gm.guild_id = g.id
-WHERE gm.user_id = $1
+WHERE gm.user_id = $1 AND gm.deleted = FALSE AND g.deleted = FALSE
 `
 
 func (q *Queries) ListUserGuilds(ctx context.Context, userID pgtype.UUID) ([]Guild, error) {
@@ -321,6 +341,8 @@ func (q *Queries) ListUserGuilds(ctx context.Context, userID pgtype.UUID) ([]Gui
 			&i.IconUrl,
 			&i.OwnerID,
 			&i.CreatedAt,
+			&i.Deleted,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -333,7 +355,7 @@ func (q *Queries) ListUserGuilds(ctx context.Context, userID pgtype.UUID) ([]Gui
 }
 
 const removeGuildMember = `-- name: RemoveGuildMember :exec
-DELETE FROM guild_members WHERE guild_id = $1 AND user_id = $2
+UPDATE guild_members SET deleted = TRUE, updated_at = NOW() WHERE guild_id = $1 AND user_id = $2
 `
 
 type RemoveGuildMemberParams struct {
@@ -348,7 +370,7 @@ func (q *Queries) RemoveGuildMember(ctx context.Context, arg RemoveGuildMemberPa
 
 const transferGuildOwnership = `-- name: TransferGuildOwnership :one
 UPDATE guilds SET owner_id = $2 WHERE id = $1
-RETURNING id, name, description, icon_url, owner_id, created_at
+RETURNING id, name, description, icon_url, owner_id, created_at, deleted, updated_at
 `
 
 type TransferGuildOwnershipParams struct {
@@ -366,6 +388,8 @@ func (q *Queries) TransferGuildOwnership(ctx context.Context, arg TransferGuildO
 		&i.IconUrl,
 		&i.OwnerID,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -376,7 +400,7 @@ UPDATE guilds SET
     description = COALESCE($3, description),
     icon_url = COALESCE($4, icon_url)
 WHERE id = $1
-RETURNING id, name, description, icon_url, owner_id, created_at
+RETURNING id, name, description, icon_url, owner_id, created_at, deleted, updated_at
 `
 
 type UpdateGuildParams struct {
@@ -401,6 +425,8 @@ func (q *Queries) UpdateGuild(ctx context.Context, arg UpdateGuildParams) (Guild
 		&i.IconUrl,
 		&i.OwnerID,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

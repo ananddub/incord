@@ -13,7 +13,7 @@ import (
 
 const addDMChannelMember = `-- name: AddDMChannelMember :exec
 INSERT INTO dm_channel_members (channel_id, user_id) VALUES ($1, $2)
-ON CONFLICT DO NOTHING
+ON CONFLICT (channel_id, user_id) DO UPDATE SET deleted = FALSE, updated_at = NOW()
 `
 
 type AddDMChannelMemberParams struct {
@@ -29,7 +29,7 @@ func (q *Queries) AddDMChannelMember(ctx context.Context, arg AddDMChannelMember
 const createChannel = `-- name: CreateChannel :one
 INSERT INTO channels (guild_id, name, type, topic, position, parent_id)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, guild_id, name, type, topic, position, parent_id, created_at
+RETURNING id, guild_id, name, type, topic, position, parent_id, created_at, deleted, updated_at
 `
 
 type CreateChannelParams struct {
@@ -60,6 +60,8 @@ func (q *Queries) CreateChannel(ctx context.Context, arg CreateChannelParams) (C
 		&i.Position,
 		&i.ParentID,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -67,7 +69,7 @@ func (q *Queries) CreateChannel(ctx context.Context, arg CreateChannelParams) (C
 const createDMChannel = `-- name: CreateDMChannel :one
 INSERT INTO channels (name, type)
 VALUES ($1, $2)
-RETURNING id, guild_id, name, type, topic, position, parent_id, created_at
+RETURNING id, guild_id, name, type, topic, position, parent_id, created_at, deleted, updated_at
 `
 
 type CreateDMChannelParams struct {
@@ -87,12 +89,14 @@ func (q *Queries) CreateDMChannel(ctx context.Context, arg CreateDMChannelParams
 		&i.Position,
 		&i.ParentID,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const deleteChannel = `-- name: DeleteChannel :exec
-DELETE FROM channels WHERE id = $1
+UPDATE channels SET deleted = TRUE, updated_at = NOW() WHERE id = $1
 `
 
 func (q *Queries) DeleteChannel(ctx context.Context, id pgtype.UUID) error {
@@ -101,7 +105,7 @@ func (q *Queries) DeleteChannel(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getChannelByID = `-- name: GetChannelByID :one
-SELECT id, guild_id, name, type, topic, position, parent_id, created_at FROM channels WHERE id = $1
+SELECT id, guild_id, name, type, topic, position, parent_id, created_at, deleted, updated_at FROM channels WHERE id = $1 AND deleted = FALSE
 `
 
 func (q *Queries) GetChannelByID(ctx context.Context, id pgtype.UUID) (Channel, error) {
@@ -116,15 +120,17 @@ func (q *Queries) GetChannelByID(ctx context.Context, id pgtype.UUID) (Channel, 
 		&i.Position,
 		&i.ParentID,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getDMChannelBetweenUsers = `-- name: GetDMChannelBetweenUsers :one
-SELECT c.id, c.guild_id, c.name, c.type, c.topic, c.position, c.parent_id, c.created_at FROM channels c
+SELECT c.id, c.guild_id, c.name, c.type, c.topic, c.position, c.parent_id, c.created_at, c.deleted, c.updated_at FROM channels c
 JOIN dm_channel_members dm1 ON dm1.channel_id = c.id AND dm1.user_id = $1
 JOIN dm_channel_members dm2 ON dm2.channel_id = c.id AND dm2.user_id = $2
-WHERE c.type = 5
+WHERE c.type = 5 AND c.deleted = FALSE AND dm1.deleted = FALSE AND dm2.deleted = FALSE
 `
 
 type GetDMChannelBetweenUsersParams struct {
@@ -144,13 +150,39 @@ func (q *Queries) GetDMChannelBetweenUsers(ctx context.Context, arg GetDMChannel
 		&i.Position,
 		&i.ParentID,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
+const getDMChannelMembers = `-- name: GetDMChannelMembers :many
+SELECT user_id FROM dm_channel_members WHERE channel_id = $1 AND deleted = FALSE
+`
+
+func (q *Queries) GetDMChannelMembers(ctx context.Context, channelID pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, getDMChannelMembers, channelID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var user_id pgtype.UUID
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const isDMChannelMember = `-- name: IsDMChannelMember :one
 SELECT EXISTS(
-    SELECT 1 FROM dm_channel_members WHERE channel_id = $1 AND user_id = $2
+    SELECT 1 FROM dm_channel_members WHERE channel_id = $1 AND user_id = $2 AND deleted = FALSE
 ) AS is_member
 `
 
@@ -167,9 +199,9 @@ func (q *Queries) IsDMChannelMember(ctx context.Context, arg IsDMChannelMemberPa
 }
 
 const listDMChannels = `-- name: ListDMChannels :many
-SELECT c.id, c.guild_id, c.name, c.type, c.topic, c.position, c.parent_id, c.created_at FROM channels c
+SELECT c.id, c.guild_id, c.name, c.type, c.topic, c.position, c.parent_id, c.created_at, c.deleted, c.updated_at FROM channels c
 JOIN dm_channel_members dm ON dm.channel_id = c.id
-WHERE dm.user_id = $1 AND c.type IN (5, 6)
+WHERE dm.user_id = $1 AND c.type IN (5, 6) AND c.deleted = FALSE AND dm.deleted = FALSE
 `
 
 func (q *Queries) ListDMChannels(ctx context.Context, userID pgtype.UUID) ([]Channel, error) {
@@ -190,6 +222,8 @@ func (q *Queries) ListDMChannels(ctx context.Context, userID pgtype.UUID) ([]Cha
 			&i.Position,
 			&i.ParentID,
 			&i.CreatedAt,
+			&i.Deleted,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -202,7 +236,7 @@ func (q *Queries) ListDMChannels(ctx context.Context, userID pgtype.UUID) ([]Cha
 }
 
 const listGuildChannels = `-- name: ListGuildChannels :many
-SELECT id, guild_id, name, type, topic, position, parent_id, created_at FROM channels WHERE guild_id = $1 ORDER BY position
+SELECT id, guild_id, name, type, topic, position, parent_id, created_at, deleted, updated_at FROM channels WHERE guild_id = $1 AND deleted = FALSE ORDER BY position
 `
 
 func (q *Queries) ListGuildChannels(ctx context.Context, guildID pgtype.UUID) ([]Channel, error) {
@@ -223,6 +257,8 @@ func (q *Queries) ListGuildChannels(ctx context.Context, guildID pgtype.UUID) ([
 			&i.Position,
 			&i.ParentID,
 			&i.CreatedAt,
+			&i.Deleted,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -235,7 +271,7 @@ func (q *Queries) ListGuildChannels(ctx context.Context, guildID pgtype.UUID) ([
 }
 
 const removeDMChannelMember = `-- name: RemoveDMChannelMember :exec
-DELETE FROM dm_channel_members WHERE channel_id = $1 AND user_id = $2
+UPDATE dm_channel_members SET deleted = TRUE, updated_at = NOW() WHERE channel_id = $1 AND user_id = $2
 `
 
 type RemoveDMChannelMemberParams struct {
@@ -255,7 +291,7 @@ UPDATE channels SET
     position = COALESCE($4, position),
     parent_id = COALESCE($5, parent_id)
 WHERE id = $1
-RETURNING id, guild_id, name, type, topic, position, parent_id, created_at
+RETURNING id, guild_id, name, type, topic, position, parent_id, created_at, deleted, updated_at
 `
 
 type UpdateChannelParams struct {
@@ -284,6 +320,8 @@ func (q *Queries) UpdateChannel(ctx context.Context, arg UpdateChannelParams) (C
 		&i.Position,
 		&i.ParentID,
 		&i.CreatedAt,
+		&i.Deleted,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
