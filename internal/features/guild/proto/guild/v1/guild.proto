@@ -37,6 +37,9 @@ service GuildService {
   rpc UploadGuildIcon(UploadGuildIconRequest) returns (UploadGuildIconResponse);
   rpc DeleteGuild(DeleteGuildRequest) returns (DeleteGuildResponse);
   rpc ListUserGuilds(ListUserGuildsRequest) returns (ListUserGuildsResponse);
+  // PreviewInvite returns guild metadata for an invite code WITHOUT joining.
+  // Used for deep-link landing pages (e.g. https://ndiscord.app/invite/{code}).
+  rpc PreviewInvite(PreviewInviteRequest) returns (PreviewInviteResponse);
   rpc JoinGuild(JoinGuildRequest) returns (JoinGuildResponse);
   rpc LeaveGuild(LeaveGuildRequest) returns (LeaveGuildResponse);
   rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
@@ -96,6 +99,8 @@ message Invite {
   int32 uses = 6;
   google.protobuf.Timestamp expires_at = 7;
   google.protobuf.Timestamp created_at = 8;
+  // Full shareable URL (e.g. https://ndiscord.app/invite/{code}).
+  string url = 9;
 }
 
 message CreateGuildRequest {
@@ -157,8 +162,47 @@ message JoinGuildRequest {
   string invite_code = 1 [(buf.validate.field).string = {min_len: 4, max_len: 32}];
 }
 
+// InviteChannelInfo is a simplified channel payload embedded in invite-related
+// responses so clients get everything they need in a single call after joining.
+message InviteChannelInfo {
+  string id = 1;
+  string name = 2;
+  int32 type = 3;
+  string topic = 4;
+  int32 position = 5;
+  string parent_id = 6;
+}
+
 message JoinGuildResponse {
   Guild guild = 1;
+  repeated InviteChannelInfo channels = 2;
+  int32 member_count = 3;
+}
+
+// PreviewInvite — public metadata shown before a user accepts an invite.
+message PreviewInviteRequest {
+  string invite_code = 1 [(buf.validate.field).string = {min_len: 4, max_len: 32}];
+}
+
+message InvitePreview {
+  string code = 1;
+  string guild_id = 2;
+  string guild_name = 3;
+  string guild_icon_url = 4;
+  string description = 5;
+  int32 member_count = 6;
+  int32 channel_count = 7;
+  string inviter_username = 8;
+  int32 max_uses = 9;
+  int32 uses = 10;
+  google.protobuf.Timestamp expires_at = 11;
+  bool already_member = 12;
+  // Full shareable URL.
+  string url = 13;
+}
+
+message PreviewInviteResponse {
+  InvitePreview preview = 1;
 }
 
 message LeaveGuildRequest {

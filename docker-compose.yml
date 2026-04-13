@@ -61,6 +61,7 @@ services:
       SMTP_PORT: "1025"
       SMTP_FROM: noreply@ndiscord.local
       NATS_URL: nats://nats:4222
+      INVITE_BASE_URL: ${INVITE_BASE_URL:-https://ndiscord.app/invite}
     depends_on:
       timescaledb:
         condition: service_healthy

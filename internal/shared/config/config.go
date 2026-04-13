@@ -17,6 +17,9 @@ type Config struct {
 	Voice      VoiceConfig
 	SMTP       SMTPConfig
 	NATS       NATSConfig
+	// InviteBaseURL is the public base URL under which invite codes are
+	// reachable, e.g. "https://ndiscord.app/invite". Final URL = base + "/" + code.
+	InviteBaseURL string
 }
 
 type ServerConfig struct {
@@ -131,6 +134,7 @@ func Load() *Config {
 		NATS: NATSConfig{
 			URL: env("NATS_URL", "nats://localhost:4222"),
 		},
+		InviteBaseURL: env("INVITE_BASE_URL", "https://ndiscord.app/invite"),
 	}
 }
 

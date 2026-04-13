@@ -200,7 +200,7 @@ func (h *Handler) JoinGuild(ctx context.Context, req *guildv1.JoinGuildRequest) 
 		return nil, status.Error(codes.Internal, "invalid caller id")
 	}
 
-	guild, err := h.svc.JoinGuild(ctx, pgID, req.GetInviteCode())
+	result, err := h.svc.JoinGuild(ctx, pgID, req.GetInviteCode())
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrInviteNotFound):
@@ -218,10 +218,73 @@ func (h *Handler) JoinGuild(ctx context.Context, req *guildv1.JoinGuildRequest) 
 		}
 	}
 
-	count, _ := h.svc.repo.CountGuildMembers(ctx, guild.ID)
 	return &guildv1.JoinGuildResponse{
-		Guild: h.toProto(ctx, guild, int32(count)),
+		Guild:       h.toProto(ctx, result.Guild, int32(result.MemberCount)),
+		Channels:    dbChannelsToInfos(result.Channels),
+		MemberCount: int32(result.MemberCount),
 	}, nil
+}
+
+func (h *Handler) PreviewInvite(ctx context.Context, req *guildv1.PreviewInviteRequest) (*guildv1.PreviewInviteResponse, error) {
+	var callerPgID pgtype.UUID
+	if callerID := middleware.UserIDFromContext(ctx); callerID != "" {
+		if id, err := parseUUID(callerID); err == nil {
+			callerPgID = id
+		}
+	}
+
+	result, err := h.svc.PreviewInvite(ctx, callerPgID, req.GetInviteCode())
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrInviteNotFound), errors.Is(err, ErrGuildNotFound):
+			return nil, status.Error(codes.NotFound, "invite not found")
+		case errors.Is(err, ErrInviteExpired):
+			return nil, status.Error(codes.FailedPrecondition, "invite has expired")
+		case errors.Is(err, ErrInviteMaxUses):
+			return nil, status.Error(codes.FailedPrecondition, "invite has reached maximum uses")
+		case errors.Is(err, ErrUserBanned):
+			return nil, status.Error(codes.PermissionDenied, "you are banned from this guild")
+		default:
+			return nil, status.Error(codes.Internal, "failed to preview invite")
+		}
+	}
+
+	preview := &guildv1.InvitePreview{
+		Code:            result.Invite.Code,
+		GuildId:         pgToStr(result.Guild.ID),
+		GuildName:       result.Guild.Name,
+		GuildIconUrl:    h.svc.ResolveIconURL(ctx, result.Guild.IconUrl),
+		Description:     result.Guild.Description,
+		MemberCount:     int32(result.MemberCount),
+		ChannelCount:    result.ChannelCount,
+		InviterUsername: result.InviterUsername,
+		MaxUses:         result.Invite.MaxUses,
+		Uses:            result.Invite.Uses,
+		AlreadyMember:   result.AlreadyMember,
+	}
+	if result.Invite.ExpiresAt.Valid {
+		preview.ExpiresAt = timestamppb.New(result.Invite.ExpiresAt.Time)
+	}
+
+	return &guildv1.PreviewInviteResponse{Preview: preview}, nil
+}
+
+func dbChannelsToInfos(channels []db.Channel) []*guildv1.InviteChannelInfo {
+	out := make([]*guildv1.InviteChannelInfo, len(channels))
+	for i, c := range channels {
+		info := &guildv1.InviteChannelInfo{
+			Id:       pgToStr(c.ID),
+			Name:     c.Name,
+			Type:     c.Type,
+			Topic:    c.Topic,
+			Position: c.Position,
+		}
+		if c.ParentID.Valid {
+			info.ParentId = pgToStr(c.ParentID)
+		}
+		out[i] = info
+	}
+	return out
 }
 
 func (h *Handler) LeaveGuild(ctx context.Context, req *guildv1.LeaveGuildRequest) (*guildv1.LeaveGuildResponse, error) {
@@ -427,7 +490,7 @@ func (h *Handler) CreateInvite(ctx context.Context, req *guildv1.CreateInviteReq
 	}
 
 	return &guildv1.CreateInviteResponse{
-		Invite: dbInviteToProto(invite),
+		Invite: h.inviteToProto(invite),
 	}, nil
 }
 
@@ -703,7 +766,7 @@ func dbRoleToProto(r db.Role) *guildv1.Role {
 	return pr
 }
 
-func dbInviteToProto(inv db.Invite) *guildv1.Invite {
+func (h *Handler) inviteToProto(inv db.Invite) *guildv1.Invite {
 	pi := &guildv1.Invite{
 		Code:      inv.Code,
 		GuildId:   inv.GuildID.String(),
@@ -711,6 +774,7 @@ func dbInviteToProto(inv db.Invite) *guildv1.Invite {
 		CreatorId: inv.CreatorID.String(),
 		MaxUses:   inv.MaxUses,
 		Uses:      inv.Uses,
+		Url:       h.svc.BuildInviteURL(inv.Code),
 	}
 	if inv.ExpiresAt.Valid {
 		pi.ExpiresAt = timestamppb.New(inv.ExpiresAt.Time)

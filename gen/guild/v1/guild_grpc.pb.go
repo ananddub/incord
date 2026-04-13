@@ -25,6 +25,7 @@ const (
 	GuildService_UploadGuildIcon_FullMethodName    = "/guild.v1.GuildService/UploadGuildIcon"
 	GuildService_DeleteGuild_FullMethodName        = "/guild.v1.GuildService/DeleteGuild"
 	GuildService_ListUserGuilds_FullMethodName     = "/guild.v1.GuildService/ListUserGuilds"
+	GuildService_PreviewInvite_FullMethodName      = "/guild.v1.GuildService/PreviewInvite"
 	GuildService_JoinGuild_FullMethodName          = "/guild.v1.GuildService/JoinGuild"
 	GuildService_LeaveGuild_FullMethodName         = "/guild.v1.GuildService/LeaveGuild"
 	GuildService_ListMembers_FullMethodName        = "/guild.v1.GuildService/ListMembers"
@@ -53,6 +54,9 @@ type GuildServiceClient interface {
 	UploadGuildIcon(ctx context.Context, in *UploadGuildIconRequest, opts ...grpc.CallOption) (*UploadGuildIconResponse, error)
 	DeleteGuild(ctx context.Context, in *DeleteGuildRequest, opts ...grpc.CallOption) (*DeleteGuildResponse, error)
 	ListUserGuilds(ctx context.Context, in *ListUserGuildsRequest, opts ...grpc.CallOption) (*ListUserGuildsResponse, error)
+	// PreviewInvite returns guild metadata for an invite code WITHOUT joining.
+	// Used for deep-link landing pages (e.g. https://ndiscord.app/invite/{code}).
+	PreviewInvite(ctx context.Context, in *PreviewInviteRequest, opts ...grpc.CallOption) (*PreviewInviteResponse, error)
 	JoinGuild(ctx context.Context, in *JoinGuildRequest, opts ...grpc.CallOption) (*JoinGuildResponse, error)
 	LeaveGuild(ctx context.Context, in *LeaveGuildRequest, opts ...grpc.CallOption) (*LeaveGuildResponse, error)
 	ListMembers(ctx context.Context, in *ListMembersRequest, opts ...grpc.CallOption) (*ListMembersResponse, error)
@@ -135,6 +139,16 @@ func (c *guildServiceClient) ListUserGuilds(ctx context.Context, in *ListUserGui
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListUserGuildsResponse)
 	err := c.cc.Invoke(ctx, GuildService_ListUserGuilds_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *guildServiceClient) PreviewInvite(ctx context.Context, in *PreviewInviteRequest, opts ...grpc.CallOption) (*PreviewInviteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PreviewInviteResponse)
+	err := c.cc.Invoke(ctx, GuildService_PreviewInvite_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -311,6 +325,9 @@ type GuildServiceServer interface {
 	UploadGuildIcon(context.Context, *UploadGuildIconRequest) (*UploadGuildIconResponse, error)
 	DeleteGuild(context.Context, *DeleteGuildRequest) (*DeleteGuildResponse, error)
 	ListUserGuilds(context.Context, *ListUserGuildsRequest) (*ListUserGuildsResponse, error)
+	// PreviewInvite returns guild metadata for an invite code WITHOUT joining.
+	// Used for deep-link landing pages (e.g. https://ndiscord.app/invite/{code}).
+	PreviewInvite(context.Context, *PreviewInviteRequest) (*PreviewInviteResponse, error)
 	JoinGuild(context.Context, *JoinGuildRequest) (*JoinGuildResponse, error)
 	LeaveGuild(context.Context, *LeaveGuildRequest) (*LeaveGuildResponse, error)
 	ListMembers(context.Context, *ListMembersRequest) (*ListMembersResponse, error)
@@ -356,6 +373,9 @@ func (UnimplementedGuildServiceServer) DeleteGuild(context.Context, *DeleteGuild
 }
 func (UnimplementedGuildServiceServer) ListUserGuilds(context.Context, *ListUserGuildsRequest) (*ListUserGuildsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListUserGuilds not implemented")
+}
+func (UnimplementedGuildServiceServer) PreviewInvite(context.Context, *PreviewInviteRequest) (*PreviewInviteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PreviewInvite not implemented")
 }
 func (UnimplementedGuildServiceServer) JoinGuild(context.Context, *JoinGuildRequest) (*JoinGuildResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method JoinGuild not implemented")
@@ -530,6 +550,24 @@ func _GuildService_ListUserGuilds_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(GuildServiceServer).ListUserGuilds(ctx, req.(*ListUserGuildsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GuildService_PreviewInvite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PreviewInviteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuildServiceServer).PreviewInvite(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GuildService_PreviewInvite_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuildServiceServer).PreviewInvite(ctx, req.(*PreviewInviteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -852,6 +890,10 @@ var GuildService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListUserGuilds",
 			Handler:    _GuildService_ListUserGuilds_Handler,
+		},
+		{
+			MethodName: "PreviewInvite",
+			Handler:    _GuildService_PreviewInvite_Handler,
 		},
 		{
 			MethodName: "JoinGuild",

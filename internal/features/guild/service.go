@@ -20,12 +20,26 @@ import (
 )
 
 type Service struct {
-	repo   *Repository
-	authz  *authz.Client
-	nats   *realtime.Hub
-	minio  *minio.Client
-	signer *minio.Client
-	bucket string
+	repo          *Repository
+	authz         *authz.Client
+	nats          *realtime.Hub
+	minio         *minio.Client
+	signer        *minio.Client
+	bucket        string
+	inviteBaseURL string
+}
+
+// SetInviteBaseURL sets the public base URL used to build shareable invite links.
+func (s *Service) SetInviteBaseURL(base string) {
+	s.inviteBaseURL = base
+}
+
+// BuildInviteURL returns the shareable URL for an invite code.
+func (s *Service) BuildInviteURL(code string) string {
+	if s.inviteBaseURL == "" || code == "" {
+		return ""
+	}
+	return s.inviteBaseURL + "/" + code
 }
 
 func NewService(repo *Repository, nats *realtime.Hub, authzClient ...*authz.Client) *Service {
@@ -225,20 +239,102 @@ func (s *Service) ListUserGuilds(ctx context.Context, userID pgtype.UUID) ([]db.
 	return guilds, nil
 }
 
-func (s *Service) JoinGuild(ctx context.Context, userID pgtype.UUID, inviteCode string) (db.Guild, error) {
+// JoinGuildResult holds the full payload returned after joining via invite.
+type JoinGuildResult struct {
+	Guild       db.Guild
+	Channels    []db.Channel
+	MemberCount int64
+}
+
+// PreviewInviteResult holds guild metadata shown before accepting an invite.
+type PreviewInviteResult struct {
+	Invite          db.Invite
+	Guild           db.Guild
+	MemberCount     int64
+	ChannelCount    int32
+	InviterUsername string
+	AlreadyMember   bool
+}
+
+// PreviewInvite returns guild metadata for an invite code without joining.
+// It performs the same validity checks as JoinGuild (expired, exhausted, banned)
+// so the caller knows up-front whether the invite is usable.
+func (s *Service) PreviewInvite(ctx context.Context, callerID pgtype.UUID, inviteCode string) (*PreviewInviteResult, error) {
 	invite, err := s.repo.GetInvite(ctx, inviteCode)
 	if err != nil {
-		return db.Guild{}, ErrInviteNotFound
+		return nil, ErrInviteNotFound
+	}
+
+	if invite.ExpiresAt.Valid && invite.ExpiresAt.Time.Before(time.Now()) {
+		return nil, ErrInviteExpired
+	}
+	if invite.MaxUses > 0 && invite.Uses >= invite.MaxUses {
+		return nil, ErrInviteMaxUses
+	}
+
+	if callerID.Valid {
+		if _, banErr := s.repo.GetBan(ctx, db.GetBanParams{
+			GuildID: invite.GuildID,
+			UserID:  callerID,
+		}); banErr == nil {
+			return nil, ErrUserBanned
+		}
+	}
+
+	guild, err := s.repo.GetGuildByID(ctx, invite.GuildID)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrGuildNotFound, err)
+	}
+
+	memberCount, err := s.repo.CountGuildMembers(ctx, invite.GuildID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count members: %w", err)
+	}
+
+	channels, err := s.repo.ListGuildChannels(ctx, invite.GuildID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list channels: %w", err)
+	}
+
+	inviterUsername := ""
+	if inviter, err := s.repo.GetUserByID(ctx, invite.CreatorID); err == nil {
+		inviterUsername = inviter.Username
+	}
+
+	alreadyMember := false
+	if callerID.Valid {
+		if _, memErr := s.repo.GetGuildMember(ctx, db.GetGuildMemberParams{
+			GuildID: invite.GuildID,
+			UserID:  callerID,
+		}); memErr == nil {
+			alreadyMember = true
+		}
+	}
+
+	return &PreviewInviteResult{
+		Invite:          invite,
+		Guild:           guild,
+		MemberCount:     memberCount,
+		ChannelCount:    int32(len(channels)),
+		InviterUsername: inviterUsername,
+		AlreadyMember:   alreadyMember,
+	}, nil
+}
+
+func (s *Service) JoinGuild(ctx context.Context, userID pgtype.UUID, inviteCode string) (*JoinGuildResult, error) {
+	invite, err := s.repo.GetInvite(ctx, inviteCode)
+	if err != nil {
+		return nil, ErrInviteNotFound
 	}
 
 	// Check expiry
 	if invite.ExpiresAt.Valid && invite.ExpiresAt.Time.Before(time.Now()) {
-		return db.Guild{}, ErrInviteExpired
+		return nil, ErrInviteExpired
 	}
 
 	// Check max uses
 	if invite.MaxUses > 0 && invite.Uses >= invite.MaxUses {
-		return db.Guild{}, ErrInviteMaxUses
+		return nil, ErrInviteMaxUses
 	}
 
 	// Check if banned
@@ -247,7 +343,7 @@ func (s *Service) JoinGuild(ctx context.Context, userID pgtype.UUID, inviteCode 
 		UserID:  userID,
 	})
 	if err == nil {
-		return db.Guild{}, ErrUserBanned
+		return nil, ErrUserBanned
 	}
 
 	// Check if already a member
@@ -256,7 +352,7 @@ func (s *Service) JoinGuild(ctx context.Context, userID pgtype.UUID, inviteCode 
 		UserID:  userID,
 	})
 	if err == nil {
-		return db.Guild{}, ErrAlreadyMember
+		return nil, ErrAlreadyMember
 	}
 
 	// Add member
@@ -266,7 +362,7 @@ func (s *Service) JoinGuild(ctx context.Context, userID pgtype.UUID, inviteCode 
 		Nickname: "",
 	})
 	if err != nil {
-		return db.Guild{}, fmt.Errorf("failed to add guild member: %w", err)
+		return nil, fmt.Errorf("failed to add guild member: %w", err)
 	}
 
 	// Increment invite uses
@@ -274,7 +370,17 @@ func (s *Service) JoinGuild(ctx context.Context, userID pgtype.UUID, inviteCode 
 
 	guild, err := s.repo.GetGuildByID(ctx, invite.GuildID)
 	if err != nil {
-		return db.Guild{}, fmt.Errorf("failed to get guild: %w", err)
+		return nil, fmt.Errorf("failed to get guild: %w", err)
+	}
+
+	channels, err := s.repo.ListGuildChannels(ctx, invite.GuildID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list channels: %w", err)
+	}
+
+	memberCount, err := s.repo.CountGuildMembers(ctx, invite.GuildID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count members: %w", err)
 	}
 
 	// Write authz tuple
@@ -286,7 +392,11 @@ func (s *Service) JoinGuild(ctx context.Context, userID pgtype.UUID, inviteCode 
 		"user_id": userStr,
 	})
 
-	return guild, nil
+	return &JoinGuildResult{
+		Guild:       guild,
+		Channels:    channels,
+		MemberCount: memberCount,
+	}, nil
 }
 
 func (s *Service) LeaveGuild(ctx context.Context, userID, guildID pgtype.UUID) error {

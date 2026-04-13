@@ -169,7 +169,7 @@ func TestJoinGuildViaInvite(t *testing.T) {
 
 	joined, err := svc.JoinGuild(ctx, joiner, invite.Code)
 	require.NoError(t, err)
-	assert.Equal(t, g.ID, joined.ID)
+	assert.Equal(t, g.ID, joined.Guild.ID)
 
 	_, count, err := svc.GetGuild(ctx, g.ID)
 	require.NoError(t, err)

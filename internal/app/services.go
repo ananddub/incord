@@ -50,6 +50,7 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 	guildRepo := guild.NewRepository(infra.Pool, infra.Redis)
 	guildSvc := guild.NewService(guildRepo, infra.NATS, infra.Authz)
 	guildSvc.SetStorage(infra.MinIO, infra.MinIOSigner, cfg.MinIO.Bucket)
+	guildSvc.SetInviteBaseURL(cfg.InviteBaseURL)
 	guildHandler := guild.NewHandler(guildSvc)
 
 	// Channel

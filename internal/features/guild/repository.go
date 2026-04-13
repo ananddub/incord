@@ -90,6 +90,16 @@ func (r *Repository) GetInvite(ctx context.Context, code string) (db.Invite, err
 	return r.queries.GetInvite(ctx, code)
 }
 
+// ListGuildChannels returns all channels of a guild, ordered by position.
+func (r *Repository) ListGuildChannels(ctx context.Context, guildID pgtype.UUID) ([]db.Channel, error) {
+	return r.queries.ListGuildChannels(ctx, guildID)
+}
+
+// GetUserByID fetches a user record (used to resolve invite inviter).
+func (r *Repository) GetUserByID(ctx context.Context, id pgtype.UUID) (db.User, error) {
+	return r.queries.GetUserByID(ctx, id)
+}
+
 func (r *Repository) IncrementInviteUses(ctx context.Context, code string) error {
 	return r.queries.IncrementInviteUses(ctx, code)
 }
