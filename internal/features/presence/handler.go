@@ -40,10 +40,6 @@ func (h *Handler) UpdatePresence(ctx context.Context, req *presencev1.UpdatePres
 
 // GetPresence returns the presence for a specific user.
 func (h *Handler) GetPresence(ctx context.Context, req *presencev1.GetPresenceRequest) (*presencev1.GetPresenceResponse, error) {
-	if req.GetUserId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "user_id is required")
-	}
-
 	p, err := h.service.GetPresence(ctx, req.GetUserId())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get presence: %v", err)
@@ -56,10 +52,6 @@ func (h *Handler) GetPresence(ctx context.Context, req *presencev1.GetPresenceRe
 
 // GetBulkPresence returns presence for multiple users.
 func (h *Handler) GetBulkPresence(ctx context.Context, req *presencev1.GetBulkPresenceRequest) (*presencev1.GetBulkPresenceResponse, error) {
-	if len(req.GetUserIds()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "user_ids is required")
-	}
-
 	presences, err := h.service.GetBulkPresence(ctx, req.GetUserIds())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get bulk presence: %v", err)

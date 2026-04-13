@@ -50,10 +50,10 @@ func TestGuildIconUpload(t *testing.T) {
 	assert.Equal(t, upResp.IconUrl, upResp.Guild.IconUrl, "response guild should have the new icon_url")
 
 	// Verify the icon was actually stored: GET the presigned URL.
-	// Server now signs with MINIO_PUBLIC_ENDPOINT (localhost:9000), so the URL
-	// is directly reachable from the host.
-	require.True(t, strings.Contains(upResp.IconUrl, "localhost:9000"),
-		"icon_url should use public endpoint, got: %s", upResp.IconUrl)
+	// Server signs with MINIO_PUBLIC_ENDPOINT so the URL should NOT contain
+	// the docker-internal hostname.
+	require.False(t, strings.Contains(upResp.IconUrl, "rustfs:9000"),
+		"icon_url should not use docker-internal hostname, got: %s", upResp.IconUrl)
 	httpClient := &http.Client{Timeout: 5 * time.Second}
 	httpResp, err := httpClient.Get(upResp.IconUrl)
 	require.NoError(t, err)

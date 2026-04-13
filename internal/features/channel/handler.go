@@ -151,9 +151,6 @@ func (h *Handler) AddDMGroupMember(ctx context.Context, req *channelv1.AddDMGrou
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
-	if req.GetChannelId() == "" || req.GetUserId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "channel_id and user_id are required")
-	}
 
 	if err := h.svc.AddDMGroupMember(ctx, callerID, req.GetChannelId(), req.GetUserId()); err != nil {
 		return nil, mapError(err)
@@ -166,9 +163,6 @@ func (h *Handler) RemoveDMGroupMember(ctx context.Context, req *channelv1.Remove
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if req.GetChannelId() == "" || req.GetUserId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "channel_id and user_id are required")
 	}
 
 	if err := h.svc.RemoveDMGroupMember(ctx, callerID, req.GetChannelId(), req.GetUserId()); err != nil {

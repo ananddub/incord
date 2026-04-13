@@ -30,10 +30,6 @@ func (h *Handler) RequestUpload(ctx context.Context, req *mediav1.RequestUploadR
 		return nil, status.Error(codes.Unauthenticated, "missing user id")
 	}
 
-	if req.GetFilename() == "" {
-		return nil, status.Error(codes.InvalidArgument, "filename is required")
-	}
-
 	result, err := h.service.RequestUpload(ctx, userID, req.GetFilename(), req.GetContentType(), req.GetSize())
 	if err != nil {
 		if errors.Is(err, ErrFileTooLarge) || errors.Is(err, ErrInvalidContentType) {
@@ -50,10 +46,6 @@ func (h *Handler) RequestUpload(ctx context.Context, req *mediav1.RequestUploadR
 
 // ConfirmUpload marks a file upload as confirmed.
 func (h *Handler) ConfirmUpload(ctx context.Context, req *mediav1.ConfirmUploadRequest) (*mediav1.ConfirmUploadResponse, error) {
-	if req.GetUploadId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "upload_id is required")
-	}
-
 	result, err := h.service.ConfirmUpload(ctx, req.GetUploadId())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to confirm upload: %v", err)
@@ -67,10 +59,6 @@ func (h *Handler) ConfirmUpload(ctx context.Context, req *mediav1.ConfirmUploadR
 
 // GetDownloadURL generates a presigned GET URL for downloading a file.
 func (h *Handler) GetDownloadURL(ctx context.Context, req *mediav1.GetDownloadURLRequest) (*mediav1.GetDownloadURLResponse, error) {
-	if req.GetFileId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "file_id is required")
-	}
-
 	result, err := h.service.GetDownloadURL(ctx, req.GetFileId())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get download URL: %v", err)
@@ -84,10 +72,6 @@ func (h *Handler) GetDownloadURL(ctx context.Context, req *mediav1.GetDownloadUR
 
 // DeleteFile removes a file from storage and the database.
 func (h *Handler) DeleteFile(ctx context.Context, req *mediav1.DeleteFileRequest) (*mediav1.DeleteFileResponse, error) {
-	if req.GetFileId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "file_id is required")
-	}
-
 	if err := h.service.DeleteFile(ctx, req.GetFileId()); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to delete file: %v", err)
 	}

@@ -45,11 +45,9 @@ func (h *Handler) SendMessage(ctx context.Context, req *messagev1.SendMessageReq
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
 
-	if req.ChannelId == "" {
-		return nil, status.Error(codes.InvalidArgument, "channel_id is required")
-	}
-	if req.Content == "" {
-		return nil, status.Error(codes.InvalidArgument, "content is required")
+	// Content can be empty if attachments are attached (Discord-style).
+	if req.Content == "" && len(req.AttachmentIds) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "content or attachments required")
 	}
 
 	guildID := h.resolveGuildID(ctx, req.ChannelId)
@@ -72,10 +70,6 @@ func (h *Handler) SendMessage(ctx context.Context, req *messagev1.SendMessageReq
 func (h *Handler) GetMessage(ctx context.Context, req *messagev1.GetMessageRequest) (*messagev1.GetMessageResponse, error) {
 	userID := middleware.UserIDFromContext(ctx)
 
-	if req.ChannelId == "" || req.MessageId == "" {
-		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
-	}
-
 	msg, err := h.svc.GetMessage(ctx, req.ChannelId, req.MessageId)
 	if err != nil {
 		return nil, mapError(err)
@@ -95,13 +89,6 @@ func (h *Handler) EditMessage(ctx context.Context, req *messagev1.EditMessageReq
 	userID := middleware.UserIDFromContext(ctx)
 	if userID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
-	}
-
-	if req.ChannelId == "" || req.MessageId == "" {
-		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
-	}
-	if req.Content == "" {
-		return nil, status.Error(codes.InvalidArgument, "content is required")
 	}
 
 	msg, err := h.svc.EditMessage(ctx, userID, req.ChannelId, h.resolveGuildID(ctx, req.ChannelId), req.MessageId, req.Content)
@@ -125,10 +112,6 @@ func (h *Handler) DeleteMessage(ctx context.Context, req *messagev1.DeleteMessag
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
 
-	if req.ChannelId == "" || req.MessageId == "" {
-		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
-	}
-
 	if err := h.svc.DeleteMessage(ctx, userID, req.ChannelId, h.resolveGuildID(ctx, req.ChannelId), req.MessageId); err != nil {
 		return nil, mapError(err)
 	}
@@ -138,10 +121,6 @@ func (h *Handler) DeleteMessage(ctx context.Context, req *messagev1.DeleteMessag
 
 func (h *Handler) ListMessages(ctx context.Context, req *messagev1.ListMessagesRequest) (*messagev1.ListMessagesResponse, error) {
 	userID := middleware.UserIDFromContext(ctx)
-
-	if req.ChannelId == "" {
-		return nil, status.Error(codes.InvalidArgument, "channel_id is required")
-	}
 
 	messages, err := h.svc.ListMessages(ctx, userID, req.ChannelId, req.Before, req.After, req.Limit)
 	if err != nil {
@@ -164,9 +143,6 @@ func (h *Handler) ListMessages(ctx context.Context, req *messagev1.ListMessagesR
 
 func (h *Handler) PinMessage(ctx context.Context, req *messagev1.PinMessageRequest) (*messagev1.PinMessageResponse, error) {
 	userID := middleware.UserIDFromContext(ctx)
-	if req.ChannelId == "" || req.MessageId == "" {
-		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
-	}
 
 	if err := h.svc.PinMessage(ctx, userID, req.ChannelId, h.resolveGuildID(ctx, req.ChannelId), req.MessageId); err != nil {
 		return nil, mapError(err)
@@ -177,9 +153,6 @@ func (h *Handler) PinMessage(ctx context.Context, req *messagev1.PinMessageReque
 
 func (h *Handler) UnpinMessage(ctx context.Context, req *messagev1.UnpinMessageRequest) (*messagev1.UnpinMessageResponse, error) {
 	userID := middleware.UserIDFromContext(ctx)
-	if req.ChannelId == "" || req.MessageId == "" {
-		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
-	}
 
 	if err := h.svc.UnpinMessage(ctx, userID, req.ChannelId, h.resolveGuildID(ctx, req.ChannelId), req.MessageId); err != nil {
 		return nil, mapError(err)
@@ -192,13 +165,6 @@ func (h *Handler) AddReaction(ctx context.Context, req *messagev1.AddReactionReq
 	userID := middleware.UserIDFromContext(ctx)
 	if userID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
-	}
-
-	if req.ChannelId == "" || req.MessageId == "" {
-		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
-	}
-	if req.Emoji == "" {
-		return nil, status.Error(codes.InvalidArgument, "emoji is required")
 	}
 
 	if err := h.svc.AddReaction(ctx, userID, req.ChannelId, h.resolveGuildID(ctx, req.ChannelId), req.MessageId, req.Emoji); err != nil {
@@ -214,13 +180,6 @@ func (h *Handler) RemoveReaction(ctx context.Context, req *messagev1.RemoveReact
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
 
-	if req.ChannelId == "" || req.MessageId == "" {
-		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
-	}
-	if req.Emoji == "" {
-		return nil, status.Error(codes.InvalidArgument, "emoji is required")
-	}
-
 	if err := h.svc.RemoveReaction(ctx, userID, req.ChannelId, req.MessageId, req.Emoji); err != nil {
 		return nil, mapError(err)
 	}
@@ -234,10 +193,6 @@ func (h *Handler) AckMessage(ctx context.Context, req *messagev1.AckMessageReque
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
 
-	if req.ChannelId == "" || req.MessageId == "" {
-		return nil, status.Error(codes.InvalidArgument, "channel_id and message_id are required")
-	}
-
 	if err := h.svc.AckMessage(ctx, userID, req.ChannelId, req.MessageId); err != nil {
 		return nil, mapError(err)
 	}
@@ -249,10 +204,6 @@ func (h *Handler) StartTyping(ctx context.Context, req *messagev1.StartTypingReq
 	userID := middleware.UserIDFromContext(ctx)
 	if userID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
-	}
-
-	if req.ChannelId == "" {
-		return nil, status.Error(codes.InvalidArgument, "channel_id is required")
 	}
 
 	if err := h.svc.StartTyping(ctx, userID, req.ChannelId, h.resolveGuildID(ctx, req.ChannelId)); err != nil {
@@ -302,12 +253,6 @@ func (h *Handler) SendDirectMessage(ctx context.Context, req *messagev1.SendDire
 	userID := middleware.UserIDFromContext(ctx)
 	if userID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if req.RecipientId == "" {
-		return nil, status.Error(codes.InvalidArgument, "recipient_id is required")
-	}
-	if req.Content == "" {
-		return nil, status.Error(codes.InvalidArgument, "content is required")
 	}
 
 	channelID, msg, err := h.svc.SendDirectMessage(ctx, userID, req.RecipientId, req.Content)

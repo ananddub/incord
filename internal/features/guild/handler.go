@@ -29,9 +29,6 @@ func (h *Handler) CreateGuild(ctx context.Context, req *guildv1.CreateGuildReque
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
-	if req.GetName() == "" {
-		return nil, status.Error(codes.InvalidArgument, "name is required")
-	}
 
 	ownerPgID, err := parseUUID(callerID)
 	if err != nil {
@@ -49,10 +46,6 @@ func (h *Handler) CreateGuild(ctx context.Context, req *guildv1.CreateGuildReque
 }
 
 func (h *Handler) GetGuild(ctx context.Context, req *guildv1.GetGuildRequest) (*guildv1.GetGuildResponse, error) {
-	if req.GetGuildId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "guild_id is required")
-	}
-
 	pgID, err := parseUUID(req.GetGuildId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid guild_id")
@@ -76,15 +69,6 @@ func (h *Handler) UploadGuildIcon(ctx context.Context, req *guildv1.UploadGuildI
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
-	if req.GetGuildId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "guild_id is required")
-	}
-	if len(req.GetData()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "data is required")
-	}
-	if req.GetContentType() == "" {
-		return nil, status.Error(codes.InvalidArgument, "content_type is required")
-	}
 
 	callerPgID, err := parseUUID(callerID)
 	if err != nil {
@@ -95,12 +79,7 @@ func (h *Handler) UploadGuildIcon(ctx context.Context, req *guildv1.UploadGuildI
 		return nil, status.Error(codes.InvalidArgument, "invalid guild_id")
 	}
 
-	filename := req.GetFilename()
-	if filename == "" {
-		filename = "icon"
-	}
-
-	guild, iconURL, err := h.svc.UploadGuildIcon(ctx, callerPgID, guildPgID, filename, req.GetContentType(), req.GetData())
+	guild, iconURL, err := h.svc.UploadGuildIcon(ctx, callerPgID, guildPgID, req.GetFilename(), req.GetContentType(), req.GetData())
 	if err != nil {
 		if errors.Is(err, ErrInsufficientPermissions) {
 			return nil, status.Error(codes.PermissionDenied, "cannot manage this guild")
@@ -121,9 +100,6 @@ func (h *Handler) UpdateGuild(ctx context.Context, req *guildv1.UpdateGuildReque
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if req.GetGuildId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "guild_id is required")
 	}
 
 	callerPgID, err := parseUUID(callerID)
@@ -163,9 +139,6 @@ func (h *Handler) DeleteGuild(ctx context.Context, req *guildv1.DeleteGuildReque
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if req.GetGuildId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "guild_id is required")
 	}
 
 	callerPgID, err := parseUUID(callerID)
@@ -221,9 +194,6 @@ func (h *Handler) JoinGuild(ctx context.Context, req *guildv1.JoinGuildRequest) 
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
-	if req.GetInviteCode() == "" {
-		return nil, status.Error(codes.InvalidArgument, "invite_code is required")
-	}
 
 	pgID, err := parseUUID(callerID)
 	if err != nil {
@@ -259,9 +229,6 @@ func (h *Handler) LeaveGuild(ctx context.Context, req *guildv1.LeaveGuildRequest
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
-	if req.GetGuildId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "guild_id is required")
-	}
 
 	callerPgID, err := parseUUID(callerID)
 	if err != nil {
@@ -289,10 +256,6 @@ func (h *Handler) LeaveGuild(ctx context.Context, req *guildv1.LeaveGuildRequest
 }
 
 func (h *Handler) ListMembers(ctx context.Context, req *guildv1.ListMembersRequest) (*guildv1.ListMembersResponse, error) {
-	if req.GetGuildId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "guild_id is required")
-	}
-
 	guildPgID, err := parseUUID(req.GetGuildId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid guild_id")
@@ -329,9 +292,6 @@ func (h *Handler) KickMember(ctx context.Context, req *guildv1.KickMemberRequest
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if req.GetGuildId() == "" || req.GetUserId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "guild_id and user_id are required")
 	}
 
 	callerPgID, err := parseUUID(callerID)
@@ -370,9 +330,6 @@ func (h *Handler) BanMember(ctx context.Context, req *guildv1.BanMemberRequest) 
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
-	if req.GetGuildId() == "" || req.GetUserId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "guild_id and user_id are required")
-	}
 
 	callerPgID, err := parseUUID(callerID)
 	if err != nil {
@@ -408,9 +365,6 @@ func (h *Handler) UnbanMember(ctx context.Context, req *guildv1.UnbanMemberReque
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
-	if req.GetGuildId() == "" || req.GetUserId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "guild_id and user_id are required")
-	}
 
 	callerPgID, err := parseUUID(callerID)
 	if err != nil {
@@ -445,9 +399,6 @@ func (h *Handler) CreateInvite(ctx context.Context, req *guildv1.CreateInviteReq
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if req.GetGuildId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "guild_id is required")
 	}
 
 	callerPgID, err := parseUUID(callerID)
@@ -485,9 +436,6 @@ func (h *Handler) CreateRole(ctx context.Context, req *guildv1.CreateRoleRequest
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
-	if req.GetGuildId() == "" || req.GetName() == "" {
-		return nil, status.Error(codes.InvalidArgument, "guild_id and name are required")
-	}
 
 	callerPgID, err := parseUUID(callerID)
 	if err != nil {
@@ -515,9 +463,6 @@ func (h *Handler) UpdateRole(ctx context.Context, req *guildv1.UpdateRoleRequest
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if req.GetRoleId() == "" || req.GetGuildId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "role_id and guild_id are required")
 	}
 
 	callerPgID, err := parseUUID(callerID)
@@ -559,9 +504,6 @@ func (h *Handler) DeleteRole(ctx context.Context, req *guildv1.DeleteRoleRequest
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
-	if req.GetRoleId() == "" || req.GetGuildId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "role_id and guild_id are required")
-	}
 
 	callerPgID, err := parseUUID(callerID)
 	if err != nil {
@@ -594,9 +536,6 @@ func (h *Handler) AssignRole(ctx context.Context, req *guildv1.AssignRoleRequest
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if req.GetGuildId() == "" || req.GetUserId() == "" || req.GetRoleId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "guild_id, user_id, and role_id are required")
 	}
 
 	callerPgID, err := parseUUID(callerID)
@@ -637,9 +576,6 @@ func (h *Handler) RemoveRole(ctx context.Context, req *guildv1.RemoveRoleRequest
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
-	if req.GetGuildId() == "" || req.GetUserId() == "" || req.GetRoleId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "guild_id, user_id, and role_id are required")
-	}
 
 	callerPgID, err := parseUUID(callerID)
 	if err != nil {
@@ -672,9 +608,6 @@ func (h *Handler) TransferOwnership(ctx context.Context, req *guildv1.TransferOw
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if req.GetGuildId() == "" || req.GetNewOwnerId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "guild_id and new_owner_id are required")
 	}
 
 	callerPgID, err := parseUUID(callerID)

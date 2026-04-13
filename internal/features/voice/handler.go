@@ -29,11 +29,7 @@ func (h *Handler) JoinChannel(ctx context.Context, req *voicev1.JoinChannelReque
 		return nil, status.Error(codes.Unauthenticated, "missing user id")
 	}
 
-	if req.GetChannelId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "channel_id is required")
-	}
-
-	result, err := h.service.JoinChannel(ctx, userID, req.GetGuildId(), req.GetChannelId())
+result, err := h.service.JoinChannel(ctx, userID, req.GetGuildId(), req.GetChannelId())
 	if err != nil {
 		if errors.Is(err, ErrInsufficientPermissions) {
 			return nil, status.Error(codes.PermissionDenied, err.Error())
@@ -57,11 +53,7 @@ func (h *Handler) LeaveChannel(ctx context.Context, req *voicev1.LeaveChannelReq
 		return nil, status.Error(codes.Unauthenticated, "missing user id")
 	}
 
-	if req.GetChannelId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "channel_id is required")
-	}
-
-	if err := h.service.LeaveChannel(ctx, userID, req.GetChannelId()); err != nil {
+if err := h.service.LeaveChannel(ctx, userID, req.GetChannelId()); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to leave channel: %v", err)
 	}
 
@@ -70,11 +62,7 @@ func (h *Handler) LeaveChannel(ctx context.Context, req *voicev1.LeaveChannelReq
 
 // GetChannelParticipants returns all participants in a voice channel.
 func (h *Handler) GetChannelParticipants(ctx context.Context, req *voicev1.GetChannelParticipantsRequest) (*voicev1.GetChannelParticipantsResponse, error) {
-	if req.GetChannelId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "channel_id is required")
-	}
-
-	participants, err := h.service.GetChannelParticipants(ctx, req.GetChannelId())
+participants, err := h.service.GetChannelParticipants(ctx, req.GetChannelId())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get participants: %v", err)
 	}
@@ -91,11 +79,7 @@ func (h *Handler) UpdateVoiceState(ctx context.Context, req *voicev1.UpdateVoice
 		return nil, status.Error(codes.Unauthenticated, "missing user id")
 	}
 
-	if req.GetChannelId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "channel_id is required")
-	}
-
-	if err := h.service.UpdateVoiceState(ctx, userID, req.GetChannelId(), req.GetSelfMute(), req.GetSelfDeaf(), req.GetVideo(), req.GetStream()); err != nil {
+if err := h.service.UpdateVoiceState(ctx, userID, req.GetChannelId(), req.GetSelfMute(), req.GetSelfDeaf(), req.GetVideo(), req.GetStream()); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to update voice state: %v", err)
 	}
 

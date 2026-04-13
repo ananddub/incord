@@ -31,10 +31,6 @@ func NewHandler(svc *Service) *Handler {
 func (h *Handler) SetPresenceUpdater(p PresenceUpdater) { h.presenceUpdater = p }
 
 func (h *Handler) Register(ctx context.Context, req *authv1.RegisterRequest) (*authv1.RegisterResponse, error) {
-	if req.Username == "" || req.Email == "" || req.Password == "" {
-		return nil, status.Error(codes.InvalidArgument, "username, email, and password are required")
-	}
-
 	userID, err := h.svc.Register(ctx, req.Username, req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, ErrUserExists) {
@@ -54,10 +50,6 @@ func (h *Handler) Register(ctx context.Context, req *authv1.RegisterRequest) (*a
 }
 
 func (h *Handler) VerifyOTP(ctx context.Context, req *authv1.VerifyOTPRequest) (*authv1.VerifyOTPResponse, error) {
-	if req.Email == "" || req.Otp == "" {
-		return nil, status.Error(codes.InvalidArgument, "email and otp are required")
-	}
-
 	userID, tokens, err := h.svc.VerifyOTP(ctx, req.Email, req.Otp)
 	if err != nil {
 		if errors.Is(err, ErrInvalidOTP) {
@@ -74,10 +66,6 @@ func (h *Handler) VerifyOTP(ctx context.Context, req *authv1.VerifyOTPRequest) (
 }
 
 func (h *Handler) ResendOTP(ctx context.Context, req *authv1.ResendOTPRequest) (*authv1.ResendOTPResponse, error) {
-	if req.Email == "" {
-		return nil, status.Error(codes.InvalidArgument, "email is required")
-	}
-
 	if err := h.svc.ResendOTP(ctx, req.Email); err != nil {
 		if errors.Is(err, ErrInvalidCredentials) {
 			return nil, status.Error(codes.NotFound, "user not found")
@@ -91,10 +79,6 @@ func (h *Handler) ResendOTP(ctx context.Context, req *authv1.ResendOTPRequest) (
 }
 
 func (h *Handler) Login(ctx context.Context, req *authv1.LoginRequest) (*authv1.LoginResponse, error) {
-	if req.Email == "" || req.Password == "" {
-		return nil, status.Error(codes.InvalidArgument, "email and password are required")
-	}
-
 	userID, tokens, err := h.svc.Login(ctx, req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, ErrInvalidCredentials) {
@@ -114,10 +98,6 @@ func (h *Handler) Login(ctx context.Context, req *authv1.LoginRequest) (*authv1.
 }
 
 func (h *Handler) RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.RefreshTokenResponse, error) {
-	if req.RefreshToken == "" {
-		return nil, status.Error(codes.InvalidArgument, "refresh token is required")
-	}
-
 	tokens, err := h.svc.RefreshToken(ctx, req.RefreshToken)
 	if err != nil {
 		if errors.Is(err, ErrInvalidToken) {
@@ -133,10 +113,6 @@ func (h *Handler) RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequ
 }
 
 func (h *Handler) Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error) {
-	if req.RefreshToken == "" {
-		return nil, status.Error(codes.InvalidArgument, "refresh token is required")
-	}
-
 	if err := h.svc.Logout(ctx, req.RefreshToken); err != nil {
 		return nil, status.Error(codes.Internal, "failed to logout")
 	}

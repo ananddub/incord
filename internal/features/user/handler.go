@@ -29,10 +29,6 @@ func NewHandler(svc *Service) *Handler {
 func (h *Handler) SetBlockChecker(b *BlockChecker) { h.blockChecker = b }
 
 func (h *Handler) GetUser(ctx context.Context, req *userv1.GetUserRequest) (*userv1.GetUserResponse, error) {
-	if req.GetUserId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "user_id is required")
-	}
-
 	pgID, err := parseUUID(req.GetUserId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid user_id")
@@ -106,10 +102,6 @@ func (h *Handler) DeleteUser(ctx context.Context, req *userv1.DeleteUserRequest)
 }
 
 func (h *Handler) GetUserByUsername(ctx context.Context, req *userv1.GetUserByUsernameRequest) (*userv1.GetUserByUsernameResponse, error) {
-	if req.GetUsername() == "" {
-		return nil, status.Error(codes.InvalidArgument, "username is required")
-	}
-
 	user, err := h.svc.GetUserByUsername(ctx, req.GetUsername())
 	if err != nil {
 		if errors.Is(err, ErrUserNotFound) {
@@ -132,18 +124,11 @@ func (h *Handler) GetUserByUsername(ctx context.Context, req *userv1.GetUserByUs
 }
 
 func (h *Handler) SearchUsers(ctx context.Context, req *userv1.SearchUsersRequest) (*userv1.SearchUsersResponse, error) {
-	if req.GetQuery() == "" {
-		return nil, status.Error(codes.InvalidArgument, "query is required")
-	}
-
 	limit := req.GetLimit()
-	if limit <= 0 {
+	if limit == 0 {
 		limit = 20
 	}
 	offset := req.GetOffset()
-	if offset < 0 {
-		offset = 0
-	}
 
 	users, total, err := h.svc.SearchUsers(ctx, req.GetQuery(), limit, offset)
 	if err != nil {
@@ -165,9 +150,6 @@ func (h *Handler) SendFriendRequest(ctx context.Context, req *userv1.SendFriendR
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if req.GetTargetUserId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "target_user_id is required")
 	}
 
 	userPgID, err := parseUUID(callerID)
@@ -205,9 +187,6 @@ func (h *Handler) AcceptFriendRequest(ctx context.Context, req *userv1.AcceptFri
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
-	if req.GetRequesterUserId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "requester_user_id is required")
-	}
 
 	userPgID, err := parseUUID(callerID)
 	if err != nil {
@@ -236,9 +215,6 @@ func (h *Handler) DeclineFriendRequest(ctx context.Context, req *userv1.DeclineF
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
-	if req.GetRequesterUserId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "requester_user_id is required")
-	}
 
 	userPgID, err := parseUUID(callerID)
 	if err != nil {
@@ -263,9 +239,6 @@ func (h *Handler) RemoveFriend(ctx context.Context, req *userv1.RemoveFriendRequ
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if req.GetFriendId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "friend_id is required")
 	}
 
 	userPgID, err := parseUUID(callerID)
@@ -292,9 +265,6 @@ func (h *Handler) BlockUser(ctx context.Context, req *userv1.BlockUserRequest) (
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
-	if req.GetTargetUserId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "target_user_id is required")
-	}
 
 	userPgID, err := parseUUID(callerID)
 	if err != nil {
@@ -319,9 +289,6 @@ func (h *Handler) UnblockUser(ctx context.Context, req *userv1.UnblockUserReques
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if req.GetTargetUserId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "target_user_id is required")
 	}
 
 	userPgID, err := parseUUID(callerID)
