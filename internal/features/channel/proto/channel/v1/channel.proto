@@ -15,6 +15,11 @@ service ChannelService {
   rpc ListGuildChannels(ListGuildChannelsRequest) returns (ListGuildChannelsResponse);
   rpc CreateDMChannel(CreateDMChannelRequest) returns (CreateDMChannelResponse);
   rpc ListDMChannels(ListDMChannelsRequest) returns (ListDMChannelsResponse);
+  // ListDMChannelMembers returns the user_ids of all members in a DM channel.
+  rpc ListDMChannelMembers(ListDMChannelMembersRequest) returns (ListDMChannelMembersResponse);
+  // ListDMChannelsWithMembers returns each DM channel the caller is in
+  // alongside the list of its member user_ids — saves N+1 round trips.
+  rpc ListDMChannelsWithMembers(ListDMChannelsWithMembersRequest) returns (ListDMChannelsWithMembersResponse);
   rpc AddDMGroupMember(AddDMGroupMemberRequest) returns (AddDMGroupMemberResponse);
   rpc RemoveDMGroupMember(RemoveDMGroupMemberRequest) returns (RemoveDMGroupMemberResponse);
 }
@@ -101,6 +106,42 @@ message ListDMChannelsRequest {}
 
 message ListDMChannelsResponse {
   repeated Channel channels = 1;
+}
+
+// DMMember is a lightweight user profile embedded in DM channel responses so
+// clients don't need a second round trip to UserService to render the list.
+message DMMember {
+  string id = 1;
+  string username = 2;      // full "name#1234" handle
+  string display_name = 3;
+  string avatar_url = 4;
+  string status = 5;
+}
+
+message ListDMChannelMembersRequest {
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message ListDMChannelMembersResponse {
+  repeated DMMember members = 1;
+}
+
+message DMChannelWithMembers {
+  string id = 1;
+  string guild_id = 2;
+  string name = 3;
+  ChannelType type = 4;
+  string topic = 5;
+  int32 position = 6;
+  string parent_id = 7;
+  google.protobuf.Timestamp created_at = 8;
+  repeated DMMember members = 9;
+}
+
+message ListDMChannelsWithMembersRequest {}
+
+message ListDMChannelsWithMembersResponse {
+  repeated DMChannelWithMembers channels = 1;
 }
 
 message AddDMGroupMemberRequest {

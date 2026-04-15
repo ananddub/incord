@@ -16,6 +16,10 @@ CREATE TABLE IF NOT EXISTS messages (
     edited_at  TIMESTAMP,
     updated_at TIMESTAMP,
     created_at TIMESTAMP,
+    forwarded_from_channel_id UUID,
+    forwarded_from_message_id UUID,
+    forwarded_from_author_id  UUID,
+    mention_user_ids SET<UUID>,
     PRIMARY KEY (channel_id, id)
 ) WITH CLUSTERING ORDER BY (id DESC);
 

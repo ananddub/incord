@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	authv1 "github.com/ananddub/ndiscord_backend/gen/auth/v1"
+	userv1 "github.com/ananddub/ndiscord_backend/gen/user/v1"
 )
 
 const serverAddr = "localhost:50051"
@@ -23,10 +24,20 @@ const serverAddr = "localhost:50051"
 // testUser holds user credentials and tokens
 type testUser struct {
 	ID           string
-	Username     string
+	Username     string // base name passed to Register
+	Handle       string // full "name#1234" handle assigned by the server
 	Email        string
 	AccessToken  string
 	RefreshToken string
+}
+
+// resolveHandle fetches the server-assigned "name#1234" handle for a freshly
+// registered user. Required because SendFriendRequest now keys on the handle.
+func resolveHandle(t *testing.T, userClient userv1.UserServiceClient, u *testUser) {
+	t.Helper()
+	resp, err := userClient.GetUser(u.ctx(), &userv1.GetUserRequest{UserId: u.ID})
+	require.NoError(t, err)
+	u.Handle = resp.GetUser().GetUsername()
 }
 
 func (u *testUser) ctx() context.Context {

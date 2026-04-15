@@ -25,19 +25,25 @@ func (q *Queries) CountSearchUsers(ctx context.Context, dollar_1 *string) (int64
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (username, email, password_hash)
-VALUES ($1, $2, $3)
-RETURNING id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted, background_color
+INSERT INTO users (username, display_name, email, password_hash)
+VALUES ($1, $2, $3, $4)
+RETURNING id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted, background_color, display_name
 `
 
 type CreateUserParams struct {
 	Username     string `json:"username"`
+	DisplayName  string `json:"display_name"`
 	Email        string `json:"email"`
 	PasswordHash string `json:"password_hash"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUser, arg.Username, arg.Email, arg.PasswordHash)
+	row := q.db.QueryRow(ctx, createUser,
+		arg.Username,
+		arg.DisplayName,
+		arg.Email,
+		arg.PasswordHash,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -52,6 +58,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Verified,
 		&i.Deleted,
 		&i.BackgroundColor,
+		&i.DisplayName,
 	)
 	return i, err
 }
@@ -66,7 +73,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted, background_color FROM users WHERE email = $1 AND deleted = FALSE
+SELECT id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted, background_color, display_name FROM users WHERE email = $1 AND deleted = FALSE
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -85,12 +92,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Verified,
 		&i.Deleted,
 		&i.BackgroundColor,
+		&i.DisplayName,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted, background_color FROM users WHERE id = $1
+SELECT id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted, background_color, display_name FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -109,12 +117,13 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 		&i.Verified,
 		&i.Deleted,
 		&i.BackgroundColor,
+		&i.DisplayName,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted, background_color FROM users WHERE username = $1 AND deleted = FALSE
+SELECT id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted, background_color, display_name FROM users WHERE username = $1 AND deleted = FALSE
 `
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
@@ -133,6 +142,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.Verified,
 		&i.Deleted,
 		&i.BackgroundColor,
+		&i.DisplayName,
 	)
 	return i, err
 }
@@ -149,7 +159,7 @@ func (q *Queries) IsUserVerified(ctx context.Context, email string) (bool, error
 }
 
 const searchUsers = `-- name: SearchUsers :many
-SELECT id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted, background_color FROM users
+SELECT id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted, background_color, display_name FROM users
 WHERE username ILIKE '%' || $1 || '%'
   AND deleted = FALSE
 ORDER BY username
@@ -184,6 +194,7 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Use
 			&i.Verified,
 			&i.Deleted,
 			&i.BackgroundColor,
+			&i.DisplayName,
 		); err != nil {
 			return nil, err
 		}
@@ -198,18 +209,20 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Use
 const updateUser = `-- name: UpdateUser :one
 UPDATE users SET
     username = COALESCE($2, username),
-    avatar_url = COALESCE($3, avatar_url),
-    bio = COALESCE($4, bio),
-    status = COALESCE($5, status),
-    background_color = COALESCE($6, background_color),
+    display_name = COALESCE($3, display_name),
+    avatar_url = COALESCE($4, avatar_url),
+    bio = COALESCE($5, bio),
+    status = COALESCE($6, status),
+    background_color = COALESCE($7, background_color),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted, background_color
+RETURNING id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted, background_color, display_name
 `
 
 type UpdateUserParams struct {
 	ID              pgtype.UUID `json:"id"`
 	Username        *string     `json:"username"`
+	DisplayName     *string     `json:"display_name"`
 	AvatarUrl       *string     `json:"avatar_url"`
 	Bio             *string     `json:"bio"`
 	Status          *string     `json:"status"`
@@ -220,6 +233,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 	row := q.db.QueryRow(ctx, updateUser,
 		arg.ID,
 		arg.Username,
+		arg.DisplayName,
 		arg.AvatarUrl,
 		arg.Bio,
 		arg.Status,
@@ -239,6 +253,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Verified,
 		&i.Deleted,
 		&i.BackgroundColor,
+		&i.DisplayName,
 	)
 	return i, err
 }
@@ -246,7 +261,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 const verifyUser = `-- name: VerifyUser :one
 UPDATE users SET verified = TRUE, updated_at = NOW()
 WHERE id = $1
-RETURNING id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted, background_color
+RETURNING id, username, email, password_hash, avatar_url, bio, status, created_at, updated_at, verified, deleted, background_color, display_name
 `
 
 func (q *Queries) VerifyUser(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -265,6 +280,7 @@ func (q *Queries) VerifyUser(ctx context.Context, id pgtype.UUID) (User, error) 
 		&i.Verified,
 		&i.Deleted,
 		&i.BackgroundColor,
+		&i.DisplayName,
 	)
 	return i, err
 }

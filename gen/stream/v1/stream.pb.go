@@ -22,6 +22,214 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// ChatAttachment mirrors message.v1.Attachment for stream payloads so the
+// stream feature doesn't pull in the whole message proto. Reused by every
+// chat-like event (DM + guild text + guild voice chat).
+type ChatAttachment struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Filename      string                 `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
+	Url           string                 `protobuf:"bytes,3,opt,name=url,proto3" json:"url,omitempty"`
+	ContentType   string                 `protobuf:"bytes,4,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	Size          int64                  `protobuf:"varint,5,opt,name=size,proto3" json:"size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChatAttachment) Reset() {
+	*x = ChatAttachment{}
+	mi := &file_stream_v1_stream_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChatAttachment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChatAttachment) ProtoMessage() {}
+
+func (x *ChatAttachment) ProtoReflect() protoreflect.Message {
+	mi := &file_stream_v1_stream_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChatAttachment.ProtoReflect.Descriptor instead.
+func (*ChatAttachment) Descriptor() ([]byte, []int) {
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ChatAttachment) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ChatAttachment) GetFilename() string {
+	if x != nil {
+		return x.Filename
+	}
+	return ""
+}
+
+func (x *ChatAttachment) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *ChatAttachment) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *ChatAttachment) GetSize() int64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+// ChatReactionCount is a per-emoji snapshot of a message's reactions.
+// Reused across all chat events so clients never have to recompute totals
+// from raw reaction_add / reaction_remove deltas.
+type ChatReactionCount struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Emoji string                 `protobuf:"bytes,1,opt,name=emoji,proto3" json:"emoji,omitempty"`
+	Count int32                  `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
+	// True if the current stream subscriber has reacted with this emoji.
+	// On a fan-out subject we don't know the receiver, so this is populated
+	// best-effort by the server for the event's `sender_id` perspective —
+	// clients should still maintain their own self-reaction set.
+	Me            bool `protobuf:"varint,3,opt,name=me,proto3" json:"me,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChatReactionCount) Reset() {
+	*x = ChatReactionCount{}
+	mi := &file_stream_v1_stream_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChatReactionCount) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChatReactionCount) ProtoMessage() {}
+
+func (x *ChatReactionCount) ProtoReflect() protoreflect.Message {
+	mi := &file_stream_v1_stream_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChatReactionCount.ProtoReflect.Descriptor instead.
+func (*ChatReactionCount) Descriptor() ([]byte, []int) {
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ChatReactionCount) GetEmoji() string {
+	if x != nil {
+		return x.Emoji
+	}
+	return ""
+}
+
+func (x *ChatReactionCount) GetCount() int32 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+func (x *ChatReactionCount) GetMe() bool {
+	if x != nil {
+		return x.Me
+	}
+	return false
+}
+
+// ChatForwardedReference points at the message a forward was created from.
+// Mirrors message.v1.ForwardedReference; kept flat for stream payloads.
+type ChatForwardedReference struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	MessageId     string                 `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	AuthorId      string                 `protobuf:"bytes,3,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChatForwardedReference) Reset() {
+	*x = ChatForwardedReference{}
+	mi := &file_stream_v1_stream_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChatForwardedReference) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChatForwardedReference) ProtoMessage() {}
+
+func (x *ChatForwardedReference) ProtoReflect() protoreflect.Message {
+	mi := &file_stream_v1_stream_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChatForwardedReference.ProtoReflect.Descriptor instead.
+func (*ChatForwardedReference) Descriptor() ([]byte, []int) {
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ChatForwardedReference) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+func (x *ChatForwardedReference) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *ChatForwardedReference) GetAuthorId() string {
+	if x != nil {
+		return x.AuthorId
+	}
+	return ""
+}
+
 type StreamDmChatRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -30,7 +238,7 @@ type StreamDmChatRequest struct {
 
 func (x *StreamDmChatRequest) Reset() {
 	*x = StreamDmChatRequest{}
-	mi := &file_stream_v1_stream_proto_msgTypes[0]
+	mi := &file_stream_v1_stream_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -42,7 +250,7 @@ func (x *StreamDmChatRequest) String() string {
 func (*StreamDmChatRequest) ProtoMessage() {}
 
 func (x *StreamDmChatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_stream_v1_stream_proto_msgTypes[0]
+	mi := &file_stream_v1_stream_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -55,24 +263,50 @@ func (x *StreamDmChatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamDmChatRequest.ProtoReflect.Descriptor instead.
 func (*StreamDmChatRequest) Descriptor() ([]byte, []int) {
-	return file_stream_v1_stream_proto_rawDescGZIP(), []int{0}
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{3}
 }
 
 type DmChatEvent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"` // "create", "update", "delete"
-	ChannelId     string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	MessageId     string                 `protobuf:"bytes,3,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
-	SenderId      string                 `protobuf:"bytes,4,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
-	Content       string                 `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"`
-	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// One of: "create", "update", "delete", "pin", "unpin",
+	// "reaction_add", "reaction_remove", "read_receipt".
+	Type      string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	ChannelId string `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	MessageId string `protobuf:"bytes,3,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	// The user who initiated the event (sender/editor/reactor/etc.).
+	SenderId string `protobuf:"bytes,4,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
+	// Message author — present on create/update/delete/pin/unpin.
+	AuthorId string `protobuf:"bytes,10,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty"`
+	// On "update" this is the new content; on "create" it's the initial
+	// content; on "delete" it is empty.
+	Content     string                 `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"`
+	Timestamp   *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	ReplyToId   string                 `protobuf:"bytes,7,opt,name=reply_to_id,json=replyToId,proto3" json:"reply_to_id,omitempty"`
+	Attachments []*ChatAttachment      `protobuf:"bytes,8,rep,name=attachments,proto3" json:"attachments,omitempty"`
+	// Underlying MessageType int (1=default, 3=reply, ...).
+	MsgType int32 `protobuf:"varint,9,opt,name=msg_type,json=msgType,proto3" json:"msg_type,omitempty"`
+	Pinned  bool  `protobuf:"varint,11,opt,name=pinned,proto3" json:"pinned,omitempty"`
+	Deleted bool  `protobuf:"varint,12,opt,name=deleted,proto3" json:"deleted,omitempty"`
+	// Populated on reaction_add / reaction_remove events.
+	Emoji     string `protobuf:"bytes,13,opt,name=emoji,proto3" json:"emoji,omitempty"`
+	EditedAt  string `protobuf:"bytes,14,opt,name=edited_at,json=editedAt,proto3" json:"edited_at,omitempty"`
+	CreatedAt string `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// User IDs explicitly @-mentioned by the author. Empty on non-create
+	// events where mentions don't change.
+	MentionUserIds []string `protobuf:"bytes,16,rep,name=mention_user_ids,json=mentionUserIds,proto3" json:"mention_user_ids,omitempty"`
+	// Full per-emoji reaction snapshot — sent on create/update/delete/pin
+	// AND on reaction_add / reaction_remove so clients can render counts
+	// without recomputing from deltas.
+	Reactions []*ChatReactionCount `protobuf:"bytes,17,rep,name=reactions,proto3" json:"reactions,omitempty"`
+	// Populated when this message is a forward of another.
+	ForwardedFrom *ChatForwardedReference `protobuf:"bytes,18,opt,name=forwarded_from,json=forwardedFrom,proto3" json:"forwarded_from,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DmChatEvent) Reset() {
 	*x = DmChatEvent{}
-	mi := &file_stream_v1_stream_proto_msgTypes[1]
+	mi := &file_stream_v1_stream_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -84,7 +318,7 @@ func (x *DmChatEvent) String() string {
 func (*DmChatEvent) ProtoMessage() {}
 
 func (x *DmChatEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_stream_v1_stream_proto_msgTypes[1]
+	mi := &file_stream_v1_stream_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -97,7 +331,7 @@ func (x *DmChatEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DmChatEvent.ProtoReflect.Descriptor instead.
 func (*DmChatEvent) Descriptor() ([]byte, []int) {
-	return file_stream_v1_stream_proto_rawDescGZIP(), []int{1}
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *DmChatEvent) GetType() string {
@@ -128,6 +362,13 @@ func (x *DmChatEvent) GetSenderId() string {
 	return ""
 }
 
+func (x *DmChatEvent) GetAuthorId() string {
+	if x != nil {
+		return x.AuthorId
+	}
+	return ""
+}
+
 func (x *DmChatEvent) GetContent() string {
 	if x != nil {
 		return x.Content
@@ -142,6 +383,400 @@ func (x *DmChatEvent) GetTimestamp() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *DmChatEvent) GetReplyToId() string {
+	if x != nil {
+		return x.ReplyToId
+	}
+	return ""
+}
+
+func (x *DmChatEvent) GetAttachments() []*ChatAttachment {
+	if x != nil {
+		return x.Attachments
+	}
+	return nil
+}
+
+func (x *DmChatEvent) GetMsgType() int32 {
+	if x != nil {
+		return x.MsgType
+	}
+	return 0
+}
+
+func (x *DmChatEvent) GetPinned() bool {
+	if x != nil {
+		return x.Pinned
+	}
+	return false
+}
+
+func (x *DmChatEvent) GetDeleted() bool {
+	if x != nil {
+		return x.Deleted
+	}
+	return false
+}
+
+func (x *DmChatEvent) GetEmoji() string {
+	if x != nil {
+		return x.Emoji
+	}
+	return ""
+}
+
+func (x *DmChatEvent) GetEditedAt() string {
+	if x != nil {
+		return x.EditedAt
+	}
+	return ""
+}
+
+func (x *DmChatEvent) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *DmChatEvent) GetMentionUserIds() []string {
+	if x != nil {
+		return x.MentionUserIds
+	}
+	return nil
+}
+
+func (x *DmChatEvent) GetReactions() []*ChatReactionCount {
+	if x != nil {
+		return x.Reactions
+	}
+	return nil
+}
+
+func (x *DmChatEvent) GetForwardedFrom() *ChatForwardedReference {
+	if x != nil {
+		return x.ForwardedFrom
+	}
+	return nil
+}
+
+type StreamDmChannelsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamDmChannelsRequest) Reset() {
+	*x = StreamDmChannelsRequest{}
+	mi := &file_stream_v1_stream_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamDmChannelsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamDmChannelsRequest) ProtoMessage() {}
+
+func (x *StreamDmChannelsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_stream_v1_stream_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamDmChannelsRequest.ProtoReflect.Descriptor instead.
+func (*StreamDmChannelsRequest) Descriptor() ([]byte, []int) {
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{5}
+}
+
+type DmChannelMember struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"` // full "name#1234"
+	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	AvatarUrl     string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DmChannelMember) Reset() {
+	*x = DmChannelMember{}
+	mi := &file_stream_v1_stream_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DmChannelMember) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DmChannelMember) ProtoMessage() {}
+
+func (x *DmChannelMember) ProtoReflect() protoreflect.Message {
+	mi := &file_stream_v1_stream_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DmChannelMember.ProtoReflect.Descriptor instead.
+func (*DmChannelMember) Descriptor() ([]byte, []int) {
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *DmChannelMember) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *DmChannelMember) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *DmChannelMember) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *DmChannelMember) GetAvatarUrl() string {
+	if x != nil {
+		return x.AvatarUrl
+	}
+	return ""
+}
+
+func (x *DmChannelMember) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+type DmChannelEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"` // "create", "update", "delete"
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`     // channel id
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	ChannelType   int32                  `protobuf:"varint,4,opt,name=channel_type,json=channelType,proto3" json:"channel_type,omitempty"` // 5=DM, 6=GROUP_DM
+	Members       []*DmChannelMember     `protobuf:"bytes,5,rep,name=members,proto3" json:"members,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DmChannelEvent) Reset() {
+	*x = DmChannelEvent{}
+	mi := &file_stream_v1_stream_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DmChannelEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DmChannelEvent) ProtoMessage() {}
+
+func (x *DmChannelEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_stream_v1_stream_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DmChannelEvent.ProtoReflect.Descriptor instead.
+func (*DmChannelEvent) Descriptor() ([]byte, []int) {
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *DmChannelEvent) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *DmChannelEvent) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *DmChannelEvent) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *DmChannelEvent) GetChannelType() int32 {
+	if x != nil {
+		return x.ChannelType
+	}
+	return 0
+}
+
+func (x *DmChannelEvent) GetMembers() []*DmChannelMember {
+	if x != nil {
+		return x.Members
+	}
+	return nil
+}
+
+type StreamDmCallsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamDmCallsRequest) Reset() {
+	*x = StreamDmCallsRequest{}
+	mi := &file_stream_v1_stream_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamDmCallsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamDmCallsRequest) ProtoMessage() {}
+
+func (x *StreamDmCallsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_stream_v1_stream_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamDmCallsRequest.ProtoReflect.Descriptor instead.
+func (*StreamDmCallsRequest) Descriptor() ([]byte, []int) {
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{8}
+}
+
+type DmCallEvent struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// "call_incoming" — ring the recipient; caller_id populated.
+	// "call_accepted" — a recipient joined; participant_id populated.
+	// "call_rejected" — a recipient declined; participant_id populated.
+	// "call_ended"    — last participant left; no participant_id.
+	// "participant_left" — a participant hung up mid-call.
+	Type      string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	ChannelId string `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	// The user who initiated the call (present on every event so late
+	// subscribers can identify the ongoing call).
+	CallerId string `protobuf:"bytes,3,opt,name=caller_id,json=callerId,proto3" json:"caller_id,omitempty"`
+	// The specific participant this event is about (accepted/rejected/left).
+	ParticipantId string `protobuf:"bytes,4,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"`
+	// True if the caller intends to publish video (camera).
+	Video         bool                   `protobuf:"varint,5,opt,name=video,proto3" json:"video,omitempty"`
+	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DmCallEvent) Reset() {
+	*x = DmCallEvent{}
+	mi := &file_stream_v1_stream_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DmCallEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DmCallEvent) ProtoMessage() {}
+
+func (x *DmCallEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_stream_v1_stream_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DmCallEvent.ProtoReflect.Descriptor instead.
+func (*DmCallEvent) Descriptor() ([]byte, []int) {
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *DmCallEvent) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *DmCallEvent) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+func (x *DmCallEvent) GetCallerId() string {
+	if x != nil {
+		return x.CallerId
+	}
+	return ""
+}
+
+func (x *DmCallEvent) GetParticipantId() string {
+	if x != nil {
+		return x.ParticipantId
+	}
+	return ""
+}
+
+func (x *DmCallEvent) GetVideo() bool {
+	if x != nil {
+		return x.Video
+	}
+	return false
+}
+
+func (x *DmCallEvent) GetTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Timestamp
+	}
+	return nil
+}
+
 type StreamTextChannelsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -150,7 +785,7 @@ type StreamTextChannelsRequest struct {
 
 func (x *StreamTextChannelsRequest) Reset() {
 	*x = StreamTextChannelsRequest{}
-	mi := &file_stream_v1_stream_proto_msgTypes[2]
+	mi := &file_stream_v1_stream_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -162,7 +797,7 @@ func (x *StreamTextChannelsRequest) String() string {
 func (*StreamTextChannelsRequest) ProtoMessage() {}
 
 func (x *StreamTextChannelsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_stream_v1_stream_proto_msgTypes[2]
+	mi := &file_stream_v1_stream_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -175,25 +810,48 @@ func (x *StreamTextChannelsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamTextChannelsRequest.ProtoReflect.Descriptor instead.
 func (*StreamTextChannelsRequest) Descriptor() ([]byte, []int) {
-	return file_stream_v1_stream_proto_rawDescGZIP(), []int{2}
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{10}
 }
 
+// TextChannelEvent carries the same rich payload as DmChatEvent so guild
+// channel subscribers can render replies, attachments, reactions and
+// mentions without additional round trips.
 type TextChannelEvent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"` // "create", "update", "delete"
-	GuildId       string                 `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
-	ChannelId     string                 `protobuf:"bytes,3,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	MessageId     string                 `protobuf:"bytes,4,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
-	AuthorId      string                 `protobuf:"bytes,5,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty"`
-	Content       string                 `protobuf:"bytes,6,opt,name=content,proto3" json:"content,omitempty"`
-	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// One of: "create", "update", "delete", "pin", "unpin",
+	// "reaction_add", "reaction_remove".
+	Type      string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	GuildId   string `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
+	ChannelId string `protobuf:"bytes,3,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	MessageId string `protobuf:"bytes,4,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	// Message author — present on create/update/delete/pin/unpin.
+	AuthorId string `protobuf:"bytes,5,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty"`
+	// On "update" this is the new content; on "create" it's the initial
+	// content; on "delete" it is empty.
+	Content   string                 `protobuf:"bytes,6,opt,name=content,proto3" json:"content,omitempty"`
+	Timestamp *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	// The user who initiated this event. Differs from author_id on
+	// moderation-style edits/deletes.
+	SenderId    string            `protobuf:"bytes,8,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
+	ReplyToId   string            `protobuf:"bytes,9,opt,name=reply_to_id,json=replyToId,proto3" json:"reply_to_id,omitempty"`
+	Attachments []*ChatAttachment `protobuf:"bytes,10,rep,name=attachments,proto3" json:"attachments,omitempty"`
+	MsgType     int32             `protobuf:"varint,11,opt,name=msg_type,json=msgType,proto3" json:"msg_type,omitempty"`
+	Pinned      bool              `protobuf:"varint,12,opt,name=pinned,proto3" json:"pinned,omitempty"`
+	Deleted     bool              `protobuf:"varint,13,opt,name=deleted,proto3" json:"deleted,omitempty"`
+	// Populated on reaction_add / reaction_remove events.
+	Emoji          string                  `protobuf:"bytes,14,opt,name=emoji,proto3" json:"emoji,omitempty"`
+	EditedAt       string                  `protobuf:"bytes,15,opt,name=edited_at,json=editedAt,proto3" json:"edited_at,omitempty"`
+	CreatedAt      string                  `protobuf:"bytes,16,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	MentionUserIds []string                `protobuf:"bytes,17,rep,name=mention_user_ids,json=mentionUserIds,proto3" json:"mention_user_ids,omitempty"`
+	Reactions      []*ChatReactionCount    `protobuf:"bytes,18,rep,name=reactions,proto3" json:"reactions,omitempty"`
+	ForwardedFrom  *ChatForwardedReference `protobuf:"bytes,19,opt,name=forwarded_from,json=forwardedFrom,proto3" json:"forwarded_from,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *TextChannelEvent) Reset() {
 	*x = TextChannelEvent{}
-	mi := &file_stream_v1_stream_proto_msgTypes[3]
+	mi := &file_stream_v1_stream_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -205,7 +863,7 @@ func (x *TextChannelEvent) String() string {
 func (*TextChannelEvent) ProtoMessage() {}
 
 func (x *TextChannelEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_stream_v1_stream_proto_msgTypes[3]
+	mi := &file_stream_v1_stream_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -218,7 +876,7 @@ func (x *TextChannelEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TextChannelEvent.ProtoReflect.Descriptor instead.
 func (*TextChannelEvent) Descriptor() ([]byte, []int) {
-	return file_stream_v1_stream_proto_rawDescGZIP(), []int{3}
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *TextChannelEvent) GetType() string {
@@ -270,6 +928,90 @@ func (x *TextChannelEvent) GetTimestamp() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *TextChannelEvent) GetSenderId() string {
+	if x != nil {
+		return x.SenderId
+	}
+	return ""
+}
+
+func (x *TextChannelEvent) GetReplyToId() string {
+	if x != nil {
+		return x.ReplyToId
+	}
+	return ""
+}
+
+func (x *TextChannelEvent) GetAttachments() []*ChatAttachment {
+	if x != nil {
+		return x.Attachments
+	}
+	return nil
+}
+
+func (x *TextChannelEvent) GetMsgType() int32 {
+	if x != nil {
+		return x.MsgType
+	}
+	return 0
+}
+
+func (x *TextChannelEvent) GetPinned() bool {
+	if x != nil {
+		return x.Pinned
+	}
+	return false
+}
+
+func (x *TextChannelEvent) GetDeleted() bool {
+	if x != nil {
+		return x.Deleted
+	}
+	return false
+}
+
+func (x *TextChannelEvent) GetEmoji() string {
+	if x != nil {
+		return x.Emoji
+	}
+	return ""
+}
+
+func (x *TextChannelEvent) GetEditedAt() string {
+	if x != nil {
+		return x.EditedAt
+	}
+	return ""
+}
+
+func (x *TextChannelEvent) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *TextChannelEvent) GetMentionUserIds() []string {
+	if x != nil {
+		return x.MentionUserIds
+	}
+	return nil
+}
+
+func (x *TextChannelEvent) GetReactions() []*ChatReactionCount {
+	if x != nil {
+		return x.Reactions
+	}
+	return nil
+}
+
+func (x *TextChannelEvent) GetForwardedFrom() *ChatForwardedReference {
+	if x != nil {
+		return x.ForwardedFrom
+	}
+	return nil
+}
+
 type StreamVoiceChatRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -278,7 +1020,7 @@ type StreamVoiceChatRequest struct {
 
 func (x *StreamVoiceChatRequest) Reset() {
 	*x = StreamVoiceChatRequest{}
-	mi := &file_stream_v1_stream_proto_msgTypes[4]
+	mi := &file_stream_v1_stream_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -290,7 +1032,7 @@ func (x *StreamVoiceChatRequest) String() string {
 func (*StreamVoiceChatRequest) ProtoMessage() {}
 
 func (x *StreamVoiceChatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_stream_v1_stream_proto_msgTypes[4]
+	mi := &file_stream_v1_stream_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -303,25 +1045,39 @@ func (x *StreamVoiceChatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamVoiceChatRequest.ProtoReflect.Descriptor instead.
 func (*StreamVoiceChatRequest) Descriptor() ([]byte, []int) {
-	return file_stream_v1_stream_proto_rawDescGZIP(), []int{4}
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{12}
 }
 
+// VoiceChatEvent is identical in shape to TextChannelEvent — text chat
+// that happens inside a voice channel.
 type VoiceChatEvent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	GuildId       string                 `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
-	ChannelId     string                 `protobuf:"bytes,3,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	MessageId     string                 `protobuf:"bytes,4,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
-	AuthorId      string                 `protobuf:"bytes,5,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty"`
-	Content       string                 `protobuf:"bytes,6,opt,name=content,proto3" json:"content,omitempty"`
-	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState  `protogen:"open.v1"`
+	Type           string                  `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	GuildId        string                  `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
+	ChannelId      string                  `protobuf:"bytes,3,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	MessageId      string                  `protobuf:"bytes,4,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	AuthorId       string                  `protobuf:"bytes,5,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty"`
+	Content        string                  `protobuf:"bytes,6,opt,name=content,proto3" json:"content,omitempty"`
+	Timestamp      *timestamppb.Timestamp  `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	SenderId       string                  `protobuf:"bytes,8,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
+	ReplyToId      string                  `protobuf:"bytes,9,opt,name=reply_to_id,json=replyToId,proto3" json:"reply_to_id,omitempty"`
+	Attachments    []*ChatAttachment       `protobuf:"bytes,10,rep,name=attachments,proto3" json:"attachments,omitempty"`
+	MsgType        int32                   `protobuf:"varint,11,opt,name=msg_type,json=msgType,proto3" json:"msg_type,omitempty"`
+	Pinned         bool                    `protobuf:"varint,12,opt,name=pinned,proto3" json:"pinned,omitempty"`
+	Deleted        bool                    `protobuf:"varint,13,opt,name=deleted,proto3" json:"deleted,omitempty"`
+	Emoji          string                  `protobuf:"bytes,14,opt,name=emoji,proto3" json:"emoji,omitempty"`
+	EditedAt       string                  `protobuf:"bytes,15,opt,name=edited_at,json=editedAt,proto3" json:"edited_at,omitempty"`
+	CreatedAt      string                  `protobuf:"bytes,16,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	MentionUserIds []string                `protobuf:"bytes,17,rep,name=mention_user_ids,json=mentionUserIds,proto3" json:"mention_user_ids,omitempty"`
+	Reactions      []*ChatReactionCount    `protobuf:"bytes,18,rep,name=reactions,proto3" json:"reactions,omitempty"`
+	ForwardedFrom  *ChatForwardedReference `protobuf:"bytes,19,opt,name=forwarded_from,json=forwardedFrom,proto3" json:"forwarded_from,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *VoiceChatEvent) Reset() {
 	*x = VoiceChatEvent{}
-	mi := &file_stream_v1_stream_proto_msgTypes[5]
+	mi := &file_stream_v1_stream_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -333,7 +1089,7 @@ func (x *VoiceChatEvent) String() string {
 func (*VoiceChatEvent) ProtoMessage() {}
 
 func (x *VoiceChatEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_stream_v1_stream_proto_msgTypes[5]
+	mi := &file_stream_v1_stream_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -346,7 +1102,7 @@ func (x *VoiceChatEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoiceChatEvent.ProtoReflect.Descriptor instead.
 func (*VoiceChatEvent) Descriptor() ([]byte, []int) {
-	return file_stream_v1_stream_proto_rawDescGZIP(), []int{5}
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *VoiceChatEvent) GetType() string {
@@ -398,6 +1154,90 @@ func (x *VoiceChatEvent) GetTimestamp() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *VoiceChatEvent) GetSenderId() string {
+	if x != nil {
+		return x.SenderId
+	}
+	return ""
+}
+
+func (x *VoiceChatEvent) GetReplyToId() string {
+	if x != nil {
+		return x.ReplyToId
+	}
+	return ""
+}
+
+func (x *VoiceChatEvent) GetAttachments() []*ChatAttachment {
+	if x != nil {
+		return x.Attachments
+	}
+	return nil
+}
+
+func (x *VoiceChatEvent) GetMsgType() int32 {
+	if x != nil {
+		return x.MsgType
+	}
+	return 0
+}
+
+func (x *VoiceChatEvent) GetPinned() bool {
+	if x != nil {
+		return x.Pinned
+	}
+	return false
+}
+
+func (x *VoiceChatEvent) GetDeleted() bool {
+	if x != nil {
+		return x.Deleted
+	}
+	return false
+}
+
+func (x *VoiceChatEvent) GetEmoji() string {
+	if x != nil {
+		return x.Emoji
+	}
+	return ""
+}
+
+func (x *VoiceChatEvent) GetEditedAt() string {
+	if x != nil {
+		return x.EditedAt
+	}
+	return ""
+}
+
+func (x *VoiceChatEvent) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *VoiceChatEvent) GetMentionUserIds() []string {
+	if x != nil {
+		return x.MentionUserIds
+	}
+	return nil
+}
+
+func (x *VoiceChatEvent) GetReactions() []*ChatReactionCount {
+	if x != nil {
+		return x.Reactions
+	}
+	return nil
+}
+
+func (x *VoiceChatEvent) GetForwardedFrom() *ChatForwardedReference {
+	if x != nil {
+		return x.ForwardedFrom
+	}
+	return nil
+}
+
 type StreamGuildEventsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -406,7 +1246,7 @@ type StreamGuildEventsRequest struct {
 
 func (x *StreamGuildEventsRequest) Reset() {
 	*x = StreamGuildEventsRequest{}
-	mi := &file_stream_v1_stream_proto_msgTypes[6]
+	mi := &file_stream_v1_stream_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -418,7 +1258,7 @@ func (x *StreamGuildEventsRequest) String() string {
 func (*StreamGuildEventsRequest) ProtoMessage() {}
 
 func (x *StreamGuildEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_stream_v1_stream_proto_msgTypes[6]
+	mi := &file_stream_v1_stream_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -431,7 +1271,7 @@ func (x *StreamGuildEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamGuildEventsRequest.ProtoReflect.Descriptor instead.
 func (*StreamGuildEventsRequest) Descriptor() ([]byte, []int) {
-	return file_stream_v1_stream_proto_rawDescGZIP(), []int{6}
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{14}
 }
 
 type GuildEvent struct {
@@ -448,7 +1288,7 @@ type GuildEvent struct {
 
 func (x *GuildEvent) Reset() {
 	*x = GuildEvent{}
-	mi := &file_stream_v1_stream_proto_msgTypes[7]
+	mi := &file_stream_v1_stream_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -460,7 +1300,7 @@ func (x *GuildEvent) String() string {
 func (*GuildEvent) ProtoMessage() {}
 
 func (x *GuildEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_stream_v1_stream_proto_msgTypes[7]
+	mi := &file_stream_v1_stream_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -473,7 +1313,7 @@ func (x *GuildEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GuildEvent.ProtoReflect.Descriptor instead.
 func (*GuildEvent) Descriptor() ([]byte, []int) {
-	return file_stream_v1_stream_proto_rawDescGZIP(), []int{7}
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GuildEvent) GetEvent() string {
@@ -526,7 +1366,7 @@ type StreamVoiceStateRequest struct {
 
 func (x *StreamVoiceStateRequest) Reset() {
 	*x = StreamVoiceStateRequest{}
-	mi := &file_stream_v1_stream_proto_msgTypes[8]
+	mi := &file_stream_v1_stream_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -538,7 +1378,7 @@ func (x *StreamVoiceStateRequest) String() string {
 func (*StreamVoiceStateRequest) ProtoMessage() {}
 
 func (x *StreamVoiceStateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_stream_v1_stream_proto_msgTypes[8]
+	mi := &file_stream_v1_stream_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -551,7 +1391,7 @@ func (x *StreamVoiceStateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamVoiceStateRequest.ProtoReflect.Descriptor instead.
 func (*StreamVoiceStateRequest) Descriptor() ([]byte, []int) {
-	return file_stream_v1_stream_proto_rawDescGZIP(), []int{8}
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{16}
 }
 
 type VoiceStateEvent struct {
@@ -571,7 +1411,7 @@ type VoiceStateEvent struct {
 
 func (x *VoiceStateEvent) Reset() {
 	*x = VoiceStateEvent{}
-	mi := &file_stream_v1_stream_proto_msgTypes[9]
+	mi := &file_stream_v1_stream_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -583,7 +1423,7 @@ func (x *VoiceStateEvent) String() string {
 func (*VoiceStateEvent) ProtoMessage() {}
 
 func (x *VoiceStateEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_stream_v1_stream_proto_msgTypes[9]
+	mi := &file_stream_v1_stream_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -596,7 +1436,7 @@ func (x *VoiceStateEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoiceStateEvent.ProtoReflect.Descriptor instead.
 func (*VoiceStateEvent) Descriptor() ([]byte, []int) {
-	return file_stream_v1_stream_proto_rawDescGZIP(), []int{9}
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *VoiceStateEvent) GetEvent() string {
@@ -670,7 +1510,7 @@ type StreamTypingRequest struct {
 
 func (x *StreamTypingRequest) Reset() {
 	*x = StreamTypingRequest{}
-	mi := &file_stream_v1_stream_proto_msgTypes[10]
+	mi := &file_stream_v1_stream_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -682,7 +1522,7 @@ func (x *StreamTypingRequest) String() string {
 func (*StreamTypingRequest) ProtoMessage() {}
 
 func (x *StreamTypingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_stream_v1_stream_proto_msgTypes[10]
+	mi := &file_stream_v1_stream_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -695,7 +1535,7 @@ func (x *StreamTypingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamTypingRequest.ProtoReflect.Descriptor instead.
 func (*StreamTypingRequest) Descriptor() ([]byte, []int) {
-	return file_stream_v1_stream_proto_rawDescGZIP(), []int{10}
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{18}
 }
 
 type TypingEvent struct {
@@ -710,7 +1550,7 @@ type TypingEvent struct {
 
 func (x *TypingEvent) Reset() {
 	*x = TypingEvent{}
-	mi := &file_stream_v1_stream_proto_msgTypes[11]
+	mi := &file_stream_v1_stream_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -722,7 +1562,7 @@ func (x *TypingEvent) String() string {
 func (*TypingEvent) ProtoMessage() {}
 
 func (x *TypingEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_stream_v1_stream_proto_msgTypes[11]
+	mi := &file_stream_v1_stream_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -735,7 +1575,7 @@ func (x *TypingEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TypingEvent.ProtoReflect.Descriptor instead.
 func (*TypingEvent) Descriptor() ([]byte, []int) {
-	return file_stream_v1_stream_proto_rawDescGZIP(), []int{11}
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *TypingEvent) GetChannelId() string {
@@ -774,7 +1614,7 @@ type StreamFriendActivityRequest struct {
 
 func (x *StreamFriendActivityRequest) Reset() {
 	*x = StreamFriendActivityRequest{}
-	mi := &file_stream_v1_stream_proto_msgTypes[12]
+	mi := &file_stream_v1_stream_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -786,7 +1626,7 @@ func (x *StreamFriendActivityRequest) String() string {
 func (*StreamFriendActivityRequest) ProtoMessage() {}
 
 func (x *StreamFriendActivityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_stream_v1_stream_proto_msgTypes[12]
+	mi := &file_stream_v1_stream_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -799,13 +1639,14 @@ func (x *StreamFriendActivityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamFriendActivityRequest.ProtoReflect.Descriptor instead.
 func (*StreamFriendActivityRequest) Descriptor() ([]byte, []int) {
-	return file_stream_v1_stream_proto_rawDescGZIP(), []int{12}
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{20}
 }
 
 type FriendActivityEvent struct {
-	state        protoimpl.MessageState `protogen:"open.v1"`
-	Event        string                 `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"` // "presence_update", "profile_update", "friend_request", "friend_accepted", "friend_declined", "friend_removed"
-	UserId       string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Event  string                 `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"` // "presence_update", "profile_update", "friend_request", "friend_accepted", "friend_declined", "friend_removed"
+	UserId string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// Full unique handle in "name#1234" format.
 	Username     string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
 	Status       string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
 	CustomStatus string                 `protobuf:"bytes,5,opt,name=custom_status,json=customStatus,proto3" json:"custom_status,omitempty"`
@@ -813,14 +1654,16 @@ type FriendActivityEvent struct {
 	Timestamp    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// For friend_accepted: the auto-opened DM channel id so both ends can
 	// jump straight into conversation.
-	ChannelId     string `protobuf:"bytes,8,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	ChannelId string `protobuf:"bytes,8,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	// Freely changeable display name shown in UI.
+	DisplayName   string `protobuf:"bytes,9,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *FriendActivityEvent) Reset() {
 	*x = FriendActivityEvent{}
-	mi := &file_stream_v1_stream_proto_msgTypes[13]
+	mi := &file_stream_v1_stream_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -832,7 +1675,7 @@ func (x *FriendActivityEvent) String() string {
 func (*FriendActivityEvent) ProtoMessage() {}
 
 func (x *FriendActivityEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_stream_v1_stream_proto_msgTypes[13]
+	mi := &file_stream_v1_stream_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -845,7 +1688,7 @@ func (x *FriendActivityEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FriendActivityEvent.ProtoReflect.Descriptor instead.
 func (*FriendActivityEvent) Descriptor() ([]byte, []int) {
-	return file_stream_v1_stream_proto_rawDescGZIP(), []int{13}
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *FriendActivityEvent) GetEvent() string {
@@ -904,22 +1747,82 @@ func (x *FriendActivityEvent) GetChannelId() string {
 	return ""
 }
 
+func (x *FriendActivityEvent) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
 var File_stream_v1_stream_proto protoreflect.FileDescriptor
 
 const file_stream_v1_stream_proto_rawDesc = "" +
 	"\n" +
-	"\x16stream/v1/stream.proto\x12\tstream.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x15\n" +
-	"\x13StreamDmChatRequest\"\xd0\x01\n" +
+	"\x16stream/v1/stream.proto\x12\tstream.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x85\x01\n" +
+	"\x0eChatAttachment\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x10\n" +
+	"\x03url\x18\x03 \x01(\tR\x03url\x12!\n" +
+	"\fcontent_type\x18\x04 \x01(\tR\vcontentType\x12\x12\n" +
+	"\x04size\x18\x05 \x01(\x03R\x04size\"O\n" +
+	"\x11ChatReactionCount\x12\x14\n" +
+	"\x05emoji\x18\x01 \x01(\tR\x05emoji\x12\x14\n" +
+	"\x05count\x18\x02 \x01(\x05R\x05count\x12\x0e\n" +
+	"\x02me\x18\x03 \x01(\bR\x02me\"s\n" +
+	"\x16ChatForwardedReference\x12\x1d\n" +
+	"\n" +
+	"channel_id\x18\x01 \x01(\tR\tchannelId\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x02 \x01(\tR\tmessageId\x12\x1b\n" +
+	"\tauthor_id\x18\x03 \x01(\tR\bauthorId\"\x15\n" +
+	"\x13StreamDmChatRequest\"\x99\x05\n" +
 	"\vDmChatEvent\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x02 \x01(\tR\tchannelId\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x03 \x01(\tR\tmessageId\x12\x1b\n" +
-	"\tsender_id\x18\x04 \x01(\tR\bsenderId\x12\x18\n" +
+	"\tsender_id\x18\x04 \x01(\tR\bsenderId\x12\x1b\n" +
+	"\tauthor_id\x18\n" +
+	" \x01(\tR\bauthorId\x12\x18\n" +
 	"\acontent\x18\x05 \x01(\tR\acontent\x128\n" +
+	"\ttimestamp\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1e\n" +
+	"\vreply_to_id\x18\a \x01(\tR\treplyToId\x12;\n" +
+	"\vattachments\x18\b \x03(\v2\x19.stream.v1.ChatAttachmentR\vattachments\x12\x19\n" +
+	"\bmsg_type\x18\t \x01(\x05R\amsgType\x12\x16\n" +
+	"\x06pinned\x18\v \x01(\bR\x06pinned\x12\x18\n" +
+	"\adeleted\x18\f \x01(\bR\adeleted\x12\x14\n" +
+	"\x05emoji\x18\r \x01(\tR\x05emoji\x12\x1b\n" +
+	"\tedited_at\x18\x0e \x01(\tR\beditedAt\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x0f \x01(\tR\tcreatedAt\x12(\n" +
+	"\x10mention_user_ids\x18\x10 \x03(\tR\x0ementionUserIds\x12:\n" +
+	"\treactions\x18\x11 \x03(\v2\x1c.stream.v1.ChatReactionCountR\treactions\x12H\n" +
+	"\x0eforwarded_from\x18\x12 \x01(\v2!.stream.v1.ChatForwardedReferenceR\rforwardedFrom\"\x19\n" +
+	"\x17StreamDmChannelsRequest\"\x97\x01\n" +
+	"\x0fDmChannelMember\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\busername\x18\x02 \x01(\tR\busername\x12!\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x1d\n" +
+	"\n" +
+	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\"\xa1\x01\n" +
+	"\x0eDmChannelEvent\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12!\n" +
+	"\fchannel_type\x18\x04 \x01(\x05R\vchannelType\x124\n" +
+	"\amembers\x18\x05 \x03(\v2\x1a.stream.v1.DmChannelMemberR\amembers\"\x16\n" +
+	"\x14StreamDmCallsRequest\"\xd4\x01\n" +
+	"\vDmCallEvent\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\x12\x1d\n" +
+	"\n" +
+	"channel_id\x18\x02 \x01(\tR\tchannelId\x12\x1b\n" +
+	"\tcaller_id\x18\x03 \x01(\tR\bcallerId\x12%\n" +
+	"\x0eparticipant_id\x18\x04 \x01(\tR\rparticipantId\x12\x14\n" +
+	"\x05video\x18\x05 \x01(\bR\x05video\x128\n" +
 	"\ttimestamp\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\x1b\n" +
-	"\x19StreamTextChannelsRequest\"\xf0\x01\n" +
+	"\x19StreamTextChannelsRequest\"\xb9\x05\n" +
 	"\x10TextChannelEvent\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x19\n" +
 	"\bguild_id\x18\x02 \x01(\tR\aguildId\x12\x1d\n" +
@@ -929,8 +1832,22 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"message_id\x18\x04 \x01(\tR\tmessageId\x12\x1b\n" +
 	"\tauthor_id\x18\x05 \x01(\tR\bauthorId\x12\x18\n" +
 	"\acontent\x18\x06 \x01(\tR\acontent\x128\n" +
-	"\ttimestamp\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\x18\n" +
-	"\x16StreamVoiceChatRequest\"\xee\x01\n" +
+	"\ttimestamp\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1b\n" +
+	"\tsender_id\x18\b \x01(\tR\bsenderId\x12\x1e\n" +
+	"\vreply_to_id\x18\t \x01(\tR\treplyToId\x12;\n" +
+	"\vattachments\x18\n" +
+	" \x03(\v2\x19.stream.v1.ChatAttachmentR\vattachments\x12\x19\n" +
+	"\bmsg_type\x18\v \x01(\x05R\amsgType\x12\x16\n" +
+	"\x06pinned\x18\f \x01(\bR\x06pinned\x12\x18\n" +
+	"\adeleted\x18\r \x01(\bR\adeleted\x12\x14\n" +
+	"\x05emoji\x18\x0e \x01(\tR\x05emoji\x12\x1b\n" +
+	"\tedited_at\x18\x0f \x01(\tR\beditedAt\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x10 \x01(\tR\tcreatedAt\x12(\n" +
+	"\x10mention_user_ids\x18\x11 \x03(\tR\x0ementionUserIds\x12:\n" +
+	"\treactions\x18\x12 \x03(\v2\x1c.stream.v1.ChatReactionCountR\treactions\x12H\n" +
+	"\x0eforwarded_from\x18\x13 \x01(\v2!.stream.v1.ChatForwardedReferenceR\rforwardedFrom\"\x18\n" +
+	"\x16StreamVoiceChatRequest\"\xb7\x05\n" +
 	"\x0eVoiceChatEvent\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x19\n" +
 	"\bguild_id\x18\x02 \x01(\tR\aguildId\x12\x1d\n" +
@@ -940,7 +1857,21 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"message_id\x18\x04 \x01(\tR\tmessageId\x12\x1b\n" +
 	"\tauthor_id\x18\x05 \x01(\tR\bauthorId\x12\x18\n" +
 	"\acontent\x18\x06 \x01(\tR\acontent\x128\n" +
-	"\ttimestamp\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\x1a\n" +
+	"\ttimestamp\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1b\n" +
+	"\tsender_id\x18\b \x01(\tR\bsenderId\x12\x1e\n" +
+	"\vreply_to_id\x18\t \x01(\tR\treplyToId\x12;\n" +
+	"\vattachments\x18\n" +
+	" \x03(\v2\x19.stream.v1.ChatAttachmentR\vattachments\x12\x19\n" +
+	"\bmsg_type\x18\v \x01(\x05R\amsgType\x12\x16\n" +
+	"\x06pinned\x18\f \x01(\bR\x06pinned\x12\x18\n" +
+	"\adeleted\x18\r \x01(\bR\adeleted\x12\x14\n" +
+	"\x05emoji\x18\x0e \x01(\tR\x05emoji\x12\x1b\n" +
+	"\tedited_at\x18\x0f \x01(\tR\beditedAt\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x10 \x01(\tR\tcreatedAt\x12(\n" +
+	"\x10mention_user_ids\x18\x11 \x03(\tR\x0ementionUserIds\x12:\n" +
+	"\treactions\x18\x12 \x03(\v2\x1c.stream.v1.ChatReactionCountR\treactions\x12H\n" +
+	"\x0eforwarded_from\x18\x13 \x01(\v2!.stream.v1.ChatForwardedReferenceR\rforwardedFrom\"\x1a\n" +
 	"\x18StreamGuildEventsRequest\"\xc3\x01\n" +
 	"\n" +
 	"GuildEvent\x12\x14\n" +
@@ -970,7 +1901,7 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\bguild_id\x18\x02 \x01(\tR\aguildId\x12\x17\n" +
 	"\auser_id\x18\x03 \x01(\tR\x06userId\x128\n" +
 	"\ttimestamp\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\x1d\n" +
-	"\x1bStreamFriendActivityRequest\"\x95\x02\n" +
+	"\x1bStreamFriendActivityRequest\"\xb8\x02\n" +
 	"\x13FriendActivityEvent\x12\x14\n" +
 	"\x05event\x18\x01 \x01(\tR\x05event\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1a\n" +
@@ -981,9 +1912,12 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"avatar_url\x18\x06 \x01(\tR\tavatarUrl\x128\n" +
 	"\ttimestamp\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1d\n" +
 	"\n" +
-	"channel_id\x18\b \x01(\tR\tchannelId2\xdc\x04\n" +
+	"channel_id\x18\b \x01(\tR\tchannelId\x12!\n" +
+	"\fdisplay_name\x18\t \x01(\tR\vdisplayName2\xfd\x05\n" +
 	"\rStreamService\x12H\n" +
-	"\fStreamDmChat\x12\x1e.stream.v1.StreamDmChatRequest\x1a\x16.stream.v1.DmChatEvent0\x01\x12Y\n" +
+	"\fStreamDmChat\x12\x1e.stream.v1.StreamDmChatRequest\x1a\x16.stream.v1.DmChatEvent0\x01\x12S\n" +
+	"\x10StreamDmChannels\x12\".stream.v1.StreamDmChannelsRequest\x1a\x19.stream.v1.DmChannelEvent0\x01\x12J\n" +
+	"\rStreamDmCalls\x12\x1f.stream.v1.StreamDmCallsRequest\x1a\x16.stream.v1.DmCallEvent0\x01\x12Y\n" +
 	"\x12StreamTextChannels\x12$.stream.v1.StreamTextChannelsRequest\x1a\x1b.stream.v1.TextChannelEvent0\x01\x12Q\n" +
 	"\x0fStreamVoiceChat\x12!.stream.v1.StreamVoiceChatRequest\x1a\x19.stream.v1.VoiceChatEvent0\x01\x12Q\n" +
 	"\x11StreamGuildEvents\x12#.stream.v1.StreamGuildEventsRequest\x1a\x15.stream.v1.GuildEvent0\x01\x12T\n" +
@@ -1003,51 +1937,74 @@ func file_stream_v1_stream_proto_rawDescGZIP() []byte {
 	return file_stream_v1_stream_proto_rawDescData
 }
 
-var file_stream_v1_stream_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_stream_v1_stream_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_stream_v1_stream_proto_goTypes = []any{
-	(*StreamDmChatRequest)(nil),         // 0: stream.v1.StreamDmChatRequest
-	(*DmChatEvent)(nil),                 // 1: stream.v1.DmChatEvent
-	(*StreamTextChannelsRequest)(nil),   // 2: stream.v1.StreamTextChannelsRequest
-	(*TextChannelEvent)(nil),            // 3: stream.v1.TextChannelEvent
-	(*StreamVoiceChatRequest)(nil),      // 4: stream.v1.StreamVoiceChatRequest
-	(*VoiceChatEvent)(nil),              // 5: stream.v1.VoiceChatEvent
-	(*StreamGuildEventsRequest)(nil),    // 6: stream.v1.StreamGuildEventsRequest
-	(*GuildEvent)(nil),                  // 7: stream.v1.GuildEvent
-	(*StreamVoiceStateRequest)(nil),     // 8: stream.v1.StreamVoiceStateRequest
-	(*VoiceStateEvent)(nil),             // 9: stream.v1.VoiceStateEvent
-	(*StreamTypingRequest)(nil),         // 10: stream.v1.StreamTypingRequest
-	(*TypingEvent)(nil),                 // 11: stream.v1.TypingEvent
-	(*StreamFriendActivityRequest)(nil), // 12: stream.v1.StreamFriendActivityRequest
-	(*FriendActivityEvent)(nil),         // 13: stream.v1.FriendActivityEvent
-	(*timestamppb.Timestamp)(nil),       // 14: google.protobuf.Timestamp
+	(*ChatAttachment)(nil),              // 0: stream.v1.ChatAttachment
+	(*ChatReactionCount)(nil),           // 1: stream.v1.ChatReactionCount
+	(*ChatForwardedReference)(nil),      // 2: stream.v1.ChatForwardedReference
+	(*StreamDmChatRequest)(nil),         // 3: stream.v1.StreamDmChatRequest
+	(*DmChatEvent)(nil),                 // 4: stream.v1.DmChatEvent
+	(*StreamDmChannelsRequest)(nil),     // 5: stream.v1.StreamDmChannelsRequest
+	(*DmChannelMember)(nil),             // 6: stream.v1.DmChannelMember
+	(*DmChannelEvent)(nil),              // 7: stream.v1.DmChannelEvent
+	(*StreamDmCallsRequest)(nil),        // 8: stream.v1.StreamDmCallsRequest
+	(*DmCallEvent)(nil),                 // 9: stream.v1.DmCallEvent
+	(*StreamTextChannelsRequest)(nil),   // 10: stream.v1.StreamTextChannelsRequest
+	(*TextChannelEvent)(nil),            // 11: stream.v1.TextChannelEvent
+	(*StreamVoiceChatRequest)(nil),      // 12: stream.v1.StreamVoiceChatRequest
+	(*VoiceChatEvent)(nil),              // 13: stream.v1.VoiceChatEvent
+	(*StreamGuildEventsRequest)(nil),    // 14: stream.v1.StreamGuildEventsRequest
+	(*GuildEvent)(nil),                  // 15: stream.v1.GuildEvent
+	(*StreamVoiceStateRequest)(nil),     // 16: stream.v1.StreamVoiceStateRequest
+	(*VoiceStateEvent)(nil),             // 17: stream.v1.VoiceStateEvent
+	(*StreamTypingRequest)(nil),         // 18: stream.v1.StreamTypingRequest
+	(*TypingEvent)(nil),                 // 19: stream.v1.TypingEvent
+	(*StreamFriendActivityRequest)(nil), // 20: stream.v1.StreamFriendActivityRequest
+	(*FriendActivityEvent)(nil),         // 21: stream.v1.FriendActivityEvent
+	(*timestamppb.Timestamp)(nil),       // 22: google.protobuf.Timestamp
 }
 var file_stream_v1_stream_proto_depIdxs = []int32{
-	14, // 0: stream.v1.DmChatEvent.timestamp:type_name -> google.protobuf.Timestamp
-	14, // 1: stream.v1.TextChannelEvent.timestamp:type_name -> google.protobuf.Timestamp
-	14, // 2: stream.v1.VoiceChatEvent.timestamp:type_name -> google.protobuf.Timestamp
-	14, // 3: stream.v1.GuildEvent.timestamp:type_name -> google.protobuf.Timestamp
-	14, // 4: stream.v1.VoiceStateEvent.timestamp:type_name -> google.protobuf.Timestamp
-	14, // 5: stream.v1.TypingEvent.timestamp:type_name -> google.protobuf.Timestamp
-	14, // 6: stream.v1.FriendActivityEvent.timestamp:type_name -> google.protobuf.Timestamp
-	0,  // 7: stream.v1.StreamService.StreamDmChat:input_type -> stream.v1.StreamDmChatRequest
-	2,  // 8: stream.v1.StreamService.StreamTextChannels:input_type -> stream.v1.StreamTextChannelsRequest
-	4,  // 9: stream.v1.StreamService.StreamVoiceChat:input_type -> stream.v1.StreamVoiceChatRequest
-	6,  // 10: stream.v1.StreamService.StreamGuildEvents:input_type -> stream.v1.StreamGuildEventsRequest
-	8,  // 11: stream.v1.StreamService.StreamVoiceState:input_type -> stream.v1.StreamVoiceStateRequest
-	10, // 12: stream.v1.StreamService.StreamTyping:input_type -> stream.v1.StreamTypingRequest
-	12, // 13: stream.v1.StreamService.StreamFriendActivity:input_type -> stream.v1.StreamFriendActivityRequest
-	1,  // 14: stream.v1.StreamService.StreamDmChat:output_type -> stream.v1.DmChatEvent
-	3,  // 15: stream.v1.StreamService.StreamTextChannels:output_type -> stream.v1.TextChannelEvent
-	5,  // 16: stream.v1.StreamService.StreamVoiceChat:output_type -> stream.v1.VoiceChatEvent
-	7,  // 17: stream.v1.StreamService.StreamGuildEvents:output_type -> stream.v1.GuildEvent
-	9,  // 18: stream.v1.StreamService.StreamVoiceState:output_type -> stream.v1.VoiceStateEvent
-	11, // 19: stream.v1.StreamService.StreamTyping:output_type -> stream.v1.TypingEvent
-	13, // 20: stream.v1.StreamService.StreamFriendActivity:output_type -> stream.v1.FriendActivityEvent
-	14, // [14:21] is the sub-list for method output_type
-	7,  // [7:14] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	22, // 0: stream.v1.DmChatEvent.timestamp:type_name -> google.protobuf.Timestamp
+	0,  // 1: stream.v1.DmChatEvent.attachments:type_name -> stream.v1.ChatAttachment
+	1,  // 2: stream.v1.DmChatEvent.reactions:type_name -> stream.v1.ChatReactionCount
+	2,  // 3: stream.v1.DmChatEvent.forwarded_from:type_name -> stream.v1.ChatForwardedReference
+	6,  // 4: stream.v1.DmChannelEvent.members:type_name -> stream.v1.DmChannelMember
+	22, // 5: stream.v1.DmCallEvent.timestamp:type_name -> google.protobuf.Timestamp
+	22, // 6: stream.v1.TextChannelEvent.timestamp:type_name -> google.protobuf.Timestamp
+	0,  // 7: stream.v1.TextChannelEvent.attachments:type_name -> stream.v1.ChatAttachment
+	1,  // 8: stream.v1.TextChannelEvent.reactions:type_name -> stream.v1.ChatReactionCount
+	2,  // 9: stream.v1.TextChannelEvent.forwarded_from:type_name -> stream.v1.ChatForwardedReference
+	22, // 10: stream.v1.VoiceChatEvent.timestamp:type_name -> google.protobuf.Timestamp
+	0,  // 11: stream.v1.VoiceChatEvent.attachments:type_name -> stream.v1.ChatAttachment
+	1,  // 12: stream.v1.VoiceChatEvent.reactions:type_name -> stream.v1.ChatReactionCount
+	2,  // 13: stream.v1.VoiceChatEvent.forwarded_from:type_name -> stream.v1.ChatForwardedReference
+	22, // 14: stream.v1.GuildEvent.timestamp:type_name -> google.protobuf.Timestamp
+	22, // 15: stream.v1.VoiceStateEvent.timestamp:type_name -> google.protobuf.Timestamp
+	22, // 16: stream.v1.TypingEvent.timestamp:type_name -> google.protobuf.Timestamp
+	22, // 17: stream.v1.FriendActivityEvent.timestamp:type_name -> google.protobuf.Timestamp
+	3,  // 18: stream.v1.StreamService.StreamDmChat:input_type -> stream.v1.StreamDmChatRequest
+	5,  // 19: stream.v1.StreamService.StreamDmChannels:input_type -> stream.v1.StreamDmChannelsRequest
+	8,  // 20: stream.v1.StreamService.StreamDmCalls:input_type -> stream.v1.StreamDmCallsRequest
+	10, // 21: stream.v1.StreamService.StreamTextChannels:input_type -> stream.v1.StreamTextChannelsRequest
+	12, // 22: stream.v1.StreamService.StreamVoiceChat:input_type -> stream.v1.StreamVoiceChatRequest
+	14, // 23: stream.v1.StreamService.StreamGuildEvents:input_type -> stream.v1.StreamGuildEventsRequest
+	16, // 24: stream.v1.StreamService.StreamVoiceState:input_type -> stream.v1.StreamVoiceStateRequest
+	18, // 25: stream.v1.StreamService.StreamTyping:input_type -> stream.v1.StreamTypingRequest
+	20, // 26: stream.v1.StreamService.StreamFriendActivity:input_type -> stream.v1.StreamFriendActivityRequest
+	4,  // 27: stream.v1.StreamService.StreamDmChat:output_type -> stream.v1.DmChatEvent
+	7,  // 28: stream.v1.StreamService.StreamDmChannels:output_type -> stream.v1.DmChannelEvent
+	9,  // 29: stream.v1.StreamService.StreamDmCalls:output_type -> stream.v1.DmCallEvent
+	11, // 30: stream.v1.StreamService.StreamTextChannels:output_type -> stream.v1.TextChannelEvent
+	13, // 31: stream.v1.StreamService.StreamVoiceChat:output_type -> stream.v1.VoiceChatEvent
+	15, // 32: stream.v1.StreamService.StreamGuildEvents:output_type -> stream.v1.GuildEvent
+	17, // 33: stream.v1.StreamService.StreamVoiceState:output_type -> stream.v1.VoiceStateEvent
+	19, // 34: stream.v1.StreamService.StreamTyping:output_type -> stream.v1.TypingEvent
+	21, // 35: stream.v1.StreamService.StreamFriendActivity:output_type -> stream.v1.FriendActivityEvent
+	27, // [27:36] is the sub-list for method output_type
+	18, // [18:27] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_stream_v1_stream_proto_init() }
@@ -1061,7 +2018,7 @@ func file_stream_v1_stream_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_stream_v1_stream_proto_rawDesc), len(file_stream_v1_stream_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

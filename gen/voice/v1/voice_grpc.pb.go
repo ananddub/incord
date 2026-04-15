@@ -22,6 +22,10 @@ const (
 	VoiceService_JoinChannel_FullMethodName            = "/voice.v1.VoiceService/JoinChannel"
 	VoiceService_LeaveChannel_FullMethodName           = "/voice.v1.VoiceService/LeaveChannel"
 	VoiceService_GetChannelParticipants_FullMethodName = "/voice.v1.VoiceService/GetChannelParticipants"
+	VoiceService_StartDMCall_FullMethodName            = "/voice.v1.VoiceService/StartDMCall"
+	VoiceService_JoinDMCall_FullMethodName             = "/voice.v1.VoiceService/JoinDMCall"
+	VoiceService_RejectDMCall_FullMethodName           = "/voice.v1.VoiceService/RejectDMCall"
+	VoiceService_LeaveDMCall_FullMethodName            = "/voice.v1.VoiceService/LeaveDMCall"
 )
 
 // VoiceServiceClient is the client API for VoiceService service.
@@ -38,6 +42,20 @@ type VoiceServiceClient interface {
 	JoinChannel(ctx context.Context, in *JoinChannelRequest, opts ...grpc.CallOption) (*JoinChannelResponse, error)
 	LeaveChannel(ctx context.Context, in *LeaveChannelRequest, opts ...grpc.CallOption) (*LeaveChannelResponse, error)
 	GetChannelParticipants(ctx context.Context, in *GetChannelParticipantsRequest, opts ...grpc.CallOption) (*GetChannelParticipantsResponse, error)
+	// === DM calls ===
+	// StartDMCall initiates a voice/video call inside an existing DM channel.
+	// The caller immediately gets a LiveKit token; all other members receive
+	// a "call_incoming" push on their StreamDmCalls stream.
+	StartDMCall(ctx context.Context, in *StartDMCallRequest, opts ...grpc.CallOption) (*StartDMCallResponse, error)
+	// JoinDMCall is called by a ringing recipient to accept the call and
+	// obtain their own LiveKit token. Other members get a "call_accepted" push.
+	JoinDMCall(ctx context.Context, in *JoinDMCallRequest, opts ...grpc.CallOption) (*JoinDMCallResponse, error)
+	// RejectDMCall is called by a recipient to decline — the caller gets a
+	// "call_rejected" push. No LiveKit token is minted.
+	RejectDMCall(ctx context.Context, in *RejectDMCallRequest, opts ...grpc.CallOption) (*RejectDMCallResponse, error)
+	// LeaveDMCall is called when a participant hangs up. When the last
+	// participant leaves, a "call_ended" push is fanned out to all members.
+	LeaveDMCall(ctx context.Context, in *LeaveDMCallRequest, opts ...grpc.CallOption) (*LeaveDMCallResponse, error)
 }
 
 type voiceServiceClient struct {
@@ -78,6 +96,46 @@ func (c *voiceServiceClient) GetChannelParticipants(ctx context.Context, in *Get
 	return out, nil
 }
 
+func (c *voiceServiceClient) StartDMCall(ctx context.Context, in *StartDMCallRequest, opts ...grpc.CallOption) (*StartDMCallResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StartDMCallResponse)
+	err := c.cc.Invoke(ctx, VoiceService_StartDMCall_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *voiceServiceClient) JoinDMCall(ctx context.Context, in *JoinDMCallRequest, opts ...grpc.CallOption) (*JoinDMCallResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(JoinDMCallResponse)
+	err := c.cc.Invoke(ctx, VoiceService_JoinDMCall_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *voiceServiceClient) RejectDMCall(ctx context.Context, in *RejectDMCallRequest, opts ...grpc.CallOption) (*RejectDMCallResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RejectDMCallResponse)
+	err := c.cc.Invoke(ctx, VoiceService_RejectDMCall_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *voiceServiceClient) LeaveDMCall(ctx context.Context, in *LeaveDMCallRequest, opts ...grpc.CallOption) (*LeaveDMCallResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LeaveDMCallResponse)
+	err := c.cc.Invoke(ctx, VoiceService_LeaveDMCall_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // VoiceServiceServer is the server API for VoiceService service.
 // All implementations must embed UnimplementedVoiceServiceServer
 // for forward compatibility.
@@ -92,6 +150,20 @@ type VoiceServiceServer interface {
 	JoinChannel(context.Context, *JoinChannelRequest) (*JoinChannelResponse, error)
 	LeaveChannel(context.Context, *LeaveChannelRequest) (*LeaveChannelResponse, error)
 	GetChannelParticipants(context.Context, *GetChannelParticipantsRequest) (*GetChannelParticipantsResponse, error)
+	// === DM calls ===
+	// StartDMCall initiates a voice/video call inside an existing DM channel.
+	// The caller immediately gets a LiveKit token; all other members receive
+	// a "call_incoming" push on their StreamDmCalls stream.
+	StartDMCall(context.Context, *StartDMCallRequest) (*StartDMCallResponse, error)
+	// JoinDMCall is called by a ringing recipient to accept the call and
+	// obtain their own LiveKit token. Other members get a "call_accepted" push.
+	JoinDMCall(context.Context, *JoinDMCallRequest) (*JoinDMCallResponse, error)
+	// RejectDMCall is called by a recipient to decline — the caller gets a
+	// "call_rejected" push. No LiveKit token is minted.
+	RejectDMCall(context.Context, *RejectDMCallRequest) (*RejectDMCallResponse, error)
+	// LeaveDMCall is called when a participant hangs up. When the last
+	// participant leaves, a "call_ended" push is fanned out to all members.
+	LeaveDMCall(context.Context, *LeaveDMCallRequest) (*LeaveDMCallResponse, error)
 	mustEmbedUnimplementedVoiceServiceServer()
 }
 
@@ -110,6 +182,18 @@ func (UnimplementedVoiceServiceServer) LeaveChannel(context.Context, *LeaveChann
 }
 func (UnimplementedVoiceServiceServer) GetChannelParticipants(context.Context, *GetChannelParticipantsRequest) (*GetChannelParticipantsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetChannelParticipants not implemented")
+}
+func (UnimplementedVoiceServiceServer) StartDMCall(context.Context, *StartDMCallRequest) (*StartDMCallResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartDMCall not implemented")
+}
+func (UnimplementedVoiceServiceServer) JoinDMCall(context.Context, *JoinDMCallRequest) (*JoinDMCallResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method JoinDMCall not implemented")
+}
+func (UnimplementedVoiceServiceServer) RejectDMCall(context.Context, *RejectDMCallRequest) (*RejectDMCallResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RejectDMCall not implemented")
+}
+func (UnimplementedVoiceServiceServer) LeaveDMCall(context.Context, *LeaveDMCallRequest) (*LeaveDMCallResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method LeaveDMCall not implemented")
 }
 func (UnimplementedVoiceServiceServer) mustEmbedUnimplementedVoiceServiceServer() {}
 func (UnimplementedVoiceServiceServer) testEmbeddedByValue()                      {}
@@ -186,6 +270,78 @@ func _VoiceService_GetChannelParticipants_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _VoiceService_StartDMCall_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartDMCallRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VoiceServiceServer).StartDMCall(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VoiceService_StartDMCall_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VoiceServiceServer).StartDMCall(ctx, req.(*StartDMCallRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VoiceService_JoinDMCall_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(JoinDMCallRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VoiceServiceServer).JoinDMCall(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VoiceService_JoinDMCall_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VoiceServiceServer).JoinDMCall(ctx, req.(*JoinDMCallRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VoiceService_RejectDMCall_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RejectDMCallRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VoiceServiceServer).RejectDMCall(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VoiceService_RejectDMCall_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VoiceServiceServer).RejectDMCall(ctx, req.(*RejectDMCallRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VoiceService_LeaveDMCall_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LeaveDMCallRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VoiceServiceServer).LeaveDMCall(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VoiceService_LeaveDMCall_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VoiceServiceServer).LeaveDMCall(ctx, req.(*LeaveDMCallRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // VoiceService_ServiceDesc is the grpc.ServiceDesc for VoiceService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -204,6 +360,22 @@ var VoiceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetChannelParticipants",
 			Handler:    _VoiceService_GetChannelParticipants_Handler,
+		},
+		{
+			MethodName: "StartDMCall",
+			Handler:    _VoiceService_StartDMCall_Handler,
+		},
+		{
+			MethodName: "JoinDMCall",
+			Handler:    _VoiceService_JoinDMCall_Handler,
+		},
+		{
+			MethodName: "RejectDMCall",
+			Handler:    _VoiceService_RejectDMCall_Handler,
+		},
+		{
+			MethodName: "LeaveDMCall",
+			Handler:    _VoiceService_LeaveDMCall_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -37,9 +37,10 @@ func TestFriendPresenceStream(t *testing.T) {
 
 	alice := registerAndVerify(t, authClient, "fp_a_"+ts, "fp_a_"+ts+"@t.com", "password123")
 	bob := registerAndVerify(t, authClient, "fp_b_"+ts, "fp_b_"+ts+"@t.com", "password123")
+	resolveHandle(t, userClient, bob)
 
 	// Make friends
-	_, err = userClient.SendFriendRequest(alice.ctx(), &userv1.SendFriendRequestRequest{TargetUserId: bob.ID})
+	_, err = userClient.SendFriendRequest(alice.ctx(), &userv1.SendFriendRequestRequest{TargetUsername: bob.Handle})
 	require.NoError(t, err)
 	_, err = userClient.AcceptFriendRequest(bob.ctx(), &userv1.AcceptFriendRequestRequest{RequesterUserId: alice.ID})
 	require.NoError(t, err)

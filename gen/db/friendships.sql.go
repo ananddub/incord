@@ -79,7 +79,7 @@ func (q *Queries) GetFriendship(ctx context.Context, arg GetFriendshipParams) (F
 }
 
 const listBlocked = `-- name: ListBlocked :many
-SELECT u.id, u.username, u.email, u.password_hash, u.avatar_url, u.bio, u.status, u.created_at, u.updated_at, u.verified, u.deleted, u.background_color FROM users u
+SELECT u.id, u.username, u.email, u.password_hash, u.avatar_url, u.bio, u.status, u.created_at, u.updated_at, u.verified, u.deleted, u.background_color, u.display_name FROM users u
 JOIN friendships f ON f.friend_id = u.id
 WHERE f.user_id = $1 AND f.status = 'blocked' AND f.deleted = FALSE
 `
@@ -106,6 +106,7 @@ func (q *Queries) ListBlocked(ctx context.Context, userID pgtype.UUID) ([]User, 
 			&i.Verified,
 			&i.Deleted,
 			&i.BackgroundColor,
+			&i.DisplayName,
 		); err != nil {
 			return nil, err
 		}
@@ -118,7 +119,7 @@ func (q *Queries) ListBlocked(ctx context.Context, userID pgtype.UUID) ([]User, 
 }
 
 const listFriends = `-- name: ListFriends :many
-SELECT u.id, u.username, u.email, u.password_hash, u.avatar_url, u.bio, u.status, u.created_at, u.updated_at, u.verified, u.deleted, u.background_color FROM users u
+SELECT u.id, u.username, u.email, u.password_hash, u.avatar_url, u.bio, u.status, u.created_at, u.updated_at, u.verified, u.deleted, u.background_color, u.display_name FROM users u
 JOIN friendships f ON (f.friend_id = u.id AND f.user_id = $1) OR (f.user_id = u.id AND f.friend_id = $1)
 WHERE f.status = 'accepted' AND f.deleted = FALSE
 `
@@ -145,6 +146,7 @@ func (q *Queries) ListFriends(ctx context.Context, userID pgtype.UUID) ([]User, 
 			&i.Verified,
 			&i.Deleted,
 			&i.BackgroundColor,
+			&i.DisplayName,
 		); err != nil {
 			return nil, err
 		}

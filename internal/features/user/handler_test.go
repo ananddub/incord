@@ -73,8 +73,10 @@ func setupUserGRPCServer(t *testing.T) *testClients {
 	}
 }
 
-// createUser registers a user via the auth service, verifies via OTP, and returns (userID, accessToken).
-func createUser(t *testing.T, c *testClients, username, email, password string) (string, string) {
+// createUser registers a user via the auth service, verifies via OTP, and
+// returns (userID, handle, accessToken). handle is the assigned "name#1234"
+// form — useful for calls that take target_username.
+func createUser(t *testing.T, c *testClients, username, email, password string) (string, string, string) {
 	t.Helper()
 	ctx := context.Background()
 
@@ -85,7 +87,6 @@ func createUser(t *testing.T, c *testClients, username, email, password string) 
 	})
 	require.NoError(t, err)
 
-	// Fetch OTP from Redis and verify to get tokens
 	otp, err := c.infra.Redis.Get(ctx, fmt.Sprintf("otp:%s", email)).Result()
 	require.NoError(t, err)
 
@@ -95,7 +96,13 @@ func createUser(t *testing.T, c *testClients, username, email, password string) 
 	})
 	require.NoError(t, err)
 
-	return regResp.GetUserId(), verifyResp.GetAccessToken()
+	token := verifyResp.GetAccessToken()
+	getResp, err := c.user.GetUser(authedCtx(token), &userv1.GetUserRequest{
+		UserId: regResp.GetUserId(),
+	})
+	require.NoError(t, err)
+
+	return regResp.GetUserId(), getResp.GetUser().GetUsername(), token
 }
 
 // authedCtx creates a context with the given access token in metadata.
@@ -112,20 +119,21 @@ func authedCtx(token string) context.Context {
 
 func TestUserGRPC_GetUser(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	userID, token := createUser(t, c, "alice", "alice@example.com", "password123")
+	userID, handle, token := createUser(t, c, "alice", "alice@example.com", "password123")
 
 	resp, err := c.user.GetUser(authedCtx(token), &userv1.GetUserRequest{
 		UserId: userID,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, userID, resp.GetUser().GetId())
-	assert.Equal(t, "alice", resp.GetUser().GetUsername())
+	assert.Equal(t, handle, resp.GetUser().GetUsername())
+	assert.Equal(t, "alice", resp.GetUser().GetDisplayName())
 	assert.Equal(t, "alice@example.com", resp.GetUser().GetEmail())
 }
 
 func TestUserGRPC_GetUser_NotFound(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, token := createUser(t, c, "alice", "alice@example.com", "password123")
+	_, _, token := createUser(t, c, "alice", "alice@example.com", "password123")
 
 	_, err := c.user.GetUser(authedCtx(token), &userv1.GetUserRequest{
 		UserId: "00000000-0000-0000-0000-000000000000",
@@ -136,7 +144,7 @@ func TestUserGRPC_GetUser_NotFound(t *testing.T) {
 
 func TestUserGRPC_GetUser_InvalidID(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, token := createUser(t, c, "alice", "alice@example.com", "password123")
+	_, _, token := createUser(t, c, "alice", "alice@example.com", "password123")
 
 	_, err := c.user.GetUser(authedCtx(token), &userv1.GetUserRequest{
 		UserId: "not-a-uuid",
@@ -147,7 +155,7 @@ func TestUserGRPC_GetUser_InvalidID(t *testing.T) {
 
 func TestUserGRPC_GetUser_EmptyID(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, token := createUser(t, c, "alice", "alice@example.com", "password123")
+	_, _, token := createUser(t, c, "alice", "alice@example.com", "password123")
 
 	_, err := c.user.GetUser(authedCtx(token), &userv1.GetUserRequest{
 		UserId: "",
@@ -169,25 +177,25 @@ func TestUserGRPC_GetUser_Unauthenticated(t *testing.T) {
 
 func TestUserGRPC_UpdateUser(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, token := createUser(t, c, "alice", "alice@example.com", "password123")
+	_, _, token := createUser(t, c, "alice", "alice@example.com", "password123")
 
-	newUsername := "alice_updated"
+	newDisplay := "Alice Updated"
 	newBio := "Hello, world!"
 	resp, err := c.user.UpdateUser(authedCtx(token), &userv1.UpdateUserRequest{
-		Username: &newUsername,
-		Bio:      &newBio,
+		DisplayName: &newDisplay,
+		Bio:         &newBio,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "alice_updated", resp.GetUser().GetUsername())
+	assert.Equal(t, "Alice Updated", resp.GetUser().GetDisplayName())
 	assert.Equal(t, "Hello, world!", resp.GetUser().GetBio())
 }
 
 func TestUserGRPC_UpdateUser_Unauthenticated(t *testing.T) {
 	c := setupUserGRPCServer(t)
 
-	newUsername := "hacker"
+	newDisplay := "hacker"
 	_, err := c.user.UpdateUser(context.Background(), &userv1.UpdateUserRequest{
-		Username: &newUsername,
+		DisplayName: &newDisplay,
 	})
 	require.Error(t, err)
 	assert.Equal(t, codes.Unauthenticated, status.Code(err))
@@ -195,22 +203,22 @@ func TestUserGRPC_UpdateUser_Unauthenticated(t *testing.T) {
 
 func TestUserGRPC_GetUserByUsername(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	userID, token := createUser(t, c, "findme", "findme@example.com", "password123")
+	userID, handle, token := createUser(t, c, "findme", "findme@example.com", "password123")
 
 	resp, err := c.user.GetUserByUsername(authedCtx(token), &userv1.GetUserByUsernameRequest{
-		Username: "findme",
+		Username: handle,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, userID, resp.GetUser().GetId())
-	assert.Equal(t, "findme", resp.GetUser().GetUsername())
+	assert.Equal(t, handle, resp.GetUser().GetUsername())
 }
 
 func TestUserGRPC_GetUserByUsername_NotFound(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, token := createUser(t, c, "alice", "alice@example.com", "password123")
+	_, _, token := createUser(t, c, "alice", "alice@example.com", "password123")
 
 	_, err := c.user.GetUserByUsername(authedCtx(token), &userv1.GetUserByUsernameRequest{
-		Username: "nonexistent",
+		Username: "nonexistent#0001",
 	})
 	require.Error(t, err)
 	assert.Equal(t, codes.NotFound, status.Code(err))
@@ -218,7 +226,7 @@ func TestUserGRPC_GetUserByUsername_NotFound(t *testing.T) {
 
 func TestUserGRPC_GetUserByUsername_Empty(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, token := createUser(t, c, "alice", "alice@example.com", "password123")
+	_, _, token := createUser(t, c, "alice", "alice@example.com", "password123")
 
 	_, err := c.user.GetUserByUsername(authedCtx(token), &userv1.GetUserByUsernameRequest{
 		Username: "",
@@ -229,7 +237,7 @@ func TestUserGRPC_GetUserByUsername_Empty(t *testing.T) {
 
 func TestUserGRPC_SearchUsers(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, token := createUser(t, c, "searchable_alice", "searchalice@example.com", "password123")
+	_, _, token := createUser(t, c, "searchable_alice", "searchalice@example.com", "password123")
 	createUser(t, c, "searchable_bob", "searchbob@example.com", "password123")
 	createUser(t, c, "other_carol", "carol@example.com", "password123")
 
@@ -244,7 +252,7 @@ func TestUserGRPC_SearchUsers(t *testing.T) {
 
 func TestUserGRPC_SearchUsers_EmptyQuery(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, token := createUser(t, c, "alice", "alice@example.com", "password123")
+	_, _, token := createUser(t, c, "alice", "alice@example.com", "password123")
 
 	_, err := c.user.SearchUsers(authedCtx(token), &userv1.SearchUsersRequest{
 		Query: "",
@@ -255,7 +263,7 @@ func TestUserGRPC_SearchUsers_EmptyQuery(t *testing.T) {
 
 func TestUserGRPC_SearchUsers_NoResults(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, token := createUser(t, c, "alice", "alice@example.com", "password123")
+	_, _, token := createUser(t, c, "alice", "alice@example.com", "password123")
 
 	resp, err := c.user.SearchUsers(authedCtx(token), &userv1.SearchUsersRequest{
 		Query: "zzzznonexistentzzzz",
@@ -272,11 +280,11 @@ func TestUserGRPC_SearchUsers_NoResults(t *testing.T) {
 
 func TestUserGRPC_SendFriendRequest(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	userID1, token1 := createUser(t, c, "user1", "user1@example.com", "password123")
-	userID2, _ := createUser(t, c, "user2", "user2@example.com", "password123")
+	userID1, _, token1 := createUser(t, c, "user1", "user1@example.com", "password123")
+	userID2, handle2, _ := createUser(t, c, "user2", "user2@example.com", "password123")
 
 	resp, err := c.user.SendFriendRequest(authedCtx(token1), &userv1.SendFriendRequestRequest{
-		TargetUserId: userID2,
+		TargetUsername: handle2,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, userID1, resp.GetFriendship().GetUserId())
@@ -286,10 +294,10 @@ func TestUserGRPC_SendFriendRequest(t *testing.T) {
 
 func TestUserGRPC_SendFriendRequest_ToSelf(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	userID1, token1 := createUser(t, c, "lonely", "lonely@example.com", "password123")
+	_, handle1, token1 := createUser(t, c, "lonely", "lonely@example.com", "password123")
 
 	_, err := c.user.SendFriendRequest(authedCtx(token1), &userv1.SendFriendRequestRequest{
-		TargetUserId: userID1,
+		TargetUsername: handle1,
 	})
 	require.Error(t, err)
 	assert.Equal(t, codes.InvalidArgument, status.Code(err))
@@ -297,17 +305,17 @@ func TestUserGRPC_SendFriendRequest_ToSelf(t *testing.T) {
 
 func TestUserGRPC_SendFriendRequest_Duplicate(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, token1 := createUser(t, c, "user1", "user1@example.com", "password123")
-	userID2, _ := createUser(t, c, "user2", "user2@example.com", "password123")
+	_, _, token1 := createUser(t, c, "user1", "user1@example.com", "password123")
+	_, handle2, _ := createUser(t, c, "user2", "user2@example.com", "password123")
 
 	_, err := c.user.SendFriendRequest(authedCtx(token1), &userv1.SendFriendRequestRequest{
-		TargetUserId: userID2,
+		TargetUsername: handle2,
 	})
 	require.NoError(t, err)
 
 	// Sending again should fail
 	_, err = c.user.SendFriendRequest(authedCtx(token1), &userv1.SendFriendRequestRequest{
-		TargetUserId: userID2,
+		TargetUsername: handle2,
 	})
 	require.Error(t, err)
 	assert.Equal(t, codes.AlreadyExists, status.Code(err))
@@ -315,10 +323,10 @@ func TestUserGRPC_SendFriendRequest_Duplicate(t *testing.T) {
 
 func TestUserGRPC_SendFriendRequest_EmptyTarget(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, token1 := createUser(t, c, "user1", "user1@example.com", "password123")
+	_, _, token1 := createUser(t, c, "user1", "user1@example.com", "password123")
 
 	_, err := c.user.SendFriendRequest(authedCtx(token1), &userv1.SendFriendRequestRequest{
-		TargetUserId: "",
+		TargetUsername: "",
 	})
 	require.Error(t, err)
 	assert.Equal(t, codes.InvalidArgument, status.Code(err))
@@ -328,7 +336,7 @@ func TestUserGRPC_SendFriendRequest_Unauthenticated(t *testing.T) {
 	c := setupUserGRPCServer(t)
 
 	_, err := c.user.SendFriendRequest(context.Background(), &userv1.SendFriendRequestRequest{
-		TargetUserId: "00000000-0000-0000-0000-000000000000",
+		TargetUsername: "someone#0001",
 	})
 	require.Error(t, err)
 	assert.Equal(t, codes.Unauthenticated, status.Code(err))
@@ -336,12 +344,12 @@ func TestUserGRPC_SendFriendRequest_Unauthenticated(t *testing.T) {
 
 func TestUserGRPC_AcceptFriendRequest(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	userID1, token1 := createUser(t, c, "user1", "user1@example.com", "password123")
-	userID2, token2 := createUser(t, c, "user2", "user2@example.com", "password123")
+	userID1, _, token1 := createUser(t, c, "user1", "user1@example.com", "password123")
+	_, handle2, token2 := createUser(t, c, "user2", "user2@example.com", "password123")
 
 	// user1 sends request to user2
 	_, err := c.user.SendFriendRequest(authedCtx(token1), &userv1.SendFriendRequestRequest{
-		TargetUserId: userID2,
+		TargetUsername: handle2,
 	})
 	require.NoError(t, err)
 
@@ -355,8 +363,8 @@ func TestUserGRPC_AcceptFriendRequest(t *testing.T) {
 
 func TestUserGRPC_AcceptFriendRequest_NoPending(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	userID1, _ := createUser(t, c, "user1", "user1@example.com", "password123")
-	_, token2 := createUser(t, c, "user2", "user2@example.com", "password123")
+	userID1, _, _ := createUser(t, c, "user1", "user1@example.com", "password123")
+	_, _, token2 := createUser(t, c, "user2", "user2@example.com", "password123")
 
 	// No friend request was sent, accept should fail
 	_, err := c.user.AcceptFriendRequest(authedCtx(token2), &userv1.AcceptFriendRequestRequest{
@@ -368,12 +376,12 @@ func TestUserGRPC_AcceptFriendRequest_NoPending(t *testing.T) {
 
 func TestUserGRPC_ListFriends(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	uid1, tok1 := createUser(t, c, "friend1", "friend1@example.com", "password123")
-	uid2, tok2 := createUser(t, c, "friend2", "friend2@example.com", "password123")
+	uid1, _, tok1 := createUser(t, c, "friend1", "friend1@example.com", "password123")
+	uid2, h2, tok2 := createUser(t, c, "friend2", "friend2@example.com", "password123")
 
 	// friend1 sends request to friend2
 	_, err := c.user.SendFriendRequest(authedCtx(tok1), &userv1.SendFriendRequestRequest{
-		TargetUserId: uid2,
+		TargetUsername: h2,
 	})
 	require.NoError(t, err)
 
@@ -397,7 +405,7 @@ func TestUserGRPC_ListFriends(t *testing.T) {
 
 func TestUserGRPC_ListFriends_Empty(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, token := createUser(t, c, "lonely", "lonely@example.com", "password123")
+	_, _, token := createUser(t, c, "lonely", "lonely@example.com", "password123")
 
 	resp, err := c.user.ListFriends(authedCtx(token), &userv1.ListFriendsRequest{})
 	require.NoError(t, err)
@@ -414,12 +422,12 @@ func TestUserGRPC_ListFriends_Unauthenticated(t *testing.T) {
 
 func TestUserGRPC_RemoveFriend(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	uid1, tok1 := createUser(t, c, "rem1", "rem1@example.com", "password123")
-	uid2, tok2 := createUser(t, c, "rem2", "rem2@example.com", "password123")
+	uid1, _, tok1 := createUser(t, c, "rem1", "rem1@example.com", "password123")
+	uid2, h2, tok2 := createUser(t, c, "rem2", "rem2@example.com", "password123")
 
 	// Become friends
 	_, err := c.user.SendFriendRequest(authedCtx(tok1), &userv1.SendFriendRequestRequest{
-		TargetUserId: uid2,
+		TargetUsername: h2,
 	})
 	require.NoError(t, err)
 	_, err = c.user.AcceptFriendRequest(authedCtx(tok2), &userv1.AcceptFriendRequestRequest{
@@ -441,8 +449,8 @@ func TestUserGRPC_RemoveFriend(t *testing.T) {
 
 func TestUserGRPC_RemoveFriend_NotFriends(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, tok1 := createUser(t, c, "rem1", "rem1@example.com", "password123")
-	uid2, _ := createUser(t, c, "rem2", "rem2@example.com", "password123")
+	_, _, tok1 := createUser(t, c, "rem1", "rem1@example.com", "password123")
+	uid2, _, _ := createUser(t, c, "rem2", "rem2@example.com", "password123")
 
 	_, err := c.user.RemoveFriend(authedCtx(tok1), &userv1.RemoveFriendRequest{
 		FriendId: uid2,
@@ -453,8 +461,8 @@ func TestUserGRPC_RemoveFriend_NotFriends(t *testing.T) {
 
 func TestUserGRPC_BlockUser(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, tok1 := createUser(t, c, "blocker", "blocker@example.com", "password123")
-	uid2, _ := createUser(t, c, "blocked", "blocked@example.com", "password123")
+	_, _, tok1 := createUser(t, c, "blocker", "blocker@example.com", "password123")
+	uid2, _, _ := createUser(t, c, "blocked", "blocked@example.com", "password123")
 
 	_, err := c.user.BlockUser(authedCtx(tok1), &userv1.BlockUserRequest{
 		TargetUserId: uid2,
@@ -470,7 +478,7 @@ func TestUserGRPC_BlockUser(t *testing.T) {
 
 func TestUserGRPC_BlockUser_Self(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	uid1, tok1 := createUser(t, c, "selfblocker", "selfblock@example.com", "password123")
+	uid1, _, tok1 := createUser(t, c, "selfblocker", "selfblock@example.com", "password123")
 
 	_, err := c.user.BlockUser(authedCtx(tok1), &userv1.BlockUserRequest{
 		TargetUserId: uid1,
@@ -481,12 +489,12 @@ func TestUserGRPC_BlockUser_Self(t *testing.T) {
 
 func TestUserGRPC_BlockUser_RemovesFriendship(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	uid1, tok1 := createUser(t, c, "bf1", "bf1@example.com", "password123")
-	uid2, tok2 := createUser(t, c, "bf2", "bf2@example.com", "password123")
+	uid1, _, tok1 := createUser(t, c, "bf1", "bf1@example.com", "password123")
+	uid2, h2, tok2 := createUser(t, c, "bf2", "bf2@example.com", "password123")
 
 	// Become friends first
 	_, err := c.user.SendFriendRequest(authedCtx(tok1), &userv1.SendFriendRequestRequest{
-		TargetUserId: uid2,
+		TargetUsername: h2,
 	})
 	require.NoError(t, err)
 	_, err = c.user.AcceptFriendRequest(authedCtx(tok2), &userv1.AcceptFriendRequestRequest{
@@ -513,8 +521,8 @@ func TestUserGRPC_BlockUser_RemovesFriendship(t *testing.T) {
 
 func TestUserGRPC_UnblockUser(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, tok1 := createUser(t, c, "ublocker", "ublocker@example.com", "password123")
-	uid2, _ := createUser(t, c, "ublocked", "ublocked@example.com", "password123")
+	_, _, tok1 := createUser(t, c, "ublocker", "ublocker@example.com", "password123")
+	uid2, _, _ := createUser(t, c, "ublocked", "ublocked@example.com", "password123")
 
 	// Block first
 	_, err := c.user.BlockUser(authedCtx(tok1), &userv1.BlockUserRequest{
@@ -536,8 +544,8 @@ func TestUserGRPC_UnblockUser(t *testing.T) {
 
 func TestUserGRPC_UnblockUser_NotBlocked(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, tok1 := createUser(t, c, "ublocker", "ublocker@example.com", "password123")
-	uid2, _ := createUser(t, c, "ublocked", "ublocked@example.com", "password123")
+	_, _, tok1 := createUser(t, c, "ublocker", "ublocker@example.com", "password123")
+	uid2, _, _ := createUser(t, c, "ublocked", "ublocked@example.com", "password123")
 
 	_, err := c.user.UnblockUser(authedCtx(tok1), &userv1.UnblockUserRequest{
 		TargetUserId: uid2,
@@ -548,12 +556,12 @@ func TestUserGRPC_UnblockUser_NotBlocked(t *testing.T) {
 
 func TestUserGRPC_ListPendingRequests(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	uid1, tok1 := createUser(t, c, "pending1", "pending1@example.com", "password123")
-	uid2, tok2 := createUser(t, c, "pending2", "pending2@example.com", "password123")
+	uid1, _, tok1 := createUser(t, c, "pending1", "pending1@example.com", "password123")
+	uid2, h2, tok2 := createUser(t, c, "pending2", "pending2@example.com", "password123")
 
 	// user1 sends request to user2
 	_, err := c.user.SendFriendRequest(authedCtx(tok1), &userv1.SendFriendRequestRequest{
-		TargetUserId: uid2,
+		TargetUsername: h2,
 	})
 	require.NoError(t, err)
 
@@ -574,12 +582,12 @@ func TestUserGRPC_ListPendingRequests(t *testing.T) {
 
 func TestUserGRPC_DeclineFriendRequest(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	uid1, tok1 := createUser(t, c, "decline1", "decline1@example.com", "password123")
-	uid2, tok2 := createUser(t, c, "decline2", "decline2@example.com", "password123")
+	uid1, _, tok1 := createUser(t, c, "decline1", "decline1@example.com", "password123")
+	_, h2, tok2 := createUser(t, c, "decline2", "decline2@example.com", "password123")
 
 	// user1 sends request to user2
 	_, err := c.user.SendFriendRequest(authedCtx(tok1), &userv1.SendFriendRequestRequest{
-		TargetUserId: uid2,
+		TargetUsername: h2,
 	})
 	require.NoError(t, err)
 
@@ -601,8 +609,8 @@ func TestUserGRPC_DeclineFriendRequest(t *testing.T) {
 
 func TestUserGRPC_DeclineFriendRequest_NoPending(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	uid1, _ := createUser(t, c, "decline1", "decline1@example.com", "password123")
-	_, tok2 := createUser(t, c, "decline2", "decline2@example.com", "password123")
+	uid1, _, _ := createUser(t, c, "decline1", "decline1@example.com", "password123")
+	_, _, tok2 := createUser(t, c, "decline2", "decline2@example.com", "password123")
 
 	_, err := c.user.DeclineFriendRequest(authedCtx(tok2), &userv1.DeclineFriendRequestRequest{
 		RequesterUserId: uid1,
@@ -613,7 +621,7 @@ func TestUserGRPC_DeclineFriendRequest_NoPending(t *testing.T) {
 
 func TestUserGRPC_DeleteUser(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	userID, token := createUser(t, c, "todelete", "todelete@example.com", "password123")
+	userID, _, token := createUser(t, c, "todelete", "todelete@example.com", "password123")
 
 	_, err := c.user.DeleteUser(authedCtx(token), &userv1.DeleteUserRequest{
 		UserId: userID,
@@ -630,24 +638,17 @@ func TestUserGRPC_DeleteUser(t *testing.T) {
 
 func TestUserGRPC_SendFriendRequest_ToBlockedUser(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, tok1 := createUser(t, c, "sender", "sender@example.com", "password123")
-	uid2, tok2 := createUser(t, c, "target", "target@example.com", "password123")
+	uid1, _, tok1 := createUser(t, c, "sender", "sender@example.com", "password123")
+	_, h2, tok2 := createUser(t, c, "target", "target@example.com", "password123")
 
-	// user2 blocks user1 -- get user1's ID first
-	uid1Resp, err := c.user.GetUserByUsername(authedCtx(tok1), &userv1.GetUserByUsernameRequest{
-		Username: "sender",
-	})
-	require.NoError(t, err)
-	uid1 := uid1Resp.GetUser().GetId()
-
-	_, err = c.user.BlockUser(authedCtx(tok2), &userv1.BlockUserRequest{
+	_, err := c.user.BlockUser(authedCtx(tok2), &userv1.BlockUserRequest{
 		TargetUserId: uid1,
 	})
 	require.NoError(t, err)
 
 	// user1 tries to send friend request to user2 -- should fail due to block
 	_, err = c.user.SendFriendRequest(authedCtx(tok1), &userv1.SendFriendRequestRequest{
-		TargetUserId: uid2,
+		TargetUsername: h2,
 	})
 	require.Error(t, err)
 	assert.Equal(t, codes.FailedPrecondition, status.Code(err))
@@ -655,7 +656,7 @@ func TestUserGRPC_SendFriendRequest_ToBlockedUser(t *testing.T) {
 
 func TestUserGRPC_ListBlocked_Empty(t *testing.T) {
 	c := setupUserGRPCServer(t)
-	_, token := createUser(t, c, "nobody", "nobody@example.com", "password123")
+	_, _, token := createUser(t, c, "nobody", "nobody@example.com", "password123")
 
 	resp, err := c.user.ListBlocked(authedCtx(token), &userv1.ListBlockedRequest{})
 	require.NoError(t, err)

@@ -2,7 +2,12 @@ package user
 
 import (
 	"context"
+	"crypto/rand"
+	"errors"
+	"fmt"
+	"math/big"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -32,6 +37,49 @@ func (r *Repository) GetUserByUsername(ctx context.Context, username string) (db
 
 func (r *Repository) UpdateUser(ctx context.Context, params db.UpdateUserParams) (db.User, error) {
 	return r.queries.UpdateUser(ctx, params)
+}
+
+// UpdateUsername sets the caller's username handle — but only if the current
+// username is empty. Takes a base name, appends a random "#1234" discriminator,
+// retries on collision, and also sets display_name to the base name.
+// Returns ErrUsernameAlreadySet if the user already has a non-empty username.
+func (r *Repository) UpdateUsername(ctx context.Context, id pgtype.UUID, username string) (db.User, error) {
+	current, err := r.queries.GetUserByID(ctx, id)
+	if err != nil {
+		return db.User{}, err
+	}
+	if current.Username != "" {
+		return db.User{}, ErrUsernameAlreadySet
+	}
+
+	const maxHandleAttempts = 10
+	var lastErr error
+	for i := 0; i < maxHandleAttempts; i++ {
+		handle := fmt.Sprintf("%s#%s", username, randomDiscriminator())
+		updated, err := r.queries.UpdateUser(ctx, db.UpdateUserParams{
+			ID:          id,
+			Username:    &handle,
+			DisplayName: &username,
+		})
+		if err == nil {
+			return updated, nil
+		}
+		lastErr = err
+		if !isUniqueViolation(err) {
+			return db.User{}, err
+		}
+	}
+	return db.User{}, fmt.Errorf("failed to allocate unique handle after %d attempts: %w", maxHandleAttempts, lastErr)
+}
+
+func randomDiscriminator() string {
+	n, _ := rand.Int(rand.Reader, big.NewInt(9999))
+	return fmt.Sprintf("%04d", n.Int64()+1)
+}
+
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
 func (r *Repository) DeleteUser(ctx context.Context, id pgtype.UUID) error {

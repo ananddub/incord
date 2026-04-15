@@ -42,13 +42,16 @@ func NewService(repo *Repository, cfg config.JWTConfig, mailer ...*mail.Sender) 
 }
 
 // Register creates user (unverified) and sends OTP email. No tokens yet.
+// The provided username is the base name; the repository assigns a random
+// 4-digit discriminator so the stored handle becomes "name#1234" and sets
+// display_name to the base name.
 func (s *Service) Register(ctx context.Context, username, email, password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	user, err := s.repo.CreateUser(ctx, username, email, string(hash))
+	user, err := s.repo.CreateUserWithUsername(ctx, username, email, string(hash))
 	if err != nil {
 		return "", fmt.Errorf("failed to create user: %w", err)
 	}

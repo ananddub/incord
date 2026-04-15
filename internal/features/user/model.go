@@ -12,4 +12,5 @@ var (
 	ErrUserBlocked        = errors.New("user is blocked")
 	ErrAlreadyBlocked     = errors.New("user is already blocked")
 	ErrNotBlocked         = errors.New("user is not blocked")
+	ErrUsernameAlreadySet = errors.New("username is already set")
 )

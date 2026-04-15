@@ -62,7 +62,9 @@ func setupScylla(t *testing.T) *gocql.Session {
 	`).Exec()
 	require.NoError(t, err, "failed to create keyspace")
 
-	// Create tables inside the keyspace.
+	// Create tables inside the keyspace. Kept in sync with
+	// db/scylla/migrations/000001_init.cql — any new column/table there
+	// needs to be mirrored here for the test harness.
 	tables := []string{
 		`CREATE TABLE IF NOT EXISTS ndiscord_test.messages (
 			channel_id UUID,
@@ -72,10 +74,27 @@ func setupScylla(t *testing.T) *gocql.Session {
 			type       INT,
 			reply_to_id UUID,
 			pinned     BOOLEAN,
+			deleted    BOOLEAN,
 			edited_at  TIMESTAMP,
+			updated_at TIMESTAMP,
 			created_at TIMESTAMP,
+			forwarded_from_channel_id UUID,
+			forwarded_from_message_id UUID,
+			forwarded_from_author_id  UUID,
+			mention_user_ids SET<UUID>,
 			PRIMARY KEY (channel_id, id)
 		) WITH CLUSTERING ORDER BY (id DESC)`,
+
+		`CREATE TABLE IF NOT EXISTS ndiscord_test.message_attachments (
+			channel_id   UUID,
+			message_id   TIMEUUID,
+			id           UUID,
+			filename     TEXT,
+			url          TEXT,
+			content_type TEXT,
+			size         BIGINT,
+			PRIMARY KEY ((channel_id, message_id), id)
+		)`,
 
 		`CREATE TABLE IF NOT EXISTS ndiscord_test.message_reactions (
 			channel_id UUID,
@@ -92,6 +111,14 @@ func setupScylla(t *testing.T) *gocql.Session {
 			mention_count       INT,
 			PRIMARY KEY (user_id, channel_id)
 		)`,
+
+		`CREATE TABLE IF NOT EXISTS ndiscord_test.message_edit_history (
+			channel_id  UUID,
+			message_id  TIMEUUID,
+			old_content TEXT,
+			edited_at   TIMESTAMP,
+			PRIMARY KEY ((channel_id, message_id), edited_at)
+		) WITH CLUSTERING ORDER BY (edited_at DESC)`,
 	}
 	for _, ddl := range tables {
 		require.NoError(t, initSession.Query(ddl).Exec(), "failed to run DDL")

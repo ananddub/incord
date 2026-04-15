@@ -70,3 +70,7 @@ func (r *Repository) IsDMChannelMember(ctx context.Context, params db.IsDMChanne
 func (r *Repository) GetDMChannelMembers(ctx context.Context, channelID pgtype.UUID) ([]pgtype.UUID, error) {
 	return r.queries.GetDMChannelMembers(ctx, channelID)
 }
+
+func (r *Repository) GetDMChannelMemberProfiles(ctx context.Context, channelID pgtype.UUID) ([]db.GetDMChannelMemberProfilesRow, error) {
+	return r.queries.GetDMChannelMemberProfiles(ctx, channelID)
+}

@@ -87,11 +87,16 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 
 	// Media
 	mediaRepo := media.NewRepository(queries)
-	mediaSvc := media.NewService(mediaRepo, infra.MinIO, cfg.MinIO)
+	mediaSvc := media.NewService(mediaRepo, infra.MinIO, infra.MinIOSigner, cfg.MinIO)
 	mediaHandler := media.NewHandler(mediaSvc)
+
+	// Wire the media resolver now that both services exist so SendMessage
+	// can attach uploaded files to messages.
+	messageSvc.SetMediaResolver(mediaSvc)
 
 	// Voice (LiveKit SFU)
 	voiceSvc := voice.NewService(cfg.LiveKit, infra.NATS, infra.Authz)
+	voiceSvc.SetDMResolver(channel.NewDMResolver(channelSvc))
 	voiceHandler := voice.NewHandler(voiceSvc)
 
 	return &Handlers{

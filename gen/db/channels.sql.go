@@ -156,6 +156,47 @@ func (q *Queries) GetDMChannelBetweenUsers(ctx context.Context, arg GetDMChannel
 	return i, err
 }
 
+const getDMChannelMemberProfiles = `-- name: GetDMChannelMemberProfiles :many
+SELECT u.id, u.username, u.display_name, u.avatar_url, u.status
+FROM dm_channel_members dm
+JOIN users u ON u.id = dm.user_id AND u.deleted = FALSE
+WHERE dm.channel_id = $1 AND dm.deleted = FALSE
+`
+
+type GetDMChannelMemberProfilesRow struct {
+	ID          pgtype.UUID `json:"id"`
+	Username    string      `json:"username"`
+	DisplayName string      `json:"display_name"`
+	AvatarUrl   string      `json:"avatar_url"`
+	Status      string      `json:"status"`
+}
+
+func (q *Queries) GetDMChannelMemberProfiles(ctx context.Context, channelID pgtype.UUID) ([]GetDMChannelMemberProfilesRow, error) {
+	rows, err := q.db.Query(ctx, getDMChannelMemberProfiles, channelID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetDMChannelMemberProfilesRow{}
+	for rows.Next() {
+		var i GetDMChannelMemberProfilesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.DisplayName,
+			&i.AvatarUrl,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getDMChannelMembers = `-- name: GetDMChannelMembers :many
 SELECT user_id FROM dm_channel_members WHERE channel_id = $1 AND deleted = FALSE
 `

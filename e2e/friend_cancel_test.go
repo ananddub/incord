@@ -31,6 +31,8 @@ func TestCancelFriendRequest(t *testing.T) {
 		fmt.Sprintf("cancel_b_%d", ts),
 		fmt.Sprintf("cancel_b_%d@t.com", ts),
 		"password123")
+	resolveHandle(t, userClient, alice)
+	resolveHandle(t, userClient, bob)
 
 	// Bob subscribes to his friend activity stream BEFORE the flow so the
 	// cancel event is captured end-to-end via NATS.
@@ -59,7 +61,7 @@ func TestCancelFriendRequest(t *testing.T) {
 
 	// Alice sends a request to Bob.
 	_, err = userClient.SendFriendRequest(alice.ctx(), &userv1.SendFriendRequestRequest{
-		TargetUserId: bob.ID,
+		TargetUsername: bob.Handle,
 	})
 	require.NoError(t, err)
 
@@ -97,7 +99,7 @@ func TestCancelFriendRequest(t *testing.T) {
 
 	// Bob cannot cancel a request alice sent to him (wrong direction).
 	_, err = userClient.SendFriendRequest(alice.ctx(), &userv1.SendFriendRequestRequest{
-		TargetUserId: bob.ID,
+		TargetUsername: bob.Handle,
 	})
 	require.NoError(t, err)
 	_, err = userClient.CancelFriendRequest(bob.ctx(), &userv1.CancelFriendRequestRequest{

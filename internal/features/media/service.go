@@ -21,15 +21,22 @@ const (
 // Service contains the business logic for the media feature.
 type Service struct {
 	repo   *Repository
-	minio  *minio.Client
+	minio  *minio.Client // internal endpoint — used for direct object ops
+	signer *minio.Client // public endpoint — used for signing client-facing URLs
 	bucket string
 }
 
-// NewService creates a new media Service.
-func NewService(repo *Repository, minioClient *minio.Client, minioCfg config.MinIOConfig) *Service {
+// NewService creates a new media Service. `signer` is a MinIO client
+// configured with the publicly-reachable endpoint used for presigned URL
+// generation; if nil, `minioClient` is used for both.
+func NewService(repo *Repository, minioClient, signer *minio.Client, minioCfg config.MinIOConfig) *Service {
+	if signer == nil {
+		signer = minioClient
+	}
 	return &Service{
 		repo:   repo,
 		minio:  minioClient,
+		signer: signer,
 		bucket: minioCfg.Bucket,
 	}
 }
@@ -72,7 +79,7 @@ func (s *Service) RequestUpload(ctx context.Context, userID, filename, contentTy
 	}
 
 	// Generate presigned PUT URL
-	presignedURL, err := s.minio.PresignedPutObject(ctx, s.bucket, objectKey, presignedURLExpiry)
+	presignedURL, err := s.signer.PresignedPutObject(ctx, s.bucket, objectKey, presignedURLExpiry)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate presigned PUT URL: %w", err)
 	}
@@ -100,7 +107,7 @@ func (s *Service) ConfirmUpload(ctx context.Context, uploadID string) (*ConfirmU
 	}
 
 	// Generate a download URL for the confirmed file
-	dlURL, err := s.minio.PresignedGetObject(ctx, s.bucket, mediaFile.BucketKey, downloadURLExpiry, url.Values{})
+	dlURL, err := s.signer.PresignedGetObject(ctx, s.bucket, mediaFile.BucketKey, downloadURLExpiry, url.Values{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate download URL: %w", err)
 	}
@@ -131,7 +138,7 @@ func (s *Service) GetDownloadURL(ctx context.Context, fileID string) (*GetDownlo
 	}
 
 	expiresAt := time.Now().Add(downloadURLExpiry)
-	dlURL, err := s.minio.PresignedGetObject(ctx, s.bucket, mediaFile.BucketKey, downloadURLExpiry, url.Values{})
+	dlURL, err := s.signer.PresignedGetObject(ctx, s.bucket, mediaFile.BucketKey, downloadURLExpiry, url.Values{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate download URL: %w", err)
 	}
@@ -140,6 +147,32 @@ func (s *Service) GetDownloadURL(ctx context.Context, fileID string) (*GetDownlo
 		URL:       dlURL.String(),
 		ExpiresAt: expiresAt,
 	}, nil
+}
+
+// ResolveAttachment returns the metadata + presigned download URL for a
+// confirmed media file owned by uploaderID. Used by the message service
+// when persisting attachments alongside a message.
+func (s *Service) ResolveAttachment(ctx context.Context, fileID, uploaderID string) (string, string, string, int64, error) {
+	mediaFile, err := s.repo.GetMediaFile(ctx, fileID)
+	if err != nil {
+		return "", "", "", 0, fmt.Errorf("failed to get media file: %w", err)
+	}
+	if !mediaFile.Confirmed {
+		return "", "", "", 0, fmt.Errorf("file upload not yet confirmed")
+	}
+	// Ownership check — a client can only attach files they themselves uploaded.
+	if uploaderID != "" && mediaFile.UploaderID.String() != uploaderID {
+		var uploaderUUID pgtype.UUID
+		if err := uploaderUUID.Scan(uploaderID); err != nil || mediaFile.UploaderID != uploaderUUID {
+			return "", "", "", 0, fmt.Errorf("attachment owned by a different user")
+		}
+	}
+
+	dl, err := s.signer.PresignedGetObject(ctx, s.bucket, mediaFile.BucketKey, downloadURLExpiry, url.Values{})
+	if err != nil {
+		return "", "", "", 0, fmt.Errorf("failed to generate download URL: %w", err)
+	}
+	return mediaFile.Filename, dl.String(), mediaFile.ContentType, mediaFile.Size, nil
 }
 
 // DeleteFile removes the file from MinIO and deletes the DB record.

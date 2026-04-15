@@ -17,6 +17,21 @@ service VoiceService {
   rpc JoinChannel(JoinChannelRequest) returns (JoinChannelResponse);
   rpc LeaveChannel(LeaveChannelRequest) returns (LeaveChannelResponse);
   rpc GetChannelParticipants(GetChannelParticipantsRequest) returns (GetChannelParticipantsResponse);
+
+  // === DM calls ===
+  // StartDMCall initiates a voice/video call inside an existing DM channel.
+  // The caller immediately gets a LiveKit token; all other members receive
+  // a "call_incoming" push on their StreamDmCalls stream.
+  rpc StartDMCall(StartDMCallRequest) returns (StartDMCallResponse);
+  // JoinDMCall is called by a ringing recipient to accept the call and
+  // obtain their own LiveKit token. Other members get a "call_accepted" push.
+  rpc JoinDMCall(JoinDMCallRequest) returns (JoinDMCallResponse);
+  // RejectDMCall is called by a recipient to decline — the caller gets a
+  // "call_rejected" push. No LiveKit token is minted.
+  rpc RejectDMCall(RejectDMCallRequest) returns (RejectDMCallResponse);
+  // LeaveDMCall is called when a participant hangs up. When the last
+  // participant leaves, a "call_ended" push is fanned out to all members.
+  rpc LeaveDMCall(LeaveDMCallRequest) returns (LeaveDMCallResponse);
 }
 
 message JoinChannelRequest {
@@ -59,4 +74,43 @@ message GetChannelParticipantsRequest {
 message GetChannelParticipantsResponse {
   repeated VoiceParticipant participants = 1;
 }
+
+// === DM call messages ===
+
+message StartDMCallRequest {
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  // If true, the caller intends to publish video; audio is always on.
+  bool video = 2;
+}
+
+message StartDMCallResponse {
+  string url = 1;
+  string token = 2;
+  string room = 3;
+  int32 expires_in = 4;
+}
+
+message JoinDMCallRequest {
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  bool video = 2;
+}
+
+message JoinDMCallResponse {
+  string url = 1;
+  string token = 2;
+  string room = 3;
+  int32 expires_in = 4;
+}
+
+message RejectDMCallRequest {
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message RejectDMCallResponse {}
+
+message LeaveDMCallRequest {
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message LeaveDMCallResponse {}
 

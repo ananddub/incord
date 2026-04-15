@@ -11,6 +11,7 @@ import (
 	authv1 "github.com/ananddub/ndiscord_backend/gen/auth/v1"
 	channelv1 "github.com/ananddub/ndiscord_backend/gen/channel/v1"
 	guildv1 "github.com/ananddub/ndiscord_backend/gen/guild/v1"
+	userv1 "github.com/ananddub/ndiscord_backend/gen/user/v1"
 )
 
 // TestInviteLinkFlow simulates the deep-link invite flow:
@@ -32,6 +33,11 @@ func TestInviteLinkFlow(t *testing.T) {
 		fmt.Sprintf("invitebob%d", ts),
 		fmt.Sprintf("invitebob%d@test.local", ts),
 		"testpass123")
+
+	// Resolve the server-assigned "name#1234" handle so we can match the
+	// InviterUsername field the preview returns.
+	userClient := userv1.NewUserServiceClient(conn)
+	resolveHandle(t, userClient, owner)
 
 	// Owner creates guild.
 	createResp, err := guildClient.CreateGuild(owner.ctx(), &guildv1.CreateGuildRequest{
@@ -83,7 +89,7 @@ func TestInviteLinkFlow(t *testing.T) {
 	assert.Equal(t, "Invite Link Guild", p.GuildName)
 	assert.Equal(t, int32(1), p.MemberCount, "only owner is in the guild pre-join")
 	assert.Equal(t, int32(3), p.ChannelCount)
-	assert.Equal(t, owner.Username, p.InviterUsername)
+	assert.Equal(t, owner.Handle, p.InviterUsername)
 	assert.False(t, p.AlreadyMember, "bob hasn't joined yet")
 	assert.Equal(t, int32(5), p.MaxUses)
 	assert.Equal(t, int32(0), p.Uses)

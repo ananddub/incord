@@ -1,6 +1,6 @@
 -- name: CreateUser :one
-INSERT INTO users (username, email, password_hash)
-VALUES ($1, $2, $3)
+INSERT INTO users (username, display_name, email, password_hash)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetUserByID :one
@@ -15,6 +15,7 @@ SELECT * FROM users WHERE username = $1 AND deleted = FALSE;
 -- name: UpdateUser :one
 UPDATE users SET
     username = COALESCE(sqlc.narg('username'), username),
+    display_name = COALESCE(sqlc.narg('display_name'), display_name),
     avatar_url = COALESCE(sqlc.narg('avatar_url'), avatar_url),
     bio = COALESCE(sqlc.narg('bio'), bio),
     status = COALESCE(sqlc.narg('status'), status),

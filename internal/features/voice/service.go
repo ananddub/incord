@@ -22,7 +22,19 @@ const tokenTTL = 1 * time.Hour
 var (
 	ErrInsufficientPermissions = errors.New("insufficient permissions")
 	ErrLiveKitUnavailable      = errors.New("livekit not configured")
+	ErrNotDMMember             = errors.New("not a member of this DM channel")
+	ErrDMResolverMissing       = errors.New("dm resolver not configured")
 )
+
+// DMMembershipResolver lets the voice service check DM channel membership
+// and fan out call-signalling events to every member without a hard
+// dependency on the channel package.
+type DMMembershipResolver interface {
+	// IsMember reports whether userID is a member of the given DM channel.
+	IsDMMember(ctx context.Context, channelID, userID string) (bool, error)
+	// Members returns every user_id in the given DM channel.
+	DMMembers(ctx context.Context, channelID string) ([]string, error)
+}
 
 // Service wraps the LiveKit room service client and issues access tokens.
 // The SFU (LiveKit) handles all media — this service only deals with auth,
@@ -32,6 +44,7 @@ type Service struct {
 	roomClient *lksdk.RoomServiceClient
 	authz      *authz.Client
 	nats       *realtime.Hub
+	dm         DMMembershipResolver
 }
 
 // NewService constructs a voice service backed by a LiveKit deployment.
@@ -48,6 +61,9 @@ func NewService(cfg config.LiveKitConfig, nats *realtime.Hub, authzClient ...*au
 	}
 	return s
 }
+
+// SetDMResolver wires the DM membership resolver used by DM call RPCs.
+func (s *Service) SetDMResolver(r DMMembershipResolver) { s.dm = r }
 
 // JoinChannelResult holds the LiveKit connection info returned to clients.
 type JoinChannelResult struct {
@@ -170,3 +186,191 @@ func (s *Service) buildToken(room, identity string) (string, error) {
 }
 
 func boolPtr(b bool) *bool { return &b }
+
+// ── DM calls ───────────────────────────────────────────────────────────────
+
+// StartDMCall is called by the caller to initiate a voice call in a DM
+// channel. The caller gets a LiveKit token immediately and every other
+// member receives a "call_incoming" event on their DmCall subject so their
+// client can ring.
+func (s *Service) StartDMCall(ctx context.Context, callerID, channelID string, video bool) (*JoinChannelResult, error) {
+	if s.roomClient == nil {
+		return nil, ErrLiveKitUnavailable
+	}
+	if s.dm == nil {
+		return nil, ErrDMResolverMissing
+	}
+
+	ok, err := s.dm.IsDMMember(ctx, channelID, callerID)
+	if err != nil {
+		return nil, fmt.Errorf("membership check failed: %w", err)
+	}
+	if !ok {
+		return nil, ErrNotDMMember
+	}
+
+	roomName := channelID
+	if _, err := s.roomClient.CreateRoom(ctx, &livekit.CreateRoomRequest{
+		Name:            roomName,
+		EmptyTimeout:    60,
+		MaxParticipants: 10,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to create livekit room: %w", err)
+	}
+
+	token, err := s.buildToken(roomName, callerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to mint token: %w", err)
+	}
+
+	// Fan out "call_incoming" to every member — including the caller
+	// themselves so their other devices can mirror the active-call state
+	// (e.g. show "call in progress on another device").
+	members, _ := s.dm.DMMembers(ctx, channelID)
+	payload := map[string]any{
+		"type":       "call_incoming",
+		"channel_id": channelID,
+		"caller_id":  callerID,
+		"video":      video,
+	}
+	for _, mid := range members {
+		_ = s.nats.Publish(realtime.DmCall(mid), payload)
+	}
+
+	return &JoinChannelResult{
+		URL:       s.cfg.URL,
+		Token:     token,
+		Room:      roomName,
+		ExpiresIn: int32(tokenTTL.Seconds()),
+	}, nil
+}
+
+// JoinDMCall is called by a ringing recipient to accept. Mints a token and
+// publishes "call_accepted" to every member so clients can transition the
+// ringing UI to in-call.
+func (s *Service) JoinDMCall(ctx context.Context, userID, channelID string, video bool) (*JoinChannelResult, error) {
+	if s.roomClient == nil {
+		return nil, ErrLiveKitUnavailable
+	}
+	if s.dm == nil {
+		return nil, ErrDMResolverMissing
+	}
+
+	ok, err := s.dm.IsDMMember(ctx, channelID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("membership check failed: %w", err)
+	}
+	if !ok {
+		return nil, ErrNotDMMember
+	}
+
+	roomName := channelID
+	// CreateRoom is idempotent — caller may have already created it but the
+	// room could also have been reaped if empty, so re-create defensively.
+	if _, err := s.roomClient.CreateRoom(ctx, &livekit.CreateRoomRequest{
+		Name:            roomName,
+		EmptyTimeout:    60,
+		MaxParticipants: 10,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to create livekit room: %w", err)
+	}
+
+	token, err := s.buildToken(roomName, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to mint token: %w", err)
+	}
+
+	members, _ := s.dm.DMMembers(ctx, channelID)
+	payload := map[string]any{
+		"type":           "call_accepted",
+		"channel_id":     channelID,
+		"participant_id": userID,
+		"video":          video,
+	}
+	for _, mid := range members {
+		_ = s.nats.Publish(realtime.DmCall(mid), payload)
+	}
+
+	return &JoinChannelResult{
+		URL:       s.cfg.URL,
+		Token:     token,
+		Room:      roomName,
+		ExpiresIn: int32(tokenTTL.Seconds()),
+	}, nil
+}
+
+// RejectDMCall notifies every member (notably the caller) that this user
+// declined. No LiveKit room state is touched.
+func (s *Service) RejectDMCall(ctx context.Context, userID, channelID string) error {
+	if s.dm == nil {
+		return ErrDMResolverMissing
+	}
+	ok, err := s.dm.IsDMMember(ctx, channelID, userID)
+	if err != nil {
+		return fmt.Errorf("membership check failed: %w", err)
+	}
+	if !ok {
+		return ErrNotDMMember
+	}
+
+	members, _ := s.dm.DMMembers(ctx, channelID)
+	payload := map[string]any{
+		"type":           "call_rejected",
+		"channel_id":     channelID,
+		"participant_id": userID,
+	}
+	for _, mid := range members {
+		_ = s.nats.Publish(realtime.DmCall(mid), payload)
+	}
+	return nil
+}
+
+// LeaveDMCall removes the user from the LiveKit room and notifies every
+// member. If the room empties out, a "call_ended" event is fanned out too.
+func (s *Service) LeaveDMCall(ctx context.Context, userID, channelID string) error {
+	if s.roomClient == nil {
+		return ErrLiveKitUnavailable
+	}
+	if s.dm == nil {
+		return ErrDMResolverMissing
+	}
+	ok, err := s.dm.IsDMMember(ctx, channelID, userID)
+	if err != nil {
+		return fmt.Errorf("membership check failed: %w", err)
+	}
+	if !ok {
+		return ErrNotDMMember
+	}
+
+	_, _ = s.roomClient.RemoveParticipant(ctx, &livekit.RoomParticipantIdentity{
+		Room:     channelID,
+		Identity: userID,
+	})
+
+	members, _ := s.dm.DMMembers(ctx, channelID)
+	leftPayload := map[string]any{
+		"type":           "participant_left",
+		"channel_id":     channelID,
+		"participant_id": userID,
+	}
+	for _, mid := range members {
+		_ = s.nats.Publish(realtime.DmCall(mid), leftPayload)
+	}
+
+	// If the room is now empty, emit a terminal "call_ended" event so
+	// recipients that were still ringing can dismiss their UI.
+	remaining, err := s.roomClient.ListParticipants(ctx, &livekit.ListParticipantsRequest{
+		Room: channelID,
+	})
+	if err == nil && len(remaining.Participants) == 0 {
+		endPayload := map[string]any{
+			"type":       "call_ended",
+			"channel_id": channelID,
+		}
+		for _, mid := range members {
+			_ = s.nats.Publish(realtime.DmCall(mid), endPayload)
+		}
+	}
+
+	return nil
+}

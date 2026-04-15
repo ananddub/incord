@@ -19,15 +19,17 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ChannelService_CreateChannel_FullMethodName       = "/channel.v1.ChannelService/CreateChannel"
-	ChannelService_GetChannel_FullMethodName          = "/channel.v1.ChannelService/GetChannel"
-	ChannelService_UpdateChannel_FullMethodName       = "/channel.v1.ChannelService/UpdateChannel"
-	ChannelService_DeleteChannel_FullMethodName       = "/channel.v1.ChannelService/DeleteChannel"
-	ChannelService_ListGuildChannels_FullMethodName   = "/channel.v1.ChannelService/ListGuildChannels"
-	ChannelService_CreateDMChannel_FullMethodName     = "/channel.v1.ChannelService/CreateDMChannel"
-	ChannelService_ListDMChannels_FullMethodName      = "/channel.v1.ChannelService/ListDMChannels"
-	ChannelService_AddDMGroupMember_FullMethodName    = "/channel.v1.ChannelService/AddDMGroupMember"
-	ChannelService_RemoveDMGroupMember_FullMethodName = "/channel.v1.ChannelService/RemoveDMGroupMember"
+	ChannelService_CreateChannel_FullMethodName             = "/channel.v1.ChannelService/CreateChannel"
+	ChannelService_GetChannel_FullMethodName                = "/channel.v1.ChannelService/GetChannel"
+	ChannelService_UpdateChannel_FullMethodName             = "/channel.v1.ChannelService/UpdateChannel"
+	ChannelService_DeleteChannel_FullMethodName             = "/channel.v1.ChannelService/DeleteChannel"
+	ChannelService_ListGuildChannels_FullMethodName         = "/channel.v1.ChannelService/ListGuildChannels"
+	ChannelService_CreateDMChannel_FullMethodName           = "/channel.v1.ChannelService/CreateDMChannel"
+	ChannelService_ListDMChannels_FullMethodName            = "/channel.v1.ChannelService/ListDMChannels"
+	ChannelService_ListDMChannelMembers_FullMethodName      = "/channel.v1.ChannelService/ListDMChannelMembers"
+	ChannelService_ListDMChannelsWithMembers_FullMethodName = "/channel.v1.ChannelService/ListDMChannelsWithMembers"
+	ChannelService_AddDMGroupMember_FullMethodName          = "/channel.v1.ChannelService/AddDMGroupMember"
+	ChannelService_RemoveDMGroupMember_FullMethodName       = "/channel.v1.ChannelService/RemoveDMGroupMember"
 )
 
 // ChannelServiceClient is the client API for ChannelService service.
@@ -41,6 +43,11 @@ type ChannelServiceClient interface {
 	ListGuildChannels(ctx context.Context, in *ListGuildChannelsRequest, opts ...grpc.CallOption) (*ListGuildChannelsResponse, error)
 	CreateDMChannel(ctx context.Context, in *CreateDMChannelRequest, opts ...grpc.CallOption) (*CreateDMChannelResponse, error)
 	ListDMChannels(ctx context.Context, in *ListDMChannelsRequest, opts ...grpc.CallOption) (*ListDMChannelsResponse, error)
+	// ListDMChannelMembers returns the user_ids of all members in a DM channel.
+	ListDMChannelMembers(ctx context.Context, in *ListDMChannelMembersRequest, opts ...grpc.CallOption) (*ListDMChannelMembersResponse, error)
+	// ListDMChannelsWithMembers returns each DM channel the caller is in
+	// alongside the list of its member user_ids — saves N+1 round trips.
+	ListDMChannelsWithMembers(ctx context.Context, in *ListDMChannelsWithMembersRequest, opts ...grpc.CallOption) (*ListDMChannelsWithMembersResponse, error)
 	AddDMGroupMember(ctx context.Context, in *AddDMGroupMemberRequest, opts ...grpc.CallOption) (*AddDMGroupMemberResponse, error)
 	RemoveDMGroupMember(ctx context.Context, in *RemoveDMGroupMemberRequest, opts ...grpc.CallOption) (*RemoveDMGroupMemberResponse, error)
 }
@@ -123,6 +130,26 @@ func (c *channelServiceClient) ListDMChannels(ctx context.Context, in *ListDMCha
 	return out, nil
 }
 
+func (c *channelServiceClient) ListDMChannelMembers(ctx context.Context, in *ListDMChannelMembersRequest, opts ...grpc.CallOption) (*ListDMChannelMembersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListDMChannelMembersResponse)
+	err := c.cc.Invoke(ctx, ChannelService_ListDMChannelMembers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *channelServiceClient) ListDMChannelsWithMembers(ctx context.Context, in *ListDMChannelsWithMembersRequest, opts ...grpc.CallOption) (*ListDMChannelsWithMembersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListDMChannelsWithMembersResponse)
+	err := c.cc.Invoke(ctx, ChannelService_ListDMChannelsWithMembers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *channelServiceClient) AddDMGroupMember(ctx context.Context, in *AddDMGroupMemberRequest, opts ...grpc.CallOption) (*AddDMGroupMemberResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AddDMGroupMemberResponse)
@@ -154,6 +181,11 @@ type ChannelServiceServer interface {
 	ListGuildChannels(context.Context, *ListGuildChannelsRequest) (*ListGuildChannelsResponse, error)
 	CreateDMChannel(context.Context, *CreateDMChannelRequest) (*CreateDMChannelResponse, error)
 	ListDMChannels(context.Context, *ListDMChannelsRequest) (*ListDMChannelsResponse, error)
+	// ListDMChannelMembers returns the user_ids of all members in a DM channel.
+	ListDMChannelMembers(context.Context, *ListDMChannelMembersRequest) (*ListDMChannelMembersResponse, error)
+	// ListDMChannelsWithMembers returns each DM channel the caller is in
+	// alongside the list of its member user_ids — saves N+1 round trips.
+	ListDMChannelsWithMembers(context.Context, *ListDMChannelsWithMembersRequest) (*ListDMChannelsWithMembersResponse, error)
 	AddDMGroupMember(context.Context, *AddDMGroupMemberRequest) (*AddDMGroupMemberResponse, error)
 	RemoveDMGroupMember(context.Context, *RemoveDMGroupMemberRequest) (*RemoveDMGroupMemberResponse, error)
 	mustEmbedUnimplementedChannelServiceServer()
@@ -186,6 +218,12 @@ func (UnimplementedChannelServiceServer) CreateDMChannel(context.Context, *Creat
 }
 func (UnimplementedChannelServiceServer) ListDMChannels(context.Context, *ListDMChannelsRequest) (*ListDMChannelsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListDMChannels not implemented")
+}
+func (UnimplementedChannelServiceServer) ListDMChannelMembers(context.Context, *ListDMChannelMembersRequest) (*ListDMChannelMembersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListDMChannelMembers not implemented")
+}
+func (UnimplementedChannelServiceServer) ListDMChannelsWithMembers(context.Context, *ListDMChannelsWithMembersRequest) (*ListDMChannelsWithMembersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListDMChannelsWithMembers not implemented")
 }
 func (UnimplementedChannelServiceServer) AddDMGroupMember(context.Context, *AddDMGroupMemberRequest) (*AddDMGroupMemberResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddDMGroupMember not implemented")
@@ -340,6 +378,42 @@ func _ChannelService_ListDMChannels_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChannelService_ListDMChannelMembers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListDMChannelMembersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChannelServiceServer).ListDMChannelMembers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChannelService_ListDMChannelMembers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChannelServiceServer).ListDMChannelMembers(ctx, req.(*ListDMChannelMembersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChannelService_ListDMChannelsWithMembers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListDMChannelsWithMembersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChannelServiceServer).ListDMChannelsWithMembers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChannelService_ListDMChannelsWithMembers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChannelServiceServer).ListDMChannelsWithMembers(ctx, req.(*ListDMChannelsWithMembersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ChannelService_AddDMGroupMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AddDMGroupMemberRequest)
 	if err := dec(in); err != nil {
@@ -410,6 +484,14 @@ var ChannelService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListDMChannels",
 			Handler:    _ChannelService_ListDMChannels_Handler,
+		},
+		{
+			MethodName: "ListDMChannelMembers",
+			Handler:    _ChannelService_ListDMChannelMembers_Handler,
+		},
+		{
+			MethodName: "ListDMChannelsWithMembers",
+			Handler:    _ChannelService_ListDMChannelsWithMembers_Handler,
 		},
 		{
 			MethodName: "AddDMGroupMember",

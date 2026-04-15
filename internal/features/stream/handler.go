@@ -70,6 +70,28 @@ func (h *Handler) StreamDmChat(req *streamv1.StreamDmChatRequest, stream streamv
 	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
 }
 
+// StreamDmChannels - DM channel lifecycle events (create/update/delete)
+// for every channel the caller is a member of.
+func (h *Handler) StreamDmChannels(req *streamv1.StreamDmChannelsRequest, stream streamv1.StreamService_StreamDmChannelsServer) error {
+	userID := middleware.UserIDFromContext(stream.Context())
+	if userID == "" {
+		return status.Error(codes.Unauthenticated, "not authenticated")
+	}
+	subjects := []string{realtime.DmChannels(userID)}
+	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
+}
+
+// StreamDmCalls - DM voice-call signalling events (ring, accept, reject,
+// end, participant join/leave) for every DM channel the caller is in.
+func (h *Handler) StreamDmCalls(req *streamv1.StreamDmCallsRequest, stream streamv1.StreamService_StreamDmCallsServer) error {
+	userID := middleware.UserIDFromContext(stream.Context())
+	if userID == "" {
+		return status.Error(codes.Unauthenticated, "not authenticated")
+	}
+	subjects := []string{realtime.DmCall(userID)}
+	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
+}
+
 // StreamTextChannels - all text messages across all guilds user is in
 func (h *Handler) StreamTextChannels(req *streamv1.StreamTextChannelsRequest, stream streamv1.StreamService_StreamTextChannelsServer) error {
 	userID := middleware.UserIDFromContext(stream.Context())

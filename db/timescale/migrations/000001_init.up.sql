@@ -3,7 +3,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Users
 CREATE TABLE users (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username   VARCHAR(32) UNIQUE NOT NULL,
+    -- 64 chars: base name up to 32 + '#' + 4-digit discriminator + headroom.
+    username   VARCHAR(64) UNIQUE NOT NULL,
     email      VARCHAR(255) UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     avatar_url TEXT NOT NULL DEFAULT '',

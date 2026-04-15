@@ -146,6 +146,67 @@ func (h *Handler) ListDMChannels(ctx context.Context, _ *channelv1.ListDMChannel
 	}, nil
 }
 
+func (h *Handler) ListDMChannelMembers(ctx context.Context, req *channelv1.ListDMChannelMembersRequest) (*channelv1.ListDMChannelMembersResponse, error) {
+	callerID := middleware.UserIDFromContext(ctx)
+	if callerID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+
+	rows, err := h.svc.ListDMChannelMembers(ctx, callerID, req.GetChannelId())
+	if err != nil {
+		return nil, mapError(err)
+	}
+
+	members := make([]*channelv1.DMMember, len(rows))
+	for i, r := range rows {
+		members[i] = dmMemberToProto(r)
+	}
+	return &channelv1.ListDMChannelMembersResponse{Members: members}, nil
+}
+
+func (h *Handler) ListDMChannelsWithMembers(ctx context.Context, _ *channelv1.ListDMChannelsWithMembersRequest) (*channelv1.ListDMChannelsWithMembersResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if userID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+
+	items, err := h.svc.ListDMChannelsWithMembers(ctx, userID)
+	if err != nil {
+		return nil, mapError(err)
+	}
+
+	out := make([]*channelv1.DMChannelWithMembers, len(items))
+	for i, it := range items {
+		members := make([]*channelv1.DMMember, len(it.Members))
+		for j, m := range it.Members {
+			members[j] = dmMemberToProto(m)
+		}
+		pb := channelToProto(it.Channel)
+		out[i] = &channelv1.DMChannelWithMembers{
+			Id:        pb.GetId(),
+			GuildId:   pb.GetGuildId(),
+			Name:      pb.GetName(),
+			Type:      pb.GetType(),
+			Topic:     pb.GetTopic(),
+			Position:  pb.GetPosition(),
+			ParentId:  pb.GetParentId(),
+			CreatedAt: pb.GetCreatedAt(),
+			Members:   members,
+		}
+	}
+	return &channelv1.ListDMChannelsWithMembersResponse{Channels: out}, nil
+}
+
+func dmMemberToProto(r db.GetDMChannelMemberProfilesRow) *channelv1.DMMember {
+	return &channelv1.DMMember{
+		Id:          uuidToString(r.ID),
+		Username:    r.Username,
+		DisplayName: r.DisplayName,
+		AvatarUrl:   r.AvatarUrl,
+		Status:      r.Status,
+	}
+}
+
 func (h *Handler) AddDMGroupMember(ctx context.Context, req *channelv1.AddDMGroupMemberRequest) (*channelv1.AddDMGroupMemberResponse, error) {
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {

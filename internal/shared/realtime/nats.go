@@ -132,6 +132,17 @@ func DmMessage(userID, channelID string) string {
 	return "dm." + userID + ".message." + channelID
 }
 
+// DM channel lifecycle (create/update/delete/member changes) for a given user.
+func DmChannels(userID string) string {
+	return "dm." + userID + ".channels"
+}
+
+// DM voice-call signalling (incoming, accepted, rejected, ended, participant
+// join/leave) targeted at a specific user.
+func DmCall(userID string) string {
+	return "dm." + userID + ".call"
+}
+
 // DM typing
 func DmTyping(userID, channelID string) string {
 	return "dm." + userID + ".typing." + channelID

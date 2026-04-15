@@ -18,8 +18,8 @@ func NewRepository(session *gocql.Session) *Repository {
 }
 
 func (r *Repository) CreateMessage(ctx context.Context, msg *Message) error {
-	query := `INSERT INTO messages (channel_id, id, author_id, content, type, reply_to_id, pinned, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+	query := `INSERT INTO messages (channel_id, id, author_id, content, type, reply_to_id, pinned, created_at, forwarded_from_channel_id, forwarded_from_message_id, forwarded_from_author_id, mention_user_ids)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	return r.session.Query(query,
 		msg.ChannelID,
 		msg.ID,
@@ -29,12 +29,46 @@ func (r *Repository) CreateMessage(ctx context.Context, msg *Message) error {
 		msg.ReplyToID,
 		msg.Pinned,
 		msg.CreatedAt,
+		msg.ForwardedFromChannelID,
+		msg.ForwardedFromMessageID,
+		msg.ForwardedFromAuthorID,
+		msg.MentionUserIDs,
 	).WithContext(ctx).Exec()
 }
 
+// messageColumns lists the SELECT projection used by GetMessage and
+// ListMessages-style queries so they stay in sync.
+const messageColumns = `channel_id, id, author_id, content, type, reply_to_id, pinned, edited_at, created_at, deleted, updated_at, forwarded_from_channel_id, forwarded_from_message_id, forwarded_from_author_id, mention_user_ids`
+
+// scanMessage scans the messageColumns projection in order from a single
+// row or iterator step into a Message struct. Returns whether the scan
+// succeeded so it composes nicely with iter.Scan loops.
+func scanMessage(scanner interface {
+	Scan(dest ...any) bool
+}, msg *Message) bool {
+	return scanner.Scan(
+		&msg.ChannelID,
+		&msg.ID,
+		&msg.AuthorID,
+		&msg.Content,
+		&msg.Type,
+		&msg.ReplyToID,
+		&msg.Pinned,
+		&msg.EditedAt,
+		&msg.CreatedAt,
+		&msg.Deleted,
+		&msg.UpdatedAt,
+		&msg.ForwardedFromChannelID,
+		&msg.ForwardedFromMessageID,
+		&msg.ForwardedFromAuthorID,
+		&msg.MentionUserIDs,
+	)
+}
+
 func (r *Repository) GetMessage(ctx context.Context, channelID, messageID gocql.UUID) (*Message, error) {
-	query := `SELECT channel_id, id, author_id, content, type, reply_to_id, pinned, edited_at, created_at, deleted, updated_at
-		FROM messages WHERE channel_id = ? AND id = ? AND deleted = false`
+	// Scylla refuses equality on non-PK columns, so we can't filter
+	// `deleted = false` server-side — we fetch and skip in Go.
+	query := `SELECT ` + messageColumns + ` FROM messages WHERE channel_id = ? AND id = ?`
 
 	msg := &Message{}
 	err := r.session.Query(query, channelID, messageID).WithContext(ctx).Scan(
@@ -49,9 +83,16 @@ func (r *Repository) GetMessage(ctx context.Context, channelID, messageID gocql.
 		&msg.CreatedAt,
 		&msg.Deleted,
 		&msg.UpdatedAt,
+		&msg.ForwardedFromChannelID,
+		&msg.ForwardedFromMessageID,
+		&msg.ForwardedFromAuthorID,
+		&msg.MentionUserIDs,
 	)
 	if err != nil {
 		return nil, err
+	}
+	if msg.Deleted {
+		return nil, gocql.ErrNotFound
 	}
 	return msg, nil
 }
@@ -66,45 +107,83 @@ func (r *Repository) DeleteMessage(ctx context.Context, channelID, messageID goc
 	return r.session.Query(query, time.Now(), channelID, messageID).WithContext(ctx).Exec()
 }
 
+// IncrementMentionCount bumps the mention_count for a user's read_state in
+// the given channel, creating the row with count=1 if it doesn't yet exist.
+// Scylla doesn't support `UPDATE … SET col = col + 1` for non-counter cols,
+// so we emulate it with a read-modify-write. Race-y but acceptable for a
+// best-effort badge counter.
+func (r *Repository) IncrementMentionCount(ctx context.Context, userID, channelID gocql.UUID) error {
+	var current int
+	var lastRead gocql.UUID
+	err := r.session.Query(
+		`SELECT mention_count, last_read_message_id FROM read_states WHERE user_id = ? AND channel_id = ?`,
+		userID, channelID,
+	).WithContext(ctx).Scan(&current, &lastRead)
+	if err != nil && err != gocql.ErrNotFound {
+		return err
+	}
+	current++
+	return r.session.Query(
+		`INSERT INTO read_states (user_id, channel_id, last_read_message_id, mention_count) VALUES (?, ?, ?, ?)`,
+		userID, channelID, lastRead, current,
+	).WithContext(ctx).Exec()
+}
+
+// CascadeDeleteChildren removes attachments, reactions and edit history
+// belonging to a soft-deleted message. We keep the (now-deleted) messages
+// row itself as a tombstone for sync, but children carry no value once the
+// parent is gone and can be hard-deleted.
+func (r *Repository) CascadeDeleteChildren(ctx context.Context, channelID, messageID gocql.UUID) error {
+	stmts := []string{
+		`DELETE FROM message_attachments WHERE channel_id = ? AND message_id = ?`,
+		`DELETE FROM message_reactions WHERE channel_id = ? AND message_id = ?`,
+		`DELETE FROM message_edit_history WHERE channel_id = ? AND message_id = ?`,
+	}
+	for _, q := range stmts {
+		if err := r.session.Query(q, channelID, messageID).WithContext(ctx).Exec(); err != nil {
+			return fmt.Errorf("cascade delete: %w", err)
+		}
+	}
+	return nil
+}
+
 func (r *Repository) ListMessages(ctx context.Context, channelID gocql.UUID, before, after *gocql.UUID, limit int) ([]*Message, error) {
 	var query string
 	var args []any
 
+	// `deleted` is not part of the PK and Scylla refuses equality filters on
+	// non-PK columns, so we skip soft-deleted rows in Go. To keep the
+	// effective page size close to `limit`, we over-fetch a little.
+	fetchLimit := limit * 2
+	if fetchLimit < limit {
+		fetchLimit = limit
+	}
 	switch {
 	case before != nil:
-		query = `SELECT channel_id, id, author_id, content, type, reply_to_id, pinned, edited_at, created_at, deleted, updated_at
-			FROM messages WHERE channel_id = ? AND id < ? AND deleted = false ORDER BY id DESC LIMIT ?`
-		args = []any{channelID, *before, limit}
+		query = `SELECT ` + messageColumns + ` FROM messages WHERE channel_id = ? AND id < ? ORDER BY id DESC LIMIT ?`
+		args = []any{channelID, *before, fetchLimit}
 	case after != nil:
-		query = `SELECT channel_id, id, author_id, content, type, reply_to_id, pinned, edited_at, created_at, deleted, updated_at
-			FROM messages WHERE channel_id = ? AND id > ? AND deleted = false ORDER BY id ASC LIMIT ?`
-		args = []any{channelID, *after, limit}
+		query = `SELECT ` + messageColumns + ` FROM messages WHERE channel_id = ? AND id > ? ORDER BY id ASC LIMIT ?`
+		args = []any{channelID, *after, fetchLimit}
 	default:
-		query = `SELECT channel_id, id, author_id, content, type, reply_to_id, pinned, edited_at, created_at, deleted, updated_at
-			FROM messages WHERE channel_id = ? AND deleted = false ORDER BY id DESC LIMIT ?`
-		args = []any{channelID, limit}
+		query = `SELECT ` + messageColumns + ` FROM messages WHERE channel_id = ? ORDER BY id DESC LIMIT ?`
+		args = []any{channelID, fetchLimit}
 	}
 
 	iter := r.session.Query(query, args...).WithContext(ctx).Iter()
 	var messages []*Message
 	for {
 		msg := &Message{}
-		if !iter.Scan(
-			&msg.ChannelID,
-			&msg.ID,
-			&msg.AuthorID,
-			&msg.Content,
-			&msg.Type,
-			&msg.ReplyToID,
-			&msg.Pinned,
-			&msg.EditedAt,
-			&msg.CreatedAt,
-			&msg.Deleted,
-			&msg.UpdatedAt,
-		) {
+		if !scanMessage(iter, msg) {
 			break
 		}
+		if msg.Deleted {
+			continue
+		}
 		messages = append(messages, msg)
+		if len(messages) >= limit {
+			break
+		}
 	}
 	if err := iter.Close(); err != nil {
 		return nil, fmt.Errorf("failed to list messages: %w", err)
@@ -115,6 +194,29 @@ func (r *Repository) ListMessages(ctx context.Context, channelID gocql.UUID, bef
 func (r *Repository) SetPinned(ctx context.Context, channelID, messageID gocql.UUID, pinned bool) error {
 	query := `UPDATE messages SET pinned = ? WHERE channel_id = ? AND id = ?`
 	return r.session.Query(query, pinned, channelID, messageID).WithContext(ctx).Exec()
+}
+
+// AddMessageAttachment persists a single attachment row for a message.
+// `id` is the attachment id (distinct from media_file id), stored so clients
+// can reference individual attachments.
+func (r *Repository) AddMessageAttachment(ctx context.Context, channelID, messageID, attachmentID gocql.UUID, filename, urlStr, contentType string, size int64) error {
+	query := `INSERT INTO message_attachments (channel_id, message_id, id, filename, url, content_type, size) VALUES (?, ?, ?, ?, ?, ?, ?)`
+	return r.session.Query(query, channelID, messageID, attachmentID, filename, urlStr, contentType, size).WithContext(ctx).Exec()
+}
+
+// GetMessageAttachments loads all attachments for the given message.
+func (r *Repository) GetMessageAttachments(ctx context.Context, channelID, messageID gocql.UUID) ([]Attachment, error) {
+	query := `SELECT id, filename, url, content_type, size FROM message_attachments WHERE channel_id = ? AND message_id = ?`
+	iter := r.session.Query(query, channelID, messageID).WithContext(ctx).Iter()
+	var out []Attachment
+	var a Attachment
+	for iter.Scan(&a.ID, &a.Filename, &a.URL, &a.ContentType, &a.Size) {
+		out = append(out, a)
+	}
+	if err := iter.Close(); err != nil {
+		return nil, fmt.Errorf("failed to load attachments: %w", err)
+	}
+	return out, nil
 }
 
 func (r *Repository) AddReaction(ctx context.Context, channelID, messageID gocql.UUID, emoji string, userID gocql.UUID) error {
@@ -184,7 +286,9 @@ func (r *Repository) GetUserReadStates(ctx context.Context, userID gocql.UUID) (
 
 // CountUnreadMessages counts messages in a channel after the given message ID.
 func (r *Repository) CountUnreadMessages(ctx context.Context, channelID, afterMsgID gocql.UUID) (int, gocql.UUID, time.Time, error) {
-	query := `SELECT id, created_at FROM messages WHERE channel_id = ? AND id > ? AND deleted = false ORDER BY id DESC`
+	// Scylla refuses non-PK equality filters; we also read `deleted` and
+	// skip soft-deleted rows in Go.
+	query := `SELECT id, created_at, deleted FROM messages WHERE channel_id = ? AND id > ? ORDER BY id DESC`
 	iter := r.session.Query(query, channelID, afterMsgID).WithContext(ctx).Iter()
 
 	var count int
@@ -192,8 +296,12 @@ func (r *Repository) CountUnreadMessages(ctx context.Context, channelID, afterMs
 	var lastTime time.Time
 	var msgID gocql.UUID
 	var createdAt time.Time
+	var deleted bool
 
-	for iter.Scan(&msgID, &createdAt) {
+	for iter.Scan(&msgID, &createdAt, &deleted) {
+		if deleted {
+			continue
+		}
 		count++
 		if count == 1 {
 			lastID = msgID
@@ -208,20 +316,26 @@ func (r *Repository) CountUnreadMessages(ctx context.Context, channelID, afterMs
 
 // ListMessagesAfter returns up to `limit` messages after the given message ID (for unread previews).
 func (r *Repository) ListMessagesAfter(ctx context.Context, channelID, afterMsgID gocql.UUID, limit int) ([]*Message, error) {
-	query := `SELECT channel_id, id, author_id, content, type, reply_to_id, pinned, edited_at, created_at, deleted, updated_at FROM messages WHERE channel_id = ? AND id > ? AND deleted = false ORDER BY id ASC LIMIT ?`
-	iter := r.session.Query(query, channelID, afterMsgID, limit).WithContext(ctx).Iter()
+	fetchLimit := limit * 2
+	if fetchLimit < limit {
+		fetchLimit = limit
+	}
+	query := `SELECT ` + messageColumns + ` FROM messages WHERE channel_id = ? AND id > ? ORDER BY id ASC LIMIT ?`
+	iter := r.session.Query(query, channelID, afterMsgID, fetchLimit).WithContext(ctx).Iter()
 
 	var results []*Message
 	for {
-		var m Message
-		var editedAt *time.Time
-		if !iter.Scan(&m.ChannelID, &m.ID, &m.AuthorID, &m.Content, &m.Type, &m.ReplyToID, &m.Pinned, &editedAt, &m.CreatedAt, &m.Deleted, &m.UpdatedAt) {
+		m := &Message{}
+		if !scanMessage(iter, m) {
 			break
 		}
-		if editedAt != nil {
-			m.EditedAt = editedAt
+		if m.Deleted {
+			continue
 		}
-		results = append(results, &m)
+		results = append(results, m)
+		if len(results) >= limit {
+			break
+		}
 	}
 	iter.Close()
 	return results, nil
@@ -229,20 +343,26 @@ func (r *Repository) ListMessagesAfter(ctx context.Context, channelID, afterMsgI
 
 // ListRecentMessages returns up to `limit` most recent messages in a channel.
 func (r *Repository) ListRecentMessages(ctx context.Context, channelID gocql.UUID, limit int) ([]*Message, error) {
-	query := `SELECT channel_id, id, author_id, content, type, reply_to_id, pinned, edited_at, created_at, deleted, updated_at FROM messages WHERE channel_id = ? AND deleted = false ORDER BY id DESC LIMIT ?`
-	iter := r.session.Query(query, channelID, limit).WithContext(ctx).Iter()
+	fetchLimit := limit * 2
+	if fetchLimit < limit {
+		fetchLimit = limit
+	}
+	query := `SELECT ` + messageColumns + ` FROM messages WHERE channel_id = ? ORDER BY id DESC LIMIT ?`
+	iter := r.session.Query(query, channelID, fetchLimit).WithContext(ctx).Iter()
 
 	var results []*Message
 	for {
-		var m Message
-		var editedAt *time.Time
-		if !iter.Scan(&m.ChannelID, &m.ID, &m.AuthorID, &m.Content, &m.Type, &m.ReplyToID, &m.Pinned, &editedAt, &m.CreatedAt, &m.Deleted, &m.UpdatedAt) {
+		m := &Message{}
+		if !scanMessage(iter, m) {
 			break
 		}
-		if editedAt != nil {
-			m.EditedAt = editedAt
+		if m.Deleted {
+			continue
 		}
-		results = append(results, &m)
+		results = append(results, m)
+		if len(results) >= limit {
+			break
+		}
 	}
 	iter.Close()
 	return results, nil
@@ -250,7 +370,7 @@ func (r *Repository) ListRecentMessages(ctx context.Context, channelID gocql.UUI
 
 // CountAllMessages counts all messages in a channel (for channels with no read_state).
 func (r *Repository) CountAllMessages(ctx context.Context, channelID gocql.UUID) (int, gocql.UUID, time.Time, error) {
-	query := `SELECT id, created_at FROM messages WHERE channel_id = ? AND deleted = false ORDER BY id DESC`
+	query := `SELECT id, created_at, deleted FROM messages WHERE channel_id = ? ORDER BY id DESC`
 	iter := r.session.Query(query, channelID).WithContext(ctx).Iter()
 
 	var count int
@@ -258,8 +378,12 @@ func (r *Repository) CountAllMessages(ctx context.Context, channelID gocql.UUID)
 	var lastTime time.Time
 	var msgID gocql.UUID
 	var createdAt time.Time
+	var deleted bool
 
-	for iter.Scan(&msgID, &createdAt) {
+	for iter.Scan(&msgID, &createdAt, &deleted) {
+		if deleted {
+			continue
+		}
 		count++
 		if count == 1 {
 			lastID = msgID
@@ -297,23 +421,23 @@ func (r *Repository) GetEditHistory(ctx context.Context, channelID, messageID go
 // SearchMessages searches messages by content (ALLOW FILTERING - not ideal for production, use search index).
 func (r *Repository) SearchMessages(ctx context.Context, channelID gocql.UUID, query string, limit int) ([]*Message, error) {
 	// ScyllaDB doesn't support LIKE, so fetch recent and filter in Go
-	cql := `SELECT channel_id, id, author_id, content, type, reply_to_id, pinned, edited_at, created_at, deleted, updated_at FROM messages WHERE channel_id = ? AND deleted = false ORDER BY id DESC LIMIT ?`
+	cql := `SELECT ` + messageColumns + ` FROM messages WHERE channel_id = ? ORDER BY id DESC LIMIT ?`
 	if limit <= 0 || limit > 200 {
 		limit = 200
 	}
 	iter := r.session.Query(cql, channelID, limit*5).WithContext(ctx).Iter() // fetch more to filter
 
 	var results []*Message
-	var m Message
-	var editedAt *time.Time
-	for iter.Scan(&m.ChannelID, &m.ID, &m.AuthorID, &m.Content, &m.Type, &m.ReplyToID, &m.Pinned, &editedAt, &m.CreatedAt, &m.Deleted, &m.UpdatedAt) {
-		if editedAt != nil {
-			t := *editedAt
-			m.EditedAt = &t
+	for {
+		m := &Message{}
+		if !scanMessage(iter, m) {
+			break
+		}
+		if m.Deleted {
+			continue
 		}
 		if strings.Contains(strings.ToLower(m.Content), strings.ToLower(query)) {
-			msg := m
-			results = append(results, &msg)
+			results = append(results, m)
 			if len(results) >= limit {
 				break
 			}
@@ -329,20 +453,20 @@ func (r *Repository) GetThreadMessages(ctx context.Context, channelID, parentID 
 	if limit <= 0 || limit > 100 {
 		limit = 100
 	}
-	cql := `SELECT channel_id, id, author_id, content, type, reply_to_id, pinned, edited_at, created_at, deleted, updated_at FROM messages WHERE channel_id = ? AND deleted = false ORDER BY id DESC LIMIT ?`
+	cql := `SELECT ` + messageColumns + ` FROM messages WHERE channel_id = ? ORDER BY id DESC LIMIT ?`
 	iter := r.session.Query(cql, channelID, limit*10).WithContext(ctx).Iter()
 
 	var results []*Message
-	var m Message
-	var editedAt *time.Time
-	for iter.Scan(&m.ChannelID, &m.ID, &m.AuthorID, &m.Content, &m.Type, &m.ReplyToID, &m.Pinned, &editedAt, &m.CreatedAt, &m.Deleted, &m.UpdatedAt) {
-		if editedAt != nil {
-			t := *editedAt
-			m.EditedAt = &t
+	for {
+		m := &Message{}
+		if !scanMessage(iter, m) {
+			break
+		}
+		if m.Deleted {
+			continue
 		}
 		if m.ReplyToID == parentID {
-			msg := m
-			results = append(results, &msg)
+			results = append(results, m)
 			if len(results) >= limit {
 				break
 			}
@@ -366,20 +490,16 @@ func (r *Repository) BulkDeleteMessages(ctx context.Context, channelID gocql.UUI
 // GetMessagesSince returns all messages (including deleted) in a channel updated after the given time.
 // Used for sync - returns deleted messages too so client knows what to remove.
 func (r *Repository) GetMessagesSince(ctx context.Context, channelID gocql.UUID, since time.Time) ([]*Message, error) {
-	query := `SELECT channel_id, id, author_id, content, type, reply_to_id, pinned, deleted, edited_at, updated_at, created_at
-		FROM messages WHERE channel_id = ? AND updated_at > ? ALLOW FILTERING`
+	query := `SELECT ` + messageColumns + ` FROM messages WHERE channel_id = ? AND updated_at > ? ALLOW FILTERING`
 	iter := r.session.Query(query, channelID, since).WithContext(ctx).Iter()
 
 	var results []*Message
 	for {
-		var m Message
-		var editedAt, updatedAt *time.Time
-		if !iter.Scan(&m.ChannelID, &m.ID, &m.AuthorID, &m.Content, &m.Type, &m.ReplyToID, &m.Pinned, &m.Deleted, &editedAt, &updatedAt, &m.CreatedAt) {
+		m := &Message{}
+		if !scanMessage(iter, m) {
 			break
 		}
-		m.EditedAt = editedAt
-		m.UpdatedAt = updatedAt
-		results = append(results, &m)
+		results = append(results, m)
 	}
 	iter.Close()
 	return results, nil

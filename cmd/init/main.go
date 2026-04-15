@@ -157,10 +157,21 @@ func migrateScylla(cfg config.ScyllaDBConfig) error {
 			return fmt.Errorf("failed to read %s: %w", f, err)
 		}
 
-		stmts := strings.Split(string(data), ";")
+		// Strip full-line SQL comments so statements that start with a
+		// comment line aren't silently dropped by the naive splitter below.
+		var cleanedLines []string
+		for _, line := range strings.Split(string(data), "\n") {
+			if strings.HasPrefix(strings.TrimSpace(line), "--") {
+				continue
+			}
+			cleanedLines = append(cleanedLines, line)
+		}
+		cleaned := strings.Join(cleanedLines, "\n")
+
+		stmts := strings.Split(cleaned, ";")
 		for _, stmt := range stmts {
 			stmt = strings.TrimSpace(stmt)
-			if stmt == "" || strings.HasPrefix(stmt, "--") || strings.HasPrefix(strings.ToUpper(stmt), "USE ") || strings.HasPrefix(strings.ToUpper(stmt), "CREATE KEYSPACE") {
+			if stmt == "" || strings.HasPrefix(strings.ToUpper(stmt), "USE ") || strings.HasPrefix(strings.ToUpper(stmt), "CREATE KEYSPACE") {
 				continue
 			}
 			if err := session.Query(stmt).Exec(); err != nil {

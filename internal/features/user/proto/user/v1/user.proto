@@ -10,6 +10,10 @@ import "buf/validate/validate.proto";
 service UserService {
   rpc GetUser(GetUserRequest) returns (GetUserResponse);
   rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+  // UpdateUsername sets the caller's username handle. Only allowed once —
+  // succeeds only if the current username is empty; otherwise returns
+  // FailedPrecondition. Server appends a random "#1234" discriminator.
+  rpc UpdateUsername(UpdateUsernameRequest) returns (UpdateUsernameResponse);
   rpc UpdateStatus(UpdateStatusRequest) returns (UpdateStatusResponse);
   rpc UploadUserAvatar(UploadUserAvatarRequest) returns (UploadUserAvatarResponse);
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
@@ -34,6 +38,7 @@ service UserService {
 
 message User {
   string id = 1;
+  // Unique identity handle in "name#1234" format. Changeable but must stay unique.
   string username = 2;
   string email = 3;
   string avatar_url = 4;
@@ -43,6 +48,8 @@ message User {
   google.protobuf.Timestamp updated_at = 8;
   // Hex color (e.g. "#5865F2") used as the profile/card background.
   string background_color = 9;
+  // Freely changeable display name shown in UI. Not unique.
+  string display_name = 10;
 }
 
 message GetUserRequest {
@@ -54,15 +61,24 @@ message GetUserResponse {
 }
 
 message UpdateUserRequest {
-  optional string username = 1 [(buf.validate.field).string = {min_len: 2, max_len: 32}];
   optional string avatar_url = 2 [(buf.validate.field).string = {max_len: 2048}];
   optional string bio = 3 [(buf.validate.field).string = {max_len: 500}];
   optional string status = 4 [(buf.validate.field).string = {max_len: 128}];
   // Hex color like "#5865F2". Must be 4 or 7 chars starting with '#'.
   optional string background_color = 5 [(buf.validate.field).string = {pattern: "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"}];
+  optional string display_name = 6 [(buf.validate.field).string = {min_len: 1, max_len: 32}];
 }
 
 message UpdateUserResponse {
+  User user = 1;
+}
+
+message UpdateUsernameRequest {
+  // Base name only. Server appends a random 4-digit discriminator.
+  string username = 1 [(buf.validate.field).string = {min_len: 2, max_len: 32}];
+}
+
+message UpdateUsernameResponse {
   User user = 1;
 }
 
@@ -92,7 +108,8 @@ message DeleteUserRequest {
 message DeleteUserResponse {}
 
 message GetUserByUsernameRequest {
-  string username = 1 [(buf.validate.field).string = {min_len: 2, max_len: 32}];
+  // Full handle in "name#1234" format.
+  string username = 1 [(buf.validate.field).string = {pattern: "^.{2,32}#[0-9]{4}$"}];
 }
 
 message GetUserByUsernameResponse {
@@ -127,7 +144,8 @@ message Friendship {
 }
 
 message SendFriendRequestRequest {
-  string target_user_id = 1 [(buf.validate.field).string.uuid = true];
+  // Full handle of the user to friend-request, e.g. "alice#1234".
+  string target_username = 1 [(buf.validate.field).string = {pattern: "^.{2,32}#[0-9]{4}$"}];
 }
 
 message SendFriendRequestResponse {

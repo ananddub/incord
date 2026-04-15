@@ -89,6 +89,7 @@ func (s *Service) friendPayload(ctx context.Context, actorID pgtype.UUID) map[st
 	return map[string]any{
 		"user_id":       pgIDToStr(u.ID),
 		"username":      u.Username,
+		"display_name":  u.DisplayName,
 		"status":        u.Status,
 		"custom_status": u.Status,
 		"avatar_url":    s.ResolveAvatarURL(ctx, u.AvatarUrl),
@@ -171,9 +172,10 @@ func (s *Service) UploadAvatar(ctx context.Context, userID pgtype.UUID, filename
 
 	avatarURL := s.ResolveAvatarURL(ctx, objectKey)
 	s.publishFriendActivity(pgIDToStr(updated.ID), "profile_update", map[string]any{
-		"user_id":    pgIDToStr(updated.ID),
-		"username":   updated.Username,
-		"avatar_url": avatarURL,
+		"user_id":      pgIDToStr(updated.ID),
+		"username":     updated.Username,
+		"display_name": updated.DisplayName,
+		"avatar_url":   avatarURL,
 	})
 
 	return updated, avatarURL, nil
@@ -195,6 +197,26 @@ func (s *Service) GetUserByUsername(ctx context.Context, username string) (db.Us
 	return user, nil
 }
 
+// UpdateUsername is a one-shot set of the caller's username handle. It only
+// succeeds if the user currently has no username set; otherwise it returns
+// ErrUsernameAlreadySet. The repo appends a random 4-digit discriminator and
+// mirrors the base name into display_name.
+func (s *Service) UpdateUsername(ctx context.Context, id pgtype.UUID, username string) (db.User, error) {
+	user, err := s.repo.UpdateUsername(ctx, id, username)
+	if err != nil {
+		return db.User{}, err
+	}
+
+	s.publishFriendActivity(pgIDToStr(user.ID), "profile_update", map[string]any{
+		"user_id":      pgIDToStr(user.ID),
+		"username":     user.Username,
+		"display_name": user.DisplayName,
+		"avatar_url":   s.ResolveAvatarURL(ctx, user.AvatarUrl),
+	})
+
+	return user, nil
+}
+
 func (s *Service) UpdateUser(ctx context.Context, params db.UpdateUserParams) (db.User, error) {
 	user, err := s.repo.UpdateUser(ctx, params)
 	if err != nil {
@@ -206,6 +228,32 @@ func (s *Service) UpdateUser(ctx context.Context, params db.UpdateUserParams) (d
 	s.publishFriendActivity(pgIDToStr(user.ID), "profile_update", map[string]any{
 		"user_id":       pgIDToStr(user.ID),
 		"username":      user.Username,
+		"display_name":  user.DisplayName,
+		"status":        user.Status,
+		"custom_status": user.Status,
+		"avatar_url":    s.ResolveAvatarURL(ctx, user.AvatarUrl),
+	})
+
+	return user, nil
+}
+
+// UpdateStatus persists a new status string and emits a dedicated
+// "presence_update" event on the user's FriendActivity subject so friends
+// can update their presence UI without interpreting a generic profile
+// update.
+func (s *Service) UpdateStatus(ctx context.Context, id pgtype.UUID, newStatus string) (db.User, error) {
+	user, err := s.repo.UpdateUser(ctx, db.UpdateUserParams{
+		ID:     id,
+		Status: &newStatus,
+	})
+	if err != nil {
+		return db.User{}, fmt.Errorf("failed to update status: %w", err)
+	}
+
+	s.publishFriendActivity(pgIDToStr(user.ID), "presence_update", map[string]any{
+		"user_id":       pgIDToStr(user.ID),
+		"username":      user.Username,
+		"display_name":  user.DisplayName,
 		"status":        user.Status,
 		"custom_status": user.Status,
 		"avatar_url":    s.ResolveAvatarURL(ctx, user.AvatarUrl),

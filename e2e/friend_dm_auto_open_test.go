@@ -30,6 +30,7 @@ func TestFriendAcceptOpensDM(t *testing.T) {
 		fmt.Sprintf("dmauto_b_%d", ts),
 		fmt.Sprintf("dmauto_b_%d@t.com", ts),
 		"password123")
+	resolveHandle(t, userClient, bob)
 
 	// Baseline: neither user should have any DM channels yet.
 	aliceList, err := channelClient.ListDMChannels(alice.ctx(), &channelv1.ListDMChannelsRequest{})
@@ -42,7 +43,7 @@ func TestFriendAcceptOpensDM(t *testing.T) {
 
 	// Alice sends request → Bob accepts → DM should auto-open.
 	_, err = userClient.SendFriendRequest(alice.ctx(), &userv1.SendFriendRequestRequest{
-		TargetUserId: bob.ID,
+		TargetUsername: bob.Handle,
 	})
 	require.NoError(t, err)
 
@@ -70,7 +71,7 @@ func TestFriendAcceptOpensDM(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = userClient.SendFriendRequest(alice.ctx(), &userv1.SendFriendRequestRequest{
-		TargetUserId: bob.ID,
+		TargetUsername: bob.Handle,
 	})
 	require.NoError(t, err)
 	_, err = userClient.AcceptFriendRequest(bob.ctx(), &userv1.AcceptFriendRequestRequest{

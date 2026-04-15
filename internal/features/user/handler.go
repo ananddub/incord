@@ -67,7 +67,7 @@ func (h *Handler) UpdateUser(ctx context.Context, req *userv1.UpdateUserRequest)
 
 	params := db.UpdateUserParams{
 		ID:              pgID,
-		Username:        req.Username,
+		DisplayName:     req.DisplayName,
 		AvatarUrl:       req.AvatarUrl,
 		Bio:             req.Bio,
 		Status:          req.Status,
@@ -84,6 +84,33 @@ func (h *Handler) UpdateUser(ctx context.Context, req *userv1.UpdateUserRequest)
 	}, nil
 }
 
+func (h *Handler) UpdateUsername(ctx context.Context, req *userv1.UpdateUsernameRequest) (*userv1.UpdateUsernameResponse, error) {
+	callerID := middleware.UserIDFromContext(ctx)
+	if callerID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+	pgID, err := parseUUID(callerID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "invalid caller id")
+	}
+
+	user, err := h.svc.UpdateUsername(ctx, pgID, req.GetUsername())
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrUsernameAlreadySet):
+			return nil, status.Error(codes.FailedPrecondition, "username is already set")
+		case errors.Is(err, ErrUserNotFound):
+			return nil, status.Error(codes.NotFound, "user not found")
+		default:
+			return nil, status.Error(codes.Internal, "failed to update username")
+		}
+	}
+
+	return &userv1.UpdateUsernameResponse{
+		User: h.toProto(ctx, user),
+	}, nil
+}
+
 func (h *Handler) UpdateStatus(ctx context.Context, req *userv1.UpdateStatusRequest) (*userv1.UpdateStatusResponse, error) {
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
@@ -94,11 +121,7 @@ func (h *Handler) UpdateStatus(ctx context.Context, req *userv1.UpdateStatusRequ
 		return nil, status.Error(codes.Internal, "invalid caller id")
 	}
 
-	s := req.GetStatus()
-	user, err := h.svc.UpdateUser(ctx, db.UpdateUserParams{
-		ID:     pgID,
-		Status: &s,
-	})
+	user, err := h.svc.UpdateStatus(ctx, pgID, req.GetStatus())
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to update status")
 	}
@@ -181,10 +204,15 @@ func (h *Handler) SendFriendRequest(ctx context.Context, req *userv1.SendFriendR
 	if err != nil {
 		return nil, status.Error(codes.Internal, "invalid caller id")
 	}
-	targetPgID, err := parseUUID(req.GetTargetUserId())
+
+	targetUser, err := h.svc.GetUserByUsername(ctx, req.GetTargetUsername())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid target_user_id")
+		if errors.Is(err, ErrUserNotFound) {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to resolve target user")
 	}
+	targetPgID := targetUser.ID
 
 	friendship, err := h.svc.SendFriendRequest(ctx, userPgID, targetPgID)
 	if err != nil {
@@ -458,6 +486,7 @@ func dbUserToProto(u db.User) *userv1.User {
 	pu := &userv1.User{
 		Id:              u.ID.String(),
 		Username:        u.Username,
+		DisplayName:     u.DisplayName,
 		Email:           u.Email,
 		AvatarUrl:       u.AvatarUrl,
 		Bio:             u.Bio,

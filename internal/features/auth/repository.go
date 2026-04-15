@@ -2,9 +2,13 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"errors"
 	"fmt"
+	"math/big"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -24,12 +28,53 @@ func NewRepository(pool *pgxpool.Pool, redis *redis.Client) *Repository {
 	}
 }
 
-func (r *Repository) CreateUser(ctx context.Context, username, email, passwordHash string) (db.User, error) {
+func (r *Repository) CreateUser(ctx context.Context, username, displayName, email, passwordHash string) (db.User, error) {
 	return r.queries.CreateUser(ctx, db.CreateUserParams{
 		Username:     username,
+		DisplayName:  displayName,
 		Email:        email,
 		PasswordHash: passwordHash,
 	})
+}
+
+// CreateUserWithUsername takes a base username from the caller, assigns a
+// random 4-digit discriminator, and persists the user with
+// username="name#1234" and display_name=name. Retries on discriminator
+// collisions (unique violation on users.username) up to maxHandleAttempts.
+// Other unique violations (e.g. email) surface immediately.
+func (r *Repository) CreateUserWithUsername(ctx context.Context, username, email, passwordHash string) (db.User, error) {
+	const maxHandleAttempts = 10
+	var lastErr error
+	for i := 0; i < maxHandleAttempts; i++ {
+		handle := fmt.Sprintf("%s#%s", username, randomDiscriminator())
+		user, err := r.queries.CreateUser(ctx, db.CreateUserParams{
+			Username:     handle,
+			DisplayName:  username,
+			Email:        email,
+			PasswordHash: passwordHash,
+		})
+		if err == nil {
+			return user, nil
+		}
+		lastErr = err
+		if !isUniqueViolation(err) {
+			return db.User{}, err
+		}
+	}
+	return db.User{}, fmt.Errorf("failed to allocate unique handle after %d attempts: %w", maxHandleAttempts, lastErr)
+}
+
+// randomDiscriminator returns a 4-digit string (0001-9999). 0000 is reserved.
+func randomDiscriminator() string {
+	n, _ := rand.Int(rand.Reader, big.NewInt(9999))
+	return fmt.Sprintf("%04d", n.Int64()+1)
+}
+
+// isUniqueViolation reports whether err is a Postgres unique-constraint
+// violation (SQLSTATE 23505).
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
 func (r *Repository) GetUserByEmail(ctx context.Context, email string) (db.User, error) {

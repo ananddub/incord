@@ -20,6 +20,8 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	StreamService_StreamDmChat_FullMethodName         = "/stream.v1.StreamService/StreamDmChat"
+	StreamService_StreamDmChannels_FullMethodName     = "/stream.v1.StreamService/StreamDmChannels"
+	StreamService_StreamDmCalls_FullMethodName        = "/stream.v1.StreamService/StreamDmCalls"
 	StreamService_StreamTextChannels_FullMethodName   = "/stream.v1.StreamService/StreamTextChannels"
 	StreamService_StreamVoiceChat_FullMethodName      = "/stream.v1.StreamService/StreamVoiceChat"
 	StreamService_StreamGuildEvents_FullMethodName    = "/stream.v1.StreamService/StreamGuildEvents"
@@ -34,6 +36,15 @@ const (
 type StreamServiceClient interface {
 	// DM: all DM messages across all DM channels (auto-detect user's DMs)
 	StreamDmChat(ctx context.Context, in *StreamDmChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DmChatEvent], error)
+	// DM channel lifecycle: fires when a DM channel is created/updated/deleted
+	// or the caller's membership in one changes. Each event carries the full
+	// member profile list so clients can render the channel without a follow-up
+	// ListDMChannelMembers call.
+	StreamDmChannels(ctx context.Context, in *StreamDmChannelsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DmChannelEvent], error)
+	// DM call signalling: incoming call ring, accept, reject, end, and
+	// per-participant join/leave events. One subscription per user covers
+	// every DM channel they're in.
+	StreamDmCalls(ctx context.Context, in *StreamDmCallsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DmCallEvent], error)
 	// Guild text channels: all text messages across all guilds user is in
 	StreamTextChannels(ctx context.Context, in *StreamTextChannelsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TextChannelEvent], error)
 	// Guild voice chat: text chat in voice channels across all guilds
@@ -75,9 +86,47 @@ func (c *streamServiceClient) StreamDmChat(ctx context.Context, in *StreamDmChat
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type StreamService_StreamDmChatClient = grpc.ServerStreamingClient[DmChatEvent]
 
+func (c *streamServiceClient) StreamDmChannels(ctx context.Context, in *StreamDmChannelsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DmChannelEvent], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &StreamService_ServiceDesc.Streams[1], StreamService_StreamDmChannels_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[StreamDmChannelsRequest, DmChannelEvent]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type StreamService_StreamDmChannelsClient = grpc.ServerStreamingClient[DmChannelEvent]
+
+func (c *streamServiceClient) StreamDmCalls(ctx context.Context, in *StreamDmCallsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DmCallEvent], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &StreamService_ServiceDesc.Streams[2], StreamService_StreamDmCalls_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[StreamDmCallsRequest, DmCallEvent]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type StreamService_StreamDmCallsClient = grpc.ServerStreamingClient[DmCallEvent]
+
 func (c *streamServiceClient) StreamTextChannels(ctx context.Context, in *StreamTextChannelsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TextChannelEvent], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &StreamService_ServiceDesc.Streams[1], StreamService_StreamTextChannels_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &StreamService_ServiceDesc.Streams[3], StreamService_StreamTextChannels_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +145,7 @@ type StreamService_StreamTextChannelsClient = grpc.ServerStreamingClient[TextCha
 
 func (c *streamServiceClient) StreamVoiceChat(ctx context.Context, in *StreamVoiceChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[VoiceChatEvent], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &StreamService_ServiceDesc.Streams[2], StreamService_StreamVoiceChat_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &StreamService_ServiceDesc.Streams[4], StreamService_StreamVoiceChat_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +164,7 @@ type StreamService_StreamVoiceChatClient = grpc.ServerStreamingClient[VoiceChatE
 
 func (c *streamServiceClient) StreamGuildEvents(ctx context.Context, in *StreamGuildEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GuildEvent], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &StreamService_ServiceDesc.Streams[3], StreamService_StreamGuildEvents_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &StreamService_ServiceDesc.Streams[5], StreamService_StreamGuildEvents_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +183,7 @@ type StreamService_StreamGuildEventsClient = grpc.ServerStreamingClient[GuildEve
 
 func (c *streamServiceClient) StreamVoiceState(ctx context.Context, in *StreamVoiceStateRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[VoiceStateEvent], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &StreamService_ServiceDesc.Streams[4], StreamService_StreamVoiceState_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &StreamService_ServiceDesc.Streams[6], StreamService_StreamVoiceState_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +202,7 @@ type StreamService_StreamVoiceStateClient = grpc.ServerStreamingClient[VoiceStat
 
 func (c *streamServiceClient) StreamTyping(ctx context.Context, in *StreamTypingRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TypingEvent], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &StreamService_ServiceDesc.Streams[5], StreamService_StreamTyping_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &StreamService_ServiceDesc.Streams[7], StreamService_StreamTyping_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +221,7 @@ type StreamService_StreamTypingClient = grpc.ServerStreamingClient[TypingEvent]
 
 func (c *streamServiceClient) StreamFriendActivity(ctx context.Context, in *StreamFriendActivityRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[FriendActivityEvent], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &StreamService_ServiceDesc.Streams[6], StreamService_StreamFriendActivity_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &StreamService_ServiceDesc.Streams[8], StreamService_StreamFriendActivity_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -195,6 +244,15 @@ type StreamService_StreamFriendActivityClient = grpc.ServerStreamingClient[Frien
 type StreamServiceServer interface {
 	// DM: all DM messages across all DM channels (auto-detect user's DMs)
 	StreamDmChat(*StreamDmChatRequest, grpc.ServerStreamingServer[DmChatEvent]) error
+	// DM channel lifecycle: fires when a DM channel is created/updated/deleted
+	// or the caller's membership in one changes. Each event carries the full
+	// member profile list so clients can render the channel without a follow-up
+	// ListDMChannelMembers call.
+	StreamDmChannels(*StreamDmChannelsRequest, grpc.ServerStreamingServer[DmChannelEvent]) error
+	// DM call signalling: incoming call ring, accept, reject, end, and
+	// per-participant join/leave events. One subscription per user covers
+	// every DM channel they're in.
+	StreamDmCalls(*StreamDmCallsRequest, grpc.ServerStreamingServer[DmCallEvent]) error
 	// Guild text channels: all text messages across all guilds user is in
 	StreamTextChannels(*StreamTextChannelsRequest, grpc.ServerStreamingServer[TextChannelEvent]) error
 	// Guild voice chat: text chat in voice channels across all guilds
@@ -219,6 +277,12 @@ type UnimplementedStreamServiceServer struct{}
 
 func (UnimplementedStreamServiceServer) StreamDmChat(*StreamDmChatRequest, grpc.ServerStreamingServer[DmChatEvent]) error {
 	return status.Error(codes.Unimplemented, "method StreamDmChat not implemented")
+}
+func (UnimplementedStreamServiceServer) StreamDmChannels(*StreamDmChannelsRequest, grpc.ServerStreamingServer[DmChannelEvent]) error {
+	return status.Error(codes.Unimplemented, "method StreamDmChannels not implemented")
+}
+func (UnimplementedStreamServiceServer) StreamDmCalls(*StreamDmCallsRequest, grpc.ServerStreamingServer[DmCallEvent]) error {
+	return status.Error(codes.Unimplemented, "method StreamDmCalls not implemented")
 }
 func (UnimplementedStreamServiceServer) StreamTextChannels(*StreamTextChannelsRequest, grpc.ServerStreamingServer[TextChannelEvent]) error {
 	return status.Error(codes.Unimplemented, "method StreamTextChannels not implemented")
@@ -269,6 +333,28 @@ func _StreamService_StreamDmChat_Handler(srv interface{}, stream grpc.ServerStre
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type StreamService_StreamDmChatServer = grpc.ServerStreamingServer[DmChatEvent]
+
+func _StreamService_StreamDmChannels_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(StreamDmChannelsRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(StreamServiceServer).StreamDmChannels(m, &grpc.GenericServerStream[StreamDmChannelsRequest, DmChannelEvent]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type StreamService_StreamDmChannelsServer = grpc.ServerStreamingServer[DmChannelEvent]
+
+func _StreamService_StreamDmCalls_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(StreamDmCallsRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(StreamServiceServer).StreamDmCalls(m, &grpc.GenericServerStream[StreamDmCallsRequest, DmCallEvent]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type StreamService_StreamDmCallsServer = grpc.ServerStreamingServer[DmCallEvent]
 
 func _StreamService_StreamTextChannels_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(StreamTextChannelsRequest)
@@ -347,6 +433,16 @@ var StreamService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "StreamDmChat",
 			Handler:       _StreamService_StreamDmChat_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "StreamDmChannels",
+			Handler:       _StreamService_StreamDmChannels_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "StreamDmCalls",
+			Handler:       _StreamService_StreamDmCalls_Handler,
 			ServerStreams: true,
 		},
 		{

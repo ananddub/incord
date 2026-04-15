@@ -31,6 +31,7 @@ func TestFriendEventEnriched(t *testing.T) {
 
 	alice := registerAndVerify(t, authClient, aliceUsername, aliceUsername+"@t.com", "password123")
 	bob := registerAndVerify(t, authClient, bobUsername, bobUsername+"@t.com", "password123")
+	resolveHandle(t, userClient, bob)
 
 	// Bob subscribes to friend activity FIRST so he catches the friend_request.
 	streamCtx, cancel := context.WithTimeout(bob.ctx(), 15*time.Second)
@@ -58,7 +59,7 @@ func TestFriendEventEnriched(t *testing.T) {
 
 	// Alice sends a friend request → Bob should see it with Alice's username.
 	_, err = userClient.SendFriendRequest(alice.ctx(), &userv1.SendFriendRequestRequest{
-		TargetUserId: bob.ID,
+		TargetUsername: bob.Handle,
 	})
 	require.NoError(t, err)
 
@@ -98,7 +99,9 @@ func TestFriendEventEnriched(t *testing.T) {
 	}
 	require.NotNil(t, friendReq, "friend_request event missing")
 	assert.Equal(t, alice.ID, friendReq.UserId)
-	assert.Equal(t, aliceUsername, friendReq.Username, "friend_request must include sender username")
+	// Stream carries the full handle "<base>#1234"; display_name keeps the base name.
+	assert.Regexp(t, `^`+aliceUsername+`#[0-9]{4}$`, friendReq.Username, "friend_request must include sender handle")
+	assert.Equal(t, aliceUsername, friendReq.DisplayName, "friend_request must include display_name")
 
 	// Find the presence_update event after the friendship and assert username.
 	var presenceEvt *streamv1.FriendActivityEvent
@@ -110,7 +113,7 @@ func TestFriendEventEnriched(t *testing.T) {
 	}
 	if presenceEvt != nil {
 		assert.Equal(t, alice.ID, presenceEvt.UserId)
-		assert.Equal(t, aliceUsername, presenceEvt.Username, "presence_update must include username")
+		assert.Regexp(t, `^`+aliceUsername+`#[0-9]{4}$`, presenceEvt.Username, "presence_update must include handle")
 		assert.Equal(t, "online", presenceEvt.Status)
 		assert.Equal(t, "Hello world", presenceEvt.CustomStatus)
 	}

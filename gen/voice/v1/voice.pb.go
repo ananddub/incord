@@ -401,6 +401,407 @@ func (x *GetChannelParticipantsResponse) GetParticipants() []*VoiceParticipant {
 	return nil
 }
 
+type StartDMCallRequest struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	ChannelId string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	// If true, the caller intends to publish video; audio is always on.
+	Video         bool `protobuf:"varint,2,opt,name=video,proto3" json:"video,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartDMCallRequest) Reset() {
+	*x = StartDMCallRequest{}
+	mi := &file_voice_v1_voice_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartDMCallRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartDMCallRequest) ProtoMessage() {}
+
+func (x *StartDMCallRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_voice_v1_voice_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartDMCallRequest.ProtoReflect.Descriptor instead.
+func (*StartDMCallRequest) Descriptor() ([]byte, []int) {
+	return file_voice_v1_voice_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *StartDMCallRequest) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+func (x *StartDMCallRequest) GetVideo() bool {
+	if x != nil {
+		return x.Video
+	}
+	return false
+}
+
+type StartDMCallResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Url           string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
+	Token         string                 `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
+	Room          string                 `protobuf:"bytes,3,opt,name=room,proto3" json:"room,omitempty"`
+	ExpiresIn     int32                  `protobuf:"varint,4,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartDMCallResponse) Reset() {
+	*x = StartDMCallResponse{}
+	mi := &file_voice_v1_voice_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartDMCallResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartDMCallResponse) ProtoMessage() {}
+
+func (x *StartDMCallResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_voice_v1_voice_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartDMCallResponse.ProtoReflect.Descriptor instead.
+func (*StartDMCallResponse) Descriptor() ([]byte, []int) {
+	return file_voice_v1_voice_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *StartDMCallResponse) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *StartDMCallResponse) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *StartDMCallResponse) GetRoom() string {
+	if x != nil {
+		return x.Room
+	}
+	return ""
+}
+
+func (x *StartDMCallResponse) GetExpiresIn() int32 {
+	if x != nil {
+		return x.ExpiresIn
+	}
+	return 0
+}
+
+type JoinDMCallRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	Video         bool                   `protobuf:"varint,2,opt,name=video,proto3" json:"video,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *JoinDMCallRequest) Reset() {
+	*x = JoinDMCallRequest{}
+	mi := &file_voice_v1_voice_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *JoinDMCallRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*JoinDMCallRequest) ProtoMessage() {}
+
+func (x *JoinDMCallRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_voice_v1_voice_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use JoinDMCallRequest.ProtoReflect.Descriptor instead.
+func (*JoinDMCallRequest) Descriptor() ([]byte, []int) {
+	return file_voice_v1_voice_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *JoinDMCallRequest) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+func (x *JoinDMCallRequest) GetVideo() bool {
+	if x != nil {
+		return x.Video
+	}
+	return false
+}
+
+type JoinDMCallResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Url           string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
+	Token         string                 `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
+	Room          string                 `protobuf:"bytes,3,opt,name=room,proto3" json:"room,omitempty"`
+	ExpiresIn     int32                  `protobuf:"varint,4,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *JoinDMCallResponse) Reset() {
+	*x = JoinDMCallResponse{}
+	mi := &file_voice_v1_voice_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *JoinDMCallResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*JoinDMCallResponse) ProtoMessage() {}
+
+func (x *JoinDMCallResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_voice_v1_voice_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use JoinDMCallResponse.ProtoReflect.Descriptor instead.
+func (*JoinDMCallResponse) Descriptor() ([]byte, []int) {
+	return file_voice_v1_voice_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *JoinDMCallResponse) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *JoinDMCallResponse) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *JoinDMCallResponse) GetRoom() string {
+	if x != nil {
+		return x.Room
+	}
+	return ""
+}
+
+func (x *JoinDMCallResponse) GetExpiresIn() int32 {
+	if x != nil {
+		return x.ExpiresIn
+	}
+	return 0
+}
+
+type RejectDMCallRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RejectDMCallRequest) Reset() {
+	*x = RejectDMCallRequest{}
+	mi := &file_voice_v1_voice_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RejectDMCallRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RejectDMCallRequest) ProtoMessage() {}
+
+func (x *RejectDMCallRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_voice_v1_voice_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RejectDMCallRequest.ProtoReflect.Descriptor instead.
+func (*RejectDMCallRequest) Descriptor() ([]byte, []int) {
+	return file_voice_v1_voice_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *RejectDMCallRequest) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+type RejectDMCallResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RejectDMCallResponse) Reset() {
+	*x = RejectDMCallResponse{}
+	mi := &file_voice_v1_voice_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RejectDMCallResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RejectDMCallResponse) ProtoMessage() {}
+
+func (x *RejectDMCallResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_voice_v1_voice_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RejectDMCallResponse.ProtoReflect.Descriptor instead.
+func (*RejectDMCallResponse) Descriptor() ([]byte, []int) {
+	return file_voice_v1_voice_proto_rawDescGZIP(), []int{12}
+}
+
+type LeaveDMCallRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LeaveDMCallRequest) Reset() {
+	*x = LeaveDMCallRequest{}
+	mi := &file_voice_v1_voice_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LeaveDMCallRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LeaveDMCallRequest) ProtoMessage() {}
+
+func (x *LeaveDMCallRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_voice_v1_voice_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LeaveDMCallRequest.ProtoReflect.Descriptor instead.
+func (*LeaveDMCallRequest) Descriptor() ([]byte, []int) {
+	return file_voice_v1_voice_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *LeaveDMCallRequest) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+type LeaveDMCallResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LeaveDMCallResponse) Reset() {
+	*x = LeaveDMCallResponse{}
+	mi := &file_voice_v1_voice_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LeaveDMCallResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LeaveDMCallResponse) ProtoMessage() {}
+
+func (x *LeaveDMCallResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_voice_v1_voice_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LeaveDMCallResponse.ProtoReflect.Descriptor instead.
+func (*LeaveDMCallResponse) Descriptor() ([]byte, []int) {
+	return file_voice_v1_voice_proto_rawDescGZIP(), []int{14}
+}
+
 var File_voice_v1_voice_proto protoreflect.FileDescriptor
 
 const file_voice_v1_voice_proto_rawDesc = "" +
@@ -431,11 +832,44 @@ const file_voice_v1_voice_proto_rawDesc = "" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\"`\n" +
 	"\x1eGetChannelParticipantsResponse\x12>\n" +
-	"\fparticipants\x18\x01 \x03(\v2\x1a.voice.v1.VoiceParticipantR\fparticipants2\x96\x02\n" +
+	"\fparticipants\x18\x01 \x03(\v2\x1a.voice.v1.VoiceParticipantR\fparticipants\"S\n" +
+	"\x12StartDMCallRequest\x12'\n" +
+	"\n" +
+	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\x12\x14\n" +
+	"\x05video\x18\x02 \x01(\bR\x05video\"p\n" +
+	"\x13StartDMCallResponse\x12\x10\n" +
+	"\x03url\x18\x01 \x01(\tR\x03url\x12\x14\n" +
+	"\x05token\x18\x02 \x01(\tR\x05token\x12\x12\n" +
+	"\x04room\x18\x03 \x01(\tR\x04room\x12\x1d\n" +
+	"\n" +
+	"expires_in\x18\x04 \x01(\x05R\texpiresIn\"R\n" +
+	"\x11JoinDMCallRequest\x12'\n" +
+	"\n" +
+	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\x12\x14\n" +
+	"\x05video\x18\x02 \x01(\bR\x05video\"o\n" +
+	"\x12JoinDMCallResponse\x12\x10\n" +
+	"\x03url\x18\x01 \x01(\tR\x03url\x12\x14\n" +
+	"\x05token\x18\x02 \x01(\tR\x05token\x12\x12\n" +
+	"\x04room\x18\x03 \x01(\tR\x04room\x12\x1d\n" +
+	"\n" +
+	"expires_in\x18\x04 \x01(\x05R\texpiresIn\">\n" +
+	"\x13RejectDMCallRequest\x12'\n" +
+	"\n" +
+	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\"\x16\n" +
+	"\x14RejectDMCallResponse\"=\n" +
+	"\x12LeaveDMCallRequest\x12'\n" +
+	"\n" +
+	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\"\x15\n" +
+	"\x13LeaveDMCallResponse2\xc6\x04\n" +
 	"\fVoiceService\x12J\n" +
 	"\vJoinChannel\x12\x1c.voice.v1.JoinChannelRequest\x1a\x1d.voice.v1.JoinChannelResponse\x12M\n" +
 	"\fLeaveChannel\x12\x1d.voice.v1.LeaveChannelRequest\x1a\x1e.voice.v1.LeaveChannelResponse\x12k\n" +
-	"\x16GetChannelParticipants\x12'.voice.v1.GetChannelParticipantsRequest\x1a(.voice.v1.GetChannelParticipantsResponseB;Z9github.com/ananddub/ndiscord_backend/gen/voice/v1;voicev1b\x06proto3"
+	"\x16GetChannelParticipants\x12'.voice.v1.GetChannelParticipantsRequest\x1a(.voice.v1.GetChannelParticipantsResponse\x12J\n" +
+	"\vStartDMCall\x12\x1c.voice.v1.StartDMCallRequest\x1a\x1d.voice.v1.StartDMCallResponse\x12G\n" +
+	"\n" +
+	"JoinDMCall\x12\x1b.voice.v1.JoinDMCallRequest\x1a\x1c.voice.v1.JoinDMCallResponse\x12M\n" +
+	"\fRejectDMCall\x12\x1d.voice.v1.RejectDMCallRequest\x1a\x1e.voice.v1.RejectDMCallResponse\x12J\n" +
+	"\vLeaveDMCall\x12\x1c.voice.v1.LeaveDMCallRequest\x1a\x1d.voice.v1.LeaveDMCallResponseB;Z9github.com/ananddub/ndiscord_backend/gen/voice/v1;voicev1b\x06proto3"
 
 var (
 	file_voice_v1_voice_proto_rawDescOnce sync.Once
@@ -449,7 +883,7 @@ func file_voice_v1_voice_proto_rawDescGZIP() []byte {
 	return file_voice_v1_voice_proto_rawDescData
 }
 
-var file_voice_v1_voice_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_voice_v1_voice_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_voice_v1_voice_proto_goTypes = []any{
 	(*JoinChannelRequest)(nil),             // 0: voice.v1.JoinChannelRequest
 	(*JoinChannelResponse)(nil),            // 1: voice.v1.JoinChannelResponse
@@ -458,22 +892,38 @@ var file_voice_v1_voice_proto_goTypes = []any{
 	(*VoiceParticipant)(nil),               // 4: voice.v1.VoiceParticipant
 	(*GetChannelParticipantsRequest)(nil),  // 5: voice.v1.GetChannelParticipantsRequest
 	(*GetChannelParticipantsResponse)(nil), // 6: voice.v1.GetChannelParticipantsResponse
-	(*timestamppb.Timestamp)(nil),          // 7: google.protobuf.Timestamp
+	(*StartDMCallRequest)(nil),             // 7: voice.v1.StartDMCallRequest
+	(*StartDMCallResponse)(nil),            // 8: voice.v1.StartDMCallResponse
+	(*JoinDMCallRequest)(nil),              // 9: voice.v1.JoinDMCallRequest
+	(*JoinDMCallResponse)(nil),             // 10: voice.v1.JoinDMCallResponse
+	(*RejectDMCallRequest)(nil),            // 11: voice.v1.RejectDMCallRequest
+	(*RejectDMCallResponse)(nil),           // 12: voice.v1.RejectDMCallResponse
+	(*LeaveDMCallRequest)(nil),             // 13: voice.v1.LeaveDMCallRequest
+	(*LeaveDMCallResponse)(nil),            // 14: voice.v1.LeaveDMCallResponse
+	(*timestamppb.Timestamp)(nil),          // 15: google.protobuf.Timestamp
 }
 var file_voice_v1_voice_proto_depIdxs = []int32{
-	7, // 0: voice.v1.VoiceParticipant.joined_at:type_name -> google.protobuf.Timestamp
-	4, // 1: voice.v1.GetChannelParticipantsResponse.participants:type_name -> voice.v1.VoiceParticipant
-	0, // 2: voice.v1.VoiceService.JoinChannel:input_type -> voice.v1.JoinChannelRequest
-	2, // 3: voice.v1.VoiceService.LeaveChannel:input_type -> voice.v1.LeaveChannelRequest
-	5, // 4: voice.v1.VoiceService.GetChannelParticipants:input_type -> voice.v1.GetChannelParticipantsRequest
-	1, // 5: voice.v1.VoiceService.JoinChannel:output_type -> voice.v1.JoinChannelResponse
-	3, // 6: voice.v1.VoiceService.LeaveChannel:output_type -> voice.v1.LeaveChannelResponse
-	6, // 7: voice.v1.VoiceService.GetChannelParticipants:output_type -> voice.v1.GetChannelParticipantsResponse
-	5, // [5:8] is the sub-list for method output_type
-	2, // [2:5] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	15, // 0: voice.v1.VoiceParticipant.joined_at:type_name -> google.protobuf.Timestamp
+	4,  // 1: voice.v1.GetChannelParticipantsResponse.participants:type_name -> voice.v1.VoiceParticipant
+	0,  // 2: voice.v1.VoiceService.JoinChannel:input_type -> voice.v1.JoinChannelRequest
+	2,  // 3: voice.v1.VoiceService.LeaveChannel:input_type -> voice.v1.LeaveChannelRequest
+	5,  // 4: voice.v1.VoiceService.GetChannelParticipants:input_type -> voice.v1.GetChannelParticipantsRequest
+	7,  // 5: voice.v1.VoiceService.StartDMCall:input_type -> voice.v1.StartDMCallRequest
+	9,  // 6: voice.v1.VoiceService.JoinDMCall:input_type -> voice.v1.JoinDMCallRequest
+	11, // 7: voice.v1.VoiceService.RejectDMCall:input_type -> voice.v1.RejectDMCallRequest
+	13, // 8: voice.v1.VoiceService.LeaveDMCall:input_type -> voice.v1.LeaveDMCallRequest
+	1,  // 9: voice.v1.VoiceService.JoinChannel:output_type -> voice.v1.JoinChannelResponse
+	3,  // 10: voice.v1.VoiceService.LeaveChannel:output_type -> voice.v1.LeaveChannelResponse
+	6,  // 11: voice.v1.VoiceService.GetChannelParticipants:output_type -> voice.v1.GetChannelParticipantsResponse
+	8,  // 12: voice.v1.VoiceService.StartDMCall:output_type -> voice.v1.StartDMCallResponse
+	10, // 13: voice.v1.VoiceService.JoinDMCall:output_type -> voice.v1.JoinDMCallResponse
+	12, // 14: voice.v1.VoiceService.RejectDMCall:output_type -> voice.v1.RejectDMCallResponse
+	14, // 15: voice.v1.VoiceService.LeaveDMCall:output_type -> voice.v1.LeaveDMCallResponse
+	9,  // [9:16] is the sub-list for method output_type
+	2,  // [2:9] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_voice_v1_voice_proto_init() }
@@ -487,7 +937,7 @@ func file_voice_v1_voice_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_voice_v1_voice_proto_rawDesc), len(file_voice_v1_voice_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

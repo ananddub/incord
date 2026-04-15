@@ -140,6 +140,7 @@ type User struct {
 	Verified        bool               `json:"verified"`
 	Deleted         bool               `json:"deleted"`
 	BackgroundColor string             `json:"background_color"`
+	DisplayName     string             `json:"display_name"`
 }
 
 type Webhook struct {

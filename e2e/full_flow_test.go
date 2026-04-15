@@ -76,6 +76,7 @@ func TestFullDiscordFlow(t *testing.T) {
 	alice := registerAndVerify(t, c.auth, "a_"+ts, "a_"+ts+"@test.com", "password123")
 	bob := registerAndVerify(t, c.auth, "b_"+ts, "b_"+ts+"@test.com", "password123")
 	charlie := registerAndVerify(t, c.auth, "c_"+ts, "c_"+ts+"@test.com", "password123")
+	resolveHandle(t, c.user, bob)
 
 	// ──────────────────────────────────────
 	// 2. AUTH: Login + Token flow
@@ -108,10 +109,11 @@ func TestFullDiscordFlow(t *testing.T) {
 	// 3. USER: Profile operations
 	// ──────────────────────────────────────
 	t.Run("03_User_Profile", func(t *testing.T) {
-		// Get own profile
+		// Get own profile — username is "a_<ts>#<4-digit>"; display_name keeps the raw base name.
 		resp, err := c.user.GetUser(alice.ctx(), &userv1.GetUserRequest{UserId: alice.ID})
 		require.NoError(t, err)
-		assert.Equal(t, "a_"+ts, resp.User.Username)
+		assert.Regexp(t, `^a_`+ts+`#[0-9]{4}$`, resp.User.Username)
+		assert.Equal(t, "a_"+ts, resp.User.DisplayName)
 
 		// Update bio
 		updateResp, err := c.user.UpdateUser(alice.ctx(), &userv1.UpdateUserRequest{
@@ -134,7 +136,7 @@ func TestFullDiscordFlow(t *testing.T) {
 	t.Run("04_Friends", func(t *testing.T) {
 		// Alice sends friend request to Bob
 		_, err := c.user.SendFriendRequest(alice.ctx(), &userv1.SendFriendRequestRequest{
-			TargetUserId: bob.ID,
+			TargetUsername: bob.Handle,
 		})
 		require.NoError(t, err)
 

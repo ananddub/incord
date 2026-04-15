@@ -51,3 +51,9 @@ SELECT EXISTS(
 
 -- name: GetDMChannelMembers :many
 SELECT user_id FROM dm_channel_members WHERE channel_id = $1 AND deleted = FALSE;
+
+-- name: GetDMChannelMemberProfiles :many
+SELECT u.id, u.username, u.display_name, u.avatar_url, u.status
+FROM dm_channel_members dm
+JOIN users u ON u.id = dm.user_id AND u.deleted = FALSE
+WHERE dm.channel_id = $1 AND dm.deleted = FALSE;

@@ -166,6 +166,13 @@ func (s *Service) DeleteChannel(ctx context.Context, userID, channelID string) e
 		}
 	}
 
+	// Capture DM member IDs BEFORE delete so all of them get notified.
+	var dmMembers []string
+	isDM := !ch.GuildID.Valid && (ch.Type == 5 || ch.Type == 6)
+	if isDM {
+		dmMembers = s.dmChannelMemberIDs(ctx, id)
+	}
+
 	if err := s.repo.DeleteChannel(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete channel: %w", err)
 	}
@@ -177,6 +184,10 @@ func (s *Service) DeleteChannel(ctx context.Context, userID, channelID string) e
 			"guild_id":   gid,
 			"channel_id": channelID,
 		})
+	}
+
+	if isDM {
+		s.publishDMChannelEvent(ctx, "delete", ch, dmMembers)
 	}
 
 	return nil
@@ -257,7 +268,70 @@ func (s *Service) CreateDMChannel(ctx context.Context, userID string, recipientI
 		}
 	}
 
+	// Notify every member so their StreamDmChannels subscribers get the new
+	// channel alongside the full member profile list in one push.
+	s.publishDMChannelCreated(ctx, ch, append([]string{userID}, recipientIDs...))
+
 	return ch, nil
+}
+
+// publishDMChannelCreated emits a "create" event on each member's
+// DmChannels subject carrying the channel's full member profiles so clients
+// can render the new DM without a follow-up ListDMChannelMembers call.
+func (s *Service) publishDMChannelCreated(ctx context.Context, ch db.Channel, memberIDs []string) {
+	s.publishDMChannelEvent(ctx, "create", ch, memberIDs)
+}
+
+// publishDMChannelEvent emits a lifecycle event ("create", "update", "delete")
+// on every provided member's DmChannels subject. The payload carries the
+// current member profile snapshot so each recipient can update its local
+// channel list without refetching. For "delete", call with the pre-delete
+// member list so all of them get notified.
+func (s *Service) publishDMChannelEvent(ctx context.Context, eventType string, ch db.Channel, memberIDs []string) {
+	if s.nats == nil {
+		return
+	}
+	var members []map[string]any
+	if eventType != "delete" {
+		profiles, err := s.repo.GetDMChannelMemberProfiles(ctx, ch.ID)
+		if err != nil {
+			return
+		}
+		members = make([]map[string]any, len(profiles))
+		for i, p := range profiles {
+			members[i] = map[string]any{
+				"id":           uuidToString(p.ID),
+				"username":     p.Username,
+				"display_name": p.DisplayName,
+				"avatar_url":   p.AvatarUrl,
+				"status":       p.Status,
+			}
+		}
+	}
+	payload := map[string]any{
+		"type":         eventType,
+		"id":           uuidToString(ch.ID),
+		"name":         ch.Name,
+		"channel_type": ch.Type,
+		"members":      members,
+	}
+	for _, mid := range memberIDs {
+		_ = s.nats.Publish(realtime.DmChannels(mid), payload)
+	}
+}
+
+// dmChannelMemberIDs returns the current member user_ids of a DM channel as
+// strings. Used to fan out lifecycle events to everyone in the channel.
+func (s *Service) dmChannelMemberIDs(ctx context.Context, channelID pgtype.UUID) []string {
+	rows, err := s.repo.GetDMChannelMembers(ctx, channelID)
+	if err != nil {
+		return nil
+	}
+	out := make([]string, len(rows))
+	for i, r := range rows {
+		out[i] = uuidToString(r)
+	}
+	return out
 }
 
 func (s *Service) ListDMChannels(ctx context.Context, userID string) ([]db.Channel, error) {
@@ -271,6 +345,62 @@ func (s *Service) ListDMChannels(ctx context.Context, userID string) ([]db.Chann
 		return nil, fmt.Errorf("failed to list DM channels: %w", err)
 	}
 	return channels, nil
+}
+
+// ListDMChannelMembers returns lightweight profiles for everyone in a DM
+// channel. Caller must themselves be a member.
+func (s *Service) ListDMChannelMembers(ctx context.Context, callerID, channelID string) ([]db.GetDMChannelMemberProfilesRow, error) {
+	chUUID, err := parseUUID(channelID)
+	if err != nil {
+		return nil, ErrInvalidUUID
+	}
+	callerUUID, err := parseUUID(callerID)
+	if err != nil {
+		return nil, ErrInvalidUUID
+	}
+
+	isMember, err := s.repo.IsDMChannelMember(ctx, db.IsDMChannelMemberParams{
+		ChannelID: chUUID,
+		UserID:    callerUUID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to check membership: %w", err)
+	}
+	if !isMember {
+		return nil, ErrNotDMChannelMember
+	}
+
+	return s.repo.GetDMChannelMemberProfiles(ctx, chUUID)
+}
+
+// DMChannelWithMembers bundles a DM channel with embedded member profiles.
+type DMChannelWithMembers struct {
+	Channel db.Channel
+	Members []db.GetDMChannelMemberProfilesRow
+}
+
+// ListDMChannelsWithMembers returns every DM channel the caller is in along
+// with embedded member profiles for each channel in one call.
+func (s *Service) ListDMChannelsWithMembers(ctx context.Context, userID string) ([]DMChannelWithMembers, error) {
+	id, err := parseUUID(userID)
+	if err != nil {
+		return nil, ErrInvalidUUID
+	}
+
+	channels, err := s.repo.ListDMChannels(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list DM channels: %w", err)
+	}
+
+	out := make([]DMChannelWithMembers, 0, len(channels))
+	for _, ch := range channels {
+		members, err := s.repo.GetDMChannelMemberProfiles(ctx, ch.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load members for channel: %w", err)
+		}
+		out = append(out, DMChannelWithMembers{Channel: ch, Members: members})
+	}
+	return out, nil
 }
 
 func (s *Service) AddDMGroupMember(ctx context.Context, callerID, channelID, userID string) error {
@@ -321,6 +451,10 @@ func (s *Service) AddDMGroupMember(ctx context.Context, callerID, channelID, use
 		return fmt.Errorf("failed to add member to group DM: %w", err)
 	}
 
+	// Notify every current member (including the newly added one) with the
+	// refreshed member profile list so each client updates its view.
+	s.publishDMChannelEvent(ctx, "update", ch, s.dmChannelMemberIDs(ctx, chUUID))
+
 	return nil
 }
 
@@ -365,12 +499,18 @@ func (s *Service) RemoveDMGroupMember(ctx context.Context, callerID, channelID, 
 		return ErrNotDMChannelMember
 	}
 
+	// Capture the member list BEFORE the remove so the target user also gets
+	// notified that they were removed.
+	beforeMembers := s.dmChannelMemberIDs(ctx, chUUID)
+
 	if err := s.repo.RemoveDMChannelMember(ctx, db.RemoveDMChannelMemberParams{
 		ChannelID: chUUID,
 		UserID:    targetUUID,
 	}); err != nil {
 		return fmt.Errorf("failed to remove member from group DM: %w", err)
 	}
+
+	s.publishDMChannelEvent(ctx, "update", ch, beforeMembers)
 
 	return nil
 }
@@ -407,6 +547,31 @@ func (r *DMResolver) GetOrCreateDMChannel(ctx context.Context, userID string, re
 		return "", err
 	}
 	return uuidToString(ch.ID), nil
+}
+
+// IsDMMember implements voice.DMMembershipResolver.
+func (r *DMResolver) IsDMMember(ctx context.Context, channelID, userID string) (bool, error) {
+	chUUID, err := parseUUID(channelID)
+	if err != nil {
+		return false, ErrInvalidUUID
+	}
+	userUUID, err := parseUUID(userID)
+	if err != nil {
+		return false, ErrInvalidUUID
+	}
+	return r.svc.repo.IsDMChannelMember(ctx, db.IsDMChannelMemberParams{
+		ChannelID: chUUID,
+		UserID:    userUUID,
+	})
+}
+
+// DMMembers implements voice.DMMembershipResolver.
+func (r *DMResolver) DMMembers(ctx context.Context, channelID string) ([]string, error) {
+	chUUID, err := parseUUID(channelID)
+	if err != nil {
+		return nil, ErrInvalidUUID
+	}
+	return r.svc.dmChannelMemberIDs(ctx, chUUID), nil
 }
 
 // GuildResolver implements message.ChannelGuildResolver.

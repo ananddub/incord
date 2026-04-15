@@ -52,7 +52,15 @@ func (h *Handler) SendMessage(ctx context.Context, req *messagev1.SendMessageReq
 
 	guildID := h.resolveGuildID(ctx, req.ChannelId)
 
-	msg, err := h.svc.SendMessage(ctx, userID, req.ChannelId, guildID, req.Content, int32(req.Type), req.ReplyToId)
+	var fwd *ForwardSource
+	if req.ForwardedFrom != nil && req.ForwardedFrom.GetMessageId() != "" {
+		fwd = &ForwardSource{
+			ChannelID: req.ForwardedFrom.GetChannelId(),
+			MessageID: req.ForwardedFrom.GetMessageId(),
+		}
+	}
+
+	msg, atts, err := h.svc.SendMessage(ctx, userID, req.ChannelId, guildID, req.Content, int32(req.Type), req.ReplyToId, req.AttachmentIds, fwd, req.MentionUserIds)
 	if err != nil {
 		return nil, mapError(err)
 	}
@@ -61,6 +69,7 @@ func (h *Handler) SendMessage(ctx context.Context, req *messagev1.SendMessageReq
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to build response")
 	}
+	pbMsg.Attachments = attachmentsToProto(atts)
 
 	return &messagev1.SendMessageResponse{
 		Message: pbMsg,
@@ -180,7 +189,7 @@ func (h *Handler) RemoveReaction(ctx context.Context, req *messagev1.RemoveReact
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
 
-	if err := h.svc.RemoveReaction(ctx, userID, req.ChannelId, req.MessageId, req.Emoji); err != nil {
+	if err := h.svc.RemoveReaction(ctx, userID, req.ChannelId, h.resolveGuildID(ctx, req.ChannelId), req.MessageId, req.Emoji); err != nil {
 		return nil, mapError(err)
 	}
 
@@ -193,7 +202,7 @@ func (h *Handler) AckMessage(ctx context.Context, req *messagev1.AckMessageReque
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
 
-	if err := h.svc.AckMessage(ctx, userID, req.ChannelId, req.MessageId); err != nil {
+	if err := h.svc.AckMessage(ctx, userID, req.ChannelId, h.resolveGuildID(ctx, req.ChannelId), req.MessageId); err != nil {
 		return nil, mapError(err)
 	}
 
@@ -213,7 +222,8 @@ func (h *Handler) StartTyping(ctx context.Context, req *messagev1.StartTypingReq
 	return &messagev1.StartTypingResponse{}, nil
 }
 
-// messageToProto converts an internal Message to the proto Message, including reactions.
+// messageToProto converts an internal Message to the proto Message, including
+// reactions and attachments so a single call is enough to render it.
 func (h *Handler) messageToProto(ctx context.Context, msg *Message, currentUserID string) (*messagev1.Message, error) {
 	var zeroUUID [16]byte
 	pb := &messagev1.Message{
@@ -232,6 +242,19 @@ func (h *Handler) messageToProto(ctx context.Context, msg *Message, currentUserI
 	if msg.EditedAt != nil {
 		pb.EditedAt = timestamppb.New(*msg.EditedAt)
 	}
+	if msg.ForwardedFromMessageID != gocql.UUID(zeroUUID) {
+		pb.ForwardedFrom = &messagev1.ForwardedReference{
+			ChannelId: msg.ForwardedFromChannelID.String(),
+			MessageId: msg.ForwardedFromMessageID.String(),
+			AuthorId:  msg.ForwardedFromAuthorID.String(),
+		}
+	}
+	if len(msg.MentionUserIDs) > 0 {
+		pb.MentionUserIds = make([]string, len(msg.MentionUserIDs))
+		for i, m := range msg.MentionUserIDs {
+			pb.MentionUserIds[i] = m.String()
+		}
+	}
 
 	// Fetch reactions
 	reactions, err := h.svc.GetReactions(ctx, msg.ChannelID.String(), msg.ID.String(), currentUserID)
@@ -246,7 +269,30 @@ func (h *Handler) messageToProto(ctx context.Context, msg *Message, currentUserI
 		}
 	}
 
+	// Hydrate attachments from the mirrored Scylla rows.
+	atts, err := h.svc.GetAttachments(ctx, msg.ChannelID.String(), msg.ID.String())
+	if err == nil {
+		pb.Attachments = attachmentsToProto(atts)
+	}
+
 	return pb, nil
+}
+
+func attachmentsToProto(atts []Attachment) []*messagev1.Attachment {
+	if len(atts) == 0 {
+		return nil
+	}
+	out := make([]*messagev1.Attachment, len(atts))
+	for i, a := range atts {
+		out[i] = &messagev1.Attachment{
+			Id:          a.ID.String(),
+			Filename:    a.Filename,
+			Url:         a.URL,
+			ContentType: a.ContentType,
+			Size:        a.Size,
+		}
+	}
+	return out
 }
 
 func (h *Handler) SendDirectMessage(ctx context.Context, req *messagev1.SendDirectMessageRequest) (*messagev1.SendDirectMessageResponse, error) {
@@ -301,6 +347,7 @@ func (h *Handler) GetUnreadCounts(ctx context.Context, req *messagev1.GetUnreadC
 				SenderId:          u.SenderID,
 				SenderName:        u.SenderName,
 				UnreadCount:       u.UnreadCount,
+				MentionCount:      u.MentionCount,
 				LastReadMessageId: u.LastReadMsgID,
 				Messages:          pbMsgs,
 				LastMessageAt:     timestamppb.New(u.LastMessageTime),
@@ -311,6 +358,7 @@ func (h *Handler) GetUnreadCounts(ctx context.Context, req *messagev1.GetUnreadC
 				GuildId:           u.GuildID,
 				ChannelName:       u.ChannelName,
 				UnreadCount:       u.UnreadCount,
+				MentionCount:      u.MentionCount,
 				LastReadMessageId: u.LastReadMsgID,
 				Messages:          pbMsgs,
 				LastMessageAt:     timestamppb.New(u.LastMessageTime),
