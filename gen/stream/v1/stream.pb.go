@@ -1395,18 +1395,35 @@ func (*StreamVoiceStateRequest) Descriptor() ([]byte, []int) {
 }
 
 type VoiceStateEvent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Event         string                 `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"` // "join", "leave", "update"
-	GuildId       string                 `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
-	ChannelId     string                 `protobuf:"bytes,3,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	UserId        string                 `protobuf:"bytes,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	SelfMute      bool                   `protobuf:"varint,5,opt,name=self_mute,json=selfMute,proto3" json:"self_mute,omitempty"`
-	SelfDeaf      bool                   `protobuf:"varint,6,opt,name=self_deaf,json=selfDeaf,proto3" json:"self_deaf,omitempty"`
-	Video         bool                   `protobuf:"varint,7,opt,name=video,proto3" json:"video,omitempty"`
-	Streaming     bool                   `protobuf:"varint,8,opt,name=streaming,proto3" json:"streaming,omitempty"`
-	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Always "VOICE_STATE_UPDATE".
+	Event     string                 `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"`
+	GuildId   string                 `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
+	ChannelId string                 `protobuf:"bytes,3,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	UserId    string                 `protobuf:"bytes,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	SelfMute  bool                   `protobuf:"varint,5,opt,name=self_mute,json=selfMute,proto3" json:"self_mute,omitempty"`
+	SelfDeaf  bool                   `protobuf:"varint,6,opt,name=self_deaf,json=selfDeaf,proto3" json:"self_deaf,omitempty"`
+	Video     bool                   `protobuf:"varint,7,opt,name=video,proto3" json:"video,omitempty"`
+	Streaming bool                   `protobuf:"varint,8,opt,name=streaming,proto3" json:"streaming,omitempty"`
+	Timestamp *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	// "join", "leave", "participant_joined", "participant_left",
+	// "track_update", "state_sync", "room_started", "room_finished"
+	Action string `protobuf:"bytes,10,opt,name=action,proto3" json:"action,omitempty"`
+	// LiveKit participant SID.
+	Sid string `protobuf:"bytes,11,opt,name=sid,proto3" json:"sid,omitempty"`
+	// Display name from LiveKit participant.
+	Name string `protobuf:"bytes,12,opt,name=name,proto3" json:"name,omitempty"`
+	// Participant metadata JSON: {"userId","username","avatarUrl"}.
+	Metadata string `protobuf:"bytes,13,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// On track_update: "audio", "video", "screen_share".
+	TrackType string `protobuf:"bytes,14,opt,name=track_type,json=trackType,proto3" json:"track_type,omitempty"`
+	// On track_update: true = published, false = unpublished.
+	Published bool `protobuf:"varint,15,opt,name=published,proto3" json:"published,omitempty"`
+	// Unix timestamp (seconds) when the LiveKit room for this channel
+	// became active. Same value for every participant in the same channel.
+	RoomActiveSince int64 `protobuf:"varint,16,opt,name=room_active_since,json=roomActiveSince,proto3" json:"room_active_since,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *VoiceStateEvent) Reset() {
@@ -1500,6 +1517,55 @@ func (x *VoiceStateEvent) GetTimestamp() *timestamppb.Timestamp {
 		return x.Timestamp
 	}
 	return nil
+}
+
+func (x *VoiceStateEvent) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *VoiceStateEvent) GetSid() string {
+	if x != nil {
+		return x.Sid
+	}
+	return ""
+}
+
+func (x *VoiceStateEvent) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *VoiceStateEvent) GetMetadata() string {
+	if x != nil {
+		return x.Metadata
+	}
+	return ""
+}
+
+func (x *VoiceStateEvent) GetTrackType() string {
+	if x != nil {
+		return x.TrackType
+	}
+	return ""
+}
+
+func (x *VoiceStateEvent) GetPublished() bool {
+	if x != nil {
+		return x.Published
+	}
+	return false
+}
+
+func (x *VoiceStateEvent) GetRoomActiveSince() int64 {
+	if x != nil {
+		return x.RoomActiveSince
+	}
+	return 0
 }
 
 type StreamTypingRequest struct {
@@ -1882,7 +1948,7 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"channel_id\x18\x04 \x01(\tR\tchannelId\x12\x12\n" +
 	"\x04name\x18\x05 \x01(\tR\x04name\x128\n" +
 	"\ttimestamp\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\x19\n" +
-	"\x17StreamVoiceStateRequest\"\xa2\x02\n" +
+	"\x17StreamVoiceStateRequest\"\xe5\x03\n" +
 	"\x0fVoiceStateEvent\x12\x14\n" +
 	"\x05event\x18\x01 \x01(\tR\x05event\x12\x19\n" +
 	"\bguild_id\x18\x02 \x01(\tR\aguildId\x12\x1d\n" +
@@ -1893,7 +1959,16 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\tself_deaf\x18\x06 \x01(\bR\bselfDeaf\x12\x14\n" +
 	"\x05video\x18\a \x01(\bR\x05video\x12\x1c\n" +
 	"\tstreaming\x18\b \x01(\bR\tstreaming\x128\n" +
-	"\ttimestamp\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\x15\n" +
+	"\ttimestamp\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x16\n" +
+	"\x06action\x18\n" +
+	" \x01(\tR\x06action\x12\x10\n" +
+	"\x03sid\x18\v \x01(\tR\x03sid\x12\x12\n" +
+	"\x04name\x18\f \x01(\tR\x04name\x12\x1a\n" +
+	"\bmetadata\x18\r \x01(\tR\bmetadata\x12\x1d\n" +
+	"\n" +
+	"track_type\x18\x0e \x01(\tR\ttrackType\x12\x1c\n" +
+	"\tpublished\x18\x0f \x01(\bR\tpublished\x12*\n" +
+	"\x11room_active_since\x18\x10 \x01(\x03R\x0froomActiveSince\"\x15\n" +
 	"\x13StreamTypingRequest\"\x9a\x01\n" +
 	"\vTypingEvent\x12\x1d\n" +
 	"\n" +

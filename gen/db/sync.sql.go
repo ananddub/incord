@@ -133,7 +133,7 @@ func (q *Queries) SyncFriendships(ctx context.Context, arg SyncFriendshipsParams
 }
 
 const syncGuildMembers = `-- name: SyncGuildMembers :many
-SELECT gm.guild_id, gm.user_id, gm.nickname, gm.joined_at, gm.deleted, gm.updated_at FROM guild_members gm
+SELECT gm.guild_id, gm.user_id, gm.nickname, gm.joined_at, gm.deleted, gm.updated_at, gm.invite_code, gm.invited_by FROM guild_members gm
 WHERE gm.updated_at > $2
 AND gm.guild_id IN (SELECT gm2.guild_id FROM guild_members gm2 WHERE gm2.user_id = $1 AND gm2.deleted = FALSE)
 `
@@ -159,6 +159,8 @@ func (q *Queries) SyncGuildMembers(ctx context.Context, arg SyncGuildMembersPara
 			&i.JoinedAt,
 			&i.Deleted,
 			&i.UpdatedAt,
+			&i.InviteCode,
+			&i.InvitedBy,
 		); err != nil {
 			return nil, err
 		}

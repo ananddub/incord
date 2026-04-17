@@ -346,42 +346,39 @@ func (s *Service) JoinGuild(ctx context.Context, userID pgtype.UUID, inviteCode 
 		return nil, ErrUserBanned
 	}
 
-	// Check if already a member
+	// Idempotent: if already a member, return guild data so double-taps
+	// and retries don't show an error to the user.
 	_, err = s.repo.GetGuildMember(ctx, db.GetGuildMemberParams{
 		GuildID: invite.GuildID,
 		UserID:  userID,
 	})
 	if err == nil {
-		return nil, ErrAlreadyMember
+		return s.buildJoinResult(ctx, invite.GuildID)
 	}
 
-	// Add member
+	// Add member with invite tracking — records which invite code was used
+	// and who created that invite so the guild owner can audit joins.
 	_, err = s.repo.AddGuildMember(ctx, db.AddGuildMemberParams{
-		GuildID:  invite.GuildID,
-		UserID:   userID,
-		Nickname: "",
+		GuildID:    invite.GuildID,
+		UserID:     userID,
+		Nickname:   "",
+		InviteCode: &inviteCode,
+		InvitedBy:  invite.CreatorID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to add guild member: %w", err)
 	}
 
-	// Increment invite uses
+	// Increment invite uses counter
 	_ = s.repo.IncrementInviteUses(ctx, inviteCode)
 
-	guild, err := s.repo.GetGuildByID(ctx, invite.GuildID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get guild: %w", err)
-	}
-
-	channels, err := s.repo.ListGuildChannels(ctx, invite.GuildID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list channels: %w", err)
-	}
-
-	memberCount, err := s.repo.CountGuildMembers(ctx, invite.GuildID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to count members: %w", err)
-	}
+	// Append detailed invite usage log
+	_, _ = s.repo.RecordInviteUse(ctx, db.RecordInviteUseParams{
+		InviteCode: inviteCode,
+		GuildID:    invite.GuildID,
+		UserID:     userID,
+		InviterID:  invite.CreatorID,
+	})
 
 	// Write authz tuple
 	userStr := pgToStr(userID)
@@ -392,6 +389,24 @@ func (s *Service) JoinGuild(ctx context.Context, userID pgtype.UUID, inviteCode 
 		"user_id": userStr,
 	})
 
+	return s.buildJoinResult(ctx, invite.GuildID)
+}
+
+// buildJoinResult loads guild + channels + member count for the JoinGuild
+// response. Reused for both fresh joins and already-member short-circuits.
+func (s *Service) buildJoinResult(ctx context.Context, guildID pgtype.UUID) (*JoinGuildResult, error) {
+	guild, err := s.repo.GetGuildByID(ctx, guildID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get guild: %w", err)
+	}
+	channels, err := s.repo.ListGuildChannels(ctx, guildID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list channels: %w", err)
+	}
+	memberCount, err := s.repo.CountGuildMembers(ctx, guildID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count members: %w", err)
+	}
 	return &JoinGuildResult{
 		Guild:       guild,
 		Channels:    channels,

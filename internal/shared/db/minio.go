@@ -30,6 +30,28 @@ func NewMinIOClient(ctx context.Context, cfg config.MinIOConfig) (*minio.Client,
 		}
 	}
 
+	// Anonymous read on the whole bucket so download URLs don't need
+	// signing. Presigned PUT is still required for uploads (the policy only
+	// grants GetObject), and the only way to obtain the stable long-lived
+	// URL for a file is to go through the media service — so this is still
+	// effectively "URL-as-capability" access control.
+	publicReadPolicy := fmt.Sprintf(`{
+		"Version": "2012-10-17",
+		"Statement": [{
+			"Sid": "PublicRead",
+			"Effect": "Allow",
+			"Principal": {"AWS": ["*"]},
+			"Action": ["s3:GetObject"],
+			"Resource": ["arn:aws:s3:::%s/*"]
+		}]
+	}`, cfg.Bucket)
+	if err := client.SetBucketPolicy(ctx, cfg.Bucket, publicReadPolicy); err != nil {
+		// Non-fatal: if the backend doesn't support bucket policies
+		// (minor rustfs variants), fall back to the presigned GET path —
+		// media.Service will still generate 7-day URLs.
+		logger.Log.Warn().Err(err).Str("bucket", cfg.Bucket).Msg("failed to set public read policy; falling back to signed GET URLs")
+	}
+
 	logger.Log.Info().Str("endpoint", cfg.Endpoint).Str("bucket", cfg.Bucket).Msg("connected to minio")
 	return client, nil
 }

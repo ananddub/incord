@@ -3,7 +3,6 @@ package media
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,15 +14,20 @@ import (
 
 const (
 	presignedURLExpiry = 15 * time.Minute
-	downloadURLExpiry  = 1 * time.Hour
+	// 7 days is the hard cap the minio-go client enforces (matches the AWS
+	// SigV4 spec). For practically "forever" download URLs the bucket needs
+	// anonymous-read policy — see MakeBucketPublic below — and we stitch
+	// together a plain URL instead of a presigned one.
+	downloadURLExpiry = 7 * 24 * time.Hour
 )
 
 // Service contains the business logic for the media feature.
 type Service struct {
-	repo   *Repository
-	minio  *minio.Client // internal endpoint — used for direct object ops
-	signer *minio.Client // public endpoint — used for signing client-facing URLs
-	bucket string
+	repo           *Repository
+	minio          *minio.Client // internal endpoint — used for direct object ops
+	signer         *minio.Client // public endpoint — used for signing client-facing URLs
+	bucket         string
+	publicBaseURL  string // pre-built "http(s)://<public-endpoint>/<bucket>/" prefix
 }
 
 // NewService creates a new media Service. `signer` is a MinIO client
@@ -33,12 +37,30 @@ func NewService(repo *Repository, minioClient, signer *minio.Client, minioCfg co
 	if signer == nil {
 		signer = minioClient
 	}
-	return &Service{
-		repo:   repo,
-		minio:  minioClient,
-		signer: signer,
-		bucket: minioCfg.Bucket,
+	// Build a plain anonymous-access URL prefix. Because we set a public-read
+	// bucket policy at startup, clients can fetch these without any
+	// signature, and the URL stays valid indefinitely.
+	scheme := "http://"
+	if minioCfg.UseSSL {
+		scheme = "https://"
 	}
+	endpoint := minioCfg.PublicEndpoint
+	if endpoint == "" {
+		endpoint = minioCfg.Endpoint
+	}
+	return &Service{
+		repo:          repo,
+		minio:         minioClient,
+		signer:        signer,
+		bucket:        minioCfg.Bucket,
+		publicBaseURL: scheme + endpoint + "/" + minioCfg.Bucket + "/",
+	}
+}
+
+// publicURL returns the anonymous-access URL for an object in the bucket.
+// Relies on the bucket having a public-read policy set at startup time.
+func (s *Service) publicURL(key string) string {
+	return s.publicBaseURL + key
 }
 
 // RequestUploadResult holds the result of a RequestUpload operation.
@@ -106,17 +128,11 @@ func (s *Service) ConfirmUpload(ctx context.Context, uploadID string) (*ConfirmU
 		return nil, fmt.Errorf("failed to confirm media file: %w", err)
 	}
 
-	// Generate a download URL for the confirmed file
-	dlURL, err := s.signer.PresignedGetObject(ctx, s.bucket, mediaFile.BucketKey, downloadURLExpiry, url.Values{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate download URL: %w", err)
-	}
-
 	fileID := uuidToString(mediaFile.ID)
 
 	return &ConfirmUploadResult{
 		FileID: fileID,
-		URL:    dlURL.String(),
+		URL:    s.publicURL(mediaFile.BucketKey),
 	}, nil
 }
 
@@ -126,7 +142,10 @@ type GetDownloadURLResult struct {
 	ExpiresAt time.Time
 }
 
-// GetDownloadURL generates a presigned GET URL for a file.
+// GetDownloadURL returns the anonymous-access download URL for a file.
+// With the public-read bucket policy set at startup the URL has no
+// built-in expiry, so we report a far-future ExpiresAt (~1 year) purely
+// so legacy clients can still render a "link expires on" hint.
 func (s *Service) GetDownloadURL(ctx context.Context, fileID string) (*GetDownloadURLResult, error) {
 	mediaFile, err := s.repo.GetMediaFile(ctx, fileID)
 	if err != nil {
@@ -137,15 +156,9 @@ func (s *Service) GetDownloadURL(ctx context.Context, fileID string) (*GetDownlo
 		return nil, fmt.Errorf("file upload not yet confirmed")
 	}
 
-	expiresAt := time.Now().Add(downloadURLExpiry)
-	dlURL, err := s.signer.PresignedGetObject(ctx, s.bucket, mediaFile.BucketKey, downloadURLExpiry, url.Values{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate download URL: %w", err)
-	}
-
 	return &GetDownloadURLResult{
-		URL:       dlURL.String(),
-		ExpiresAt: expiresAt,
+		URL:       s.publicURL(mediaFile.BucketKey),
+		ExpiresAt: time.Now().Add(365 * 24 * time.Hour),
 	}, nil
 }
 
@@ -168,11 +181,7 @@ func (s *Service) ResolveAttachment(ctx context.Context, fileID, uploaderID stri
 		}
 	}
 
-	dl, err := s.signer.PresignedGetObject(ctx, s.bucket, mediaFile.BucketKey, downloadURLExpiry, url.Values{})
-	if err != nil {
-		return "", "", "", 0, fmt.Errorf("failed to generate download URL: %w", err)
-	}
-	return mediaFile.Filename, dl.String(), mediaFile.ContentType, mediaFile.Size, nil
+	return mediaFile.Filename, s.publicURL(mediaFile.BucketKey), mediaFile.ContentType, mediaFile.Size, nil
 }
 
 // DeleteFile removes the file from MinIO and deletes the DB record.

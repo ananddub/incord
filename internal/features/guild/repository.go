@@ -108,6 +108,26 @@ func (r *Repository) DeleteInvite(ctx context.Context, code string) error {
 	return r.queries.DeleteInvite(ctx, code)
 }
 
+func (r *Repository) RecordInviteUse(ctx context.Context, params db.RecordInviteUseParams) (db.InviteUse, error) {
+	return r.queries.RecordInviteUse(ctx, params)
+}
+
+func (r *Repository) ListInviteUses(ctx context.Context, code string, limit, offset int32) ([]db.ListInviteUsesRow, error) {
+	return r.queries.ListInviteUses(ctx, db.ListInviteUsesParams{
+		InviteCode: code,
+		Limit:      limit,
+		Offset:     offset,
+	})
+}
+
+func (r *Repository) ListGuildInviteUses(ctx context.Context, guildID pgtype.UUID, limit, offset int32) ([]db.ListGuildInviteUsesRow, error) {
+	return r.queries.ListGuildInviteUses(ctx, db.ListGuildInviteUsesParams{
+		GuildID: guildID,
+		Limit:   limit,
+		Offset:  offset,
+	})
+}
+
 // Roles
 
 func (r *Repository) CreateRole(ctx context.Context, params db.CreateRoleParams) (db.Role, error) {

@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/ananddub/ndiscord_backend/internal/app"
+	"github.com/ananddub/ndiscord_backend/internal/features/voice"
 	"github.com/ananddub/ndiscord_backend/internal/shared/config"
 	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
 )
@@ -21,10 +23,7 @@ func main() {
 
 	log.Info().Msg("starting ndiscord server")
 
-	// Metrics server (prometheus + health)
-	go app.StartMetricsServer()
-
-	// Connect infrastructure
+	// Connect infrastructure (before metrics so webhook handler can use NATS)
 	infra, err := app.NewInfra(ctx, cfg)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to initialize infrastructure")
@@ -33,6 +32,12 @@ func main() {
 
 	// Wire all feature handlers
 	handlers := app.NewHandlers(infra, cfg)
+
+	// LiveKit webhook receiver — needs voiceSvc for Redis state sync.
+	webhookH := voice.NewWebhookHandler(cfg.LiveKit, infra.NATS, handlers.VoiceSvc)
+	go app.StartMetricsServer(map[string]http.Handler{
+		"/livekit/webhook": webhookH,
+	})
 
 	// Create gRPC server
 	srv := app.NewGRPCServer(handlers, cfg.JWT.Secret, infra.Redis)

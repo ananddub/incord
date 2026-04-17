@@ -50,7 +50,7 @@ services:
       SCYLLA_HOST: scylladb:9042
       SCYLLA_KEYSPACE: ndiscord
       MINIO_ENDPOINT: rustfs:9000
-      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-192.168.1.2:9000}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-192.168.1.5:9000}
       MINIO_ACCESS_KEY: ndiscord
       MINIO_SECRET_KEY: ndiscord123
       MINIO_BUCKET: ndiscord
@@ -62,7 +62,7 @@ services:
       SMTP_FROM: noreply@ndiscord.local
       NATS_URL: nats://nats:4222
       INVITE_BASE_URL: ${INVITE_BASE_URL:-https://ndiscord.app/invite}
-      LIVEKIT_URL: ${LIVEKIT_URL:-ws://192.168.1.2:7880}
+      LIVEKIT_URL: ${LIVEKIT_URL:-ws://192.168.1.5:7880}
       LIVEKIT_HTTP_URL: http://livekit:7880
       LIVEKIT_API_KEY: devkey
       LIVEKIT_API_SECRET: secret
@@ -224,10 +224,19 @@ services:
       - "8222:8222"
     command: ["-js", "-m", "8222"]
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      test: ["CMD", "nats-server", "--help"]
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 5s
+
+  nats-exporter:
+    image: natsio/prometheus-nats-exporter:latest
+    container_name: ndiscord-nats-exporter
+    command: ["-varz", "-connz", "-subz", "-routez", "-jsz=all", "http://nats:8222"]
+    depends_on:
+      nats:
+        condition: service_healthy
 
   nui:
     image: ghcr.io/nats-nui/nui:latest

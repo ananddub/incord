@@ -238,7 +238,8 @@ message GuildEvent {
 message StreamVoiceStateRequest {}
 
 message VoiceStateEvent {
-  string event = 1;      // "join", "leave", "update"
+  // Always "VOICE_STATE_UPDATE".
+  string event = 1;
   string guild_id = 2;
   string channel_id = 3;
   string user_id = 4;
@@ -247,6 +248,22 @@ message VoiceStateEvent {
   bool video = 7;
   bool streaming = 8;
   google.protobuf.Timestamp timestamp = 9;
+  // "join", "leave", "participant_joined", "participant_left",
+  // "track_update", "state_sync", "room_started", "room_finished"
+  string action = 10;
+  // LiveKit participant SID.
+  string sid = 11;
+  // Display name from LiveKit participant.
+  string name = 12;
+  // Participant metadata JSON: {"userId","username","avatarUrl"}.
+  string metadata = 13;
+  // On track_update: "audio", "video", "screen_share".
+  string track_type = 14;
+  // On track_update: true = published, false = unpublished.
+  bool published = 15;
+  // Unix timestamp (seconds) when the LiveKit room for this channel
+  // became active. Same value for every participant in the same channel.
+  int64 room_active_since = 16;
 }
 
 // === Typing (all channels, auto-detect) ===

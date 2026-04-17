@@ -1,0 +1,126 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Total Connections",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "targets": [{"expr": "gnatsd_varz_connections", "legendFormat": "connections"}],
+      "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 50}, {"color": "red", "value": 200}]}}}
+    },
+    {
+      "id": 2,
+      "title": "Total Subscriptions",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "targets": [{"expr": "gnatsd_varz_subscriptions", "legendFormat": "subscriptions"}],
+      "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green", "value": null}]}}}
+    },
+    {
+      "id": 3,
+      "title": "Messages In/s",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "targets": [{"expr": "rate(gnatsd_varz_in_msgs[1m])", "legendFormat": "msgs/s in"}],
+      "fieldConfig": {"defaults": {"unit": "ops", "thresholds": {"steps": [{"color": "green", "value": null}]}}}
+    },
+    {
+      "id": 4,
+      "title": "Messages Out/s",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "targets": [{"expr": "rate(gnatsd_varz_out_msgs[1m])", "legendFormat": "msgs/s out"}],
+      "fieldConfig": {"defaults": {"unit": "ops", "thresholds": {"steps": [{"color": "green", "value": null}]}}}
+    },
+    {
+      "id": 5,
+      "title": "Message Throughput",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "targets": [
+        {"expr": "rate(gnatsd_varz_in_msgs[1m])", "legendFormat": "in msgs/s"},
+        {"expr": "rate(gnatsd_varz_out_msgs[1m])", "legendFormat": "out msgs/s"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops"}}
+    },
+    {
+      "id": 6,
+      "title": "Data Throughput",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "targets": [
+        {"expr": "rate(gnatsd_varz_in_bytes[1m])", "legendFormat": "in bytes/s"},
+        {"expr": "rate(gnatsd_varz_out_bytes[1m])", "legendFormat": "out bytes/s"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "Bps"}}
+    },
+    {
+      "id": 7,
+      "title": "Connections Over Time",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "targets": [
+        {"expr": "gnatsd_varz_connections", "legendFormat": "active connections"},
+        {"expr": "gnatsd_varz_subscriptions", "legendFormat": "subscriptions"}
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Slow Consumers",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 12},
+      "targets": [{"expr": "gnatsd_varz_slow_consumers", "legendFormat": "slow consumers"}],
+      "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}}
+    },
+    {
+      "id": 9,
+      "title": "Memory Usage",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 12},
+      "targets": [{"expr": "gnatsd_varz_mem", "legendFormat": "memory"}],
+      "fieldConfig": {"defaults": {"unit": "bytes", "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 104857600}, {"color": "red", "value": 524288000}]}}}
+    },
+    {
+      "id": 10,
+      "title": "JetStream — Streams & Consumers",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 12, "x": 12, "y": 16},
+      "targets": [
+        {"expr": "gnatsd_varz_jetstream_stats_streams", "legendFormat": "streams"},
+        {"expr": "gnatsd_varz_jetstream_stats_consumers", "legendFormat": "consumers"}
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Total Messages (cumulative)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+      "targets": [
+        {"expr": "gnatsd_varz_in_msgs", "legendFormat": "total in"},
+        {"expr": "gnatsd_varz_out_msgs", "legendFormat": "total out"}
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["ndiscord", "nats"],
+  "templating": {"list": []},
+  "time": {"from": "now-30m", "to": "now"},
+  "title": "nDiscord — NATS",
+  "uid": "ndiscord-nats"
+}

@@ -26,6 +26,17 @@ const (
 	VoiceService_JoinDMCall_FullMethodName             = "/voice.v1.VoiceService/JoinDMCall"
 	VoiceService_RejectDMCall_FullMethodName           = "/voice.v1.VoiceService/RejectDMCall"
 	VoiceService_LeaveDMCall_FullMethodName            = "/voice.v1.VoiceService/LeaveDMCall"
+	VoiceService_Mute_FullMethodName                   = "/voice.v1.VoiceService/Mute"
+	VoiceService_Unmute_FullMethodName                 = "/voice.v1.VoiceService/Unmute"
+	VoiceService_Deafen_FullMethodName                 = "/voice.v1.VoiceService/Deafen"
+	VoiceService_Undeafen_FullMethodName               = "/voice.v1.VoiceService/Undeafen"
+	VoiceService_EnableVideo_FullMethodName            = "/voice.v1.VoiceService/EnableVideo"
+	VoiceService_DisableVideo_FullMethodName           = "/voice.v1.VoiceService/DisableVideo"
+	VoiceService_StartScreenShare_FullMethodName       = "/voice.v1.VoiceService/StartScreenShare"
+	VoiceService_StopScreenShare_FullMethodName        = "/voice.v1.VoiceService/StopScreenShare"
+	VoiceService_ServerMuteUser_FullMethodName         = "/voice.v1.VoiceService/ServerMuteUser"
+	VoiceService_ServerDeafenUser_FullMethodName       = "/voice.v1.VoiceService/ServerDeafenUser"
+	VoiceService_DisconnectUser_FullMethodName         = "/voice.v1.VoiceService/DisconnectUser"
 )
 
 // VoiceServiceClient is the client API for VoiceService service.
@@ -56,6 +67,20 @@ type VoiceServiceClient interface {
 	// LeaveDMCall is called when a participant hangs up. When the last
 	// participant leaves, a "call_ended" push is fanned out to all members.
 	LeaveDMCall(ctx context.Context, in *LeaveDMCallRequest, opts ...grpc.CallOption) (*LeaveDMCallResponse, error)
+	// Self voice controls — each toggle is a separate RPC. Server updates
+	// Redis and broadcasts the full participant list to StreamVoiceState.
+	Mute(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
+	Unmute(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
+	Deafen(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
+	Undeafen(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
+	EnableVideo(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
+	DisableVideo(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
+	StartScreenShare(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
+	StopScreenShare(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
+	// Admin controls — guild owner/moderator can force state on other participants.
+	ServerMuteUser(ctx context.Context, in *ServerMuteUserRequest, opts ...grpc.CallOption) (*ServerMuteUserResponse, error)
+	ServerDeafenUser(ctx context.Context, in *ServerDeafenUserRequest, opts ...grpc.CallOption) (*ServerDeafenUserResponse, error)
+	DisconnectUser(ctx context.Context, in *DisconnectUserRequest, opts ...grpc.CallOption) (*DisconnectUserResponse, error)
 }
 
 type voiceServiceClient struct {
@@ -136,6 +161,116 @@ func (c *voiceServiceClient) LeaveDMCall(ctx context.Context, in *LeaveDMCallReq
 	return out, nil
 }
 
+func (c *voiceServiceClient) Mute(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VoiceParticipantsResponse)
+	err := c.cc.Invoke(ctx, VoiceService_Mute_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *voiceServiceClient) Unmute(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VoiceParticipantsResponse)
+	err := c.cc.Invoke(ctx, VoiceService_Unmute_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *voiceServiceClient) Deafen(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VoiceParticipantsResponse)
+	err := c.cc.Invoke(ctx, VoiceService_Deafen_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *voiceServiceClient) Undeafen(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VoiceParticipantsResponse)
+	err := c.cc.Invoke(ctx, VoiceService_Undeafen_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *voiceServiceClient) EnableVideo(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VoiceParticipantsResponse)
+	err := c.cc.Invoke(ctx, VoiceService_EnableVideo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *voiceServiceClient) DisableVideo(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VoiceParticipantsResponse)
+	err := c.cc.Invoke(ctx, VoiceService_DisableVideo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *voiceServiceClient) StartScreenShare(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VoiceParticipantsResponse)
+	err := c.cc.Invoke(ctx, VoiceService_StartScreenShare_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *voiceServiceClient) StopScreenShare(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VoiceParticipantsResponse)
+	err := c.cc.Invoke(ctx, VoiceService_StopScreenShare_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *voiceServiceClient) ServerMuteUser(ctx context.Context, in *ServerMuteUserRequest, opts ...grpc.CallOption) (*ServerMuteUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ServerMuteUserResponse)
+	err := c.cc.Invoke(ctx, VoiceService_ServerMuteUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *voiceServiceClient) ServerDeafenUser(ctx context.Context, in *ServerDeafenUserRequest, opts ...grpc.CallOption) (*ServerDeafenUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ServerDeafenUserResponse)
+	err := c.cc.Invoke(ctx, VoiceService_ServerDeafenUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *voiceServiceClient) DisconnectUser(ctx context.Context, in *DisconnectUserRequest, opts ...grpc.CallOption) (*DisconnectUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DisconnectUserResponse)
+	err := c.cc.Invoke(ctx, VoiceService_DisconnectUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // VoiceServiceServer is the server API for VoiceService service.
 // All implementations must embed UnimplementedVoiceServiceServer
 // for forward compatibility.
@@ -164,6 +299,20 @@ type VoiceServiceServer interface {
 	// LeaveDMCall is called when a participant hangs up. When the last
 	// participant leaves, a "call_ended" push is fanned out to all members.
 	LeaveDMCall(context.Context, *LeaveDMCallRequest) (*LeaveDMCallResponse, error)
+	// Self voice controls — each toggle is a separate RPC. Server updates
+	// Redis and broadcasts the full participant list to StreamVoiceState.
+	Mute(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
+	Unmute(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
+	Deafen(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
+	Undeafen(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
+	EnableVideo(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
+	DisableVideo(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
+	StartScreenShare(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
+	StopScreenShare(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
+	// Admin controls — guild owner/moderator can force state on other participants.
+	ServerMuteUser(context.Context, *ServerMuteUserRequest) (*ServerMuteUserResponse, error)
+	ServerDeafenUser(context.Context, *ServerDeafenUserRequest) (*ServerDeafenUserResponse, error)
+	DisconnectUser(context.Context, *DisconnectUserRequest) (*DisconnectUserResponse, error)
 	mustEmbedUnimplementedVoiceServiceServer()
 }
 
@@ -194,6 +343,39 @@ func (UnimplementedVoiceServiceServer) RejectDMCall(context.Context, *RejectDMCa
 }
 func (UnimplementedVoiceServiceServer) LeaveDMCall(context.Context, *LeaveDMCallRequest) (*LeaveDMCallResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method LeaveDMCall not implemented")
+}
+func (UnimplementedVoiceServiceServer) Mute(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Mute not implemented")
+}
+func (UnimplementedVoiceServiceServer) Unmute(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Unmute not implemented")
+}
+func (UnimplementedVoiceServiceServer) Deafen(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Deafen not implemented")
+}
+func (UnimplementedVoiceServiceServer) Undeafen(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Undeafen not implemented")
+}
+func (UnimplementedVoiceServiceServer) EnableVideo(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method EnableVideo not implemented")
+}
+func (UnimplementedVoiceServiceServer) DisableVideo(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DisableVideo not implemented")
+}
+func (UnimplementedVoiceServiceServer) StartScreenShare(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartScreenShare not implemented")
+}
+func (UnimplementedVoiceServiceServer) StopScreenShare(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StopScreenShare not implemented")
+}
+func (UnimplementedVoiceServiceServer) ServerMuteUser(context.Context, *ServerMuteUserRequest) (*ServerMuteUserResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ServerMuteUser not implemented")
+}
+func (UnimplementedVoiceServiceServer) ServerDeafenUser(context.Context, *ServerDeafenUserRequest) (*ServerDeafenUserResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ServerDeafenUser not implemented")
+}
+func (UnimplementedVoiceServiceServer) DisconnectUser(context.Context, *DisconnectUserRequest) (*DisconnectUserResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DisconnectUser not implemented")
 }
 func (UnimplementedVoiceServiceServer) mustEmbedUnimplementedVoiceServiceServer() {}
 func (UnimplementedVoiceServiceServer) testEmbeddedByValue()                      {}
@@ -342,6 +524,204 @@ func _VoiceService_LeaveDMCall_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _VoiceService_Mute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VoiceChannelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VoiceServiceServer).Mute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VoiceService_Mute_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VoiceServiceServer).Mute(ctx, req.(*VoiceChannelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VoiceService_Unmute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VoiceChannelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VoiceServiceServer).Unmute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VoiceService_Unmute_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VoiceServiceServer).Unmute(ctx, req.(*VoiceChannelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VoiceService_Deafen_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VoiceChannelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VoiceServiceServer).Deafen(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VoiceService_Deafen_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VoiceServiceServer).Deafen(ctx, req.(*VoiceChannelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VoiceService_Undeafen_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VoiceChannelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VoiceServiceServer).Undeafen(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VoiceService_Undeafen_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VoiceServiceServer).Undeafen(ctx, req.(*VoiceChannelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VoiceService_EnableVideo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VoiceChannelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VoiceServiceServer).EnableVideo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VoiceService_EnableVideo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VoiceServiceServer).EnableVideo(ctx, req.(*VoiceChannelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VoiceService_DisableVideo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VoiceChannelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VoiceServiceServer).DisableVideo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VoiceService_DisableVideo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VoiceServiceServer).DisableVideo(ctx, req.(*VoiceChannelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VoiceService_StartScreenShare_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VoiceChannelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VoiceServiceServer).StartScreenShare(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VoiceService_StartScreenShare_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VoiceServiceServer).StartScreenShare(ctx, req.(*VoiceChannelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VoiceService_StopScreenShare_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VoiceChannelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VoiceServiceServer).StopScreenShare(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VoiceService_StopScreenShare_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VoiceServiceServer).StopScreenShare(ctx, req.(*VoiceChannelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VoiceService_ServerMuteUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ServerMuteUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VoiceServiceServer).ServerMuteUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VoiceService_ServerMuteUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VoiceServiceServer).ServerMuteUser(ctx, req.(*ServerMuteUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VoiceService_ServerDeafenUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ServerDeafenUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VoiceServiceServer).ServerDeafenUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VoiceService_ServerDeafenUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VoiceServiceServer).ServerDeafenUser(ctx, req.(*ServerDeafenUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VoiceService_DisconnectUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DisconnectUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VoiceServiceServer).DisconnectUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VoiceService_DisconnectUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VoiceServiceServer).DisconnectUser(ctx, req.(*DisconnectUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // VoiceService_ServiceDesc is the grpc.ServiceDesc for VoiceService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -376,6 +756,50 @@ var VoiceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LeaveDMCall",
 			Handler:    _VoiceService_LeaveDMCall_Handler,
+		},
+		{
+			MethodName: "Mute",
+			Handler:    _VoiceService_Mute_Handler,
+		},
+		{
+			MethodName: "Unmute",
+			Handler:    _VoiceService_Unmute_Handler,
+		},
+		{
+			MethodName: "Deafen",
+			Handler:    _VoiceService_Deafen_Handler,
+		},
+		{
+			MethodName: "Undeafen",
+			Handler:    _VoiceService_Undeafen_Handler,
+		},
+		{
+			MethodName: "EnableVideo",
+			Handler:    _VoiceService_EnableVideo_Handler,
+		},
+		{
+			MethodName: "DisableVideo",
+			Handler:    _VoiceService_DisableVideo_Handler,
+		},
+		{
+			MethodName: "StartScreenShare",
+			Handler:    _VoiceService_StartScreenShare_Handler,
+		},
+		{
+			MethodName: "StopScreenShare",
+			Handler:    _VoiceService_StopScreenShare_Handler,
+		},
+		{
+			MethodName: "ServerMuteUser",
+			Handler:    _VoiceService_ServerMuteUser_Handler,
+		},
+		{
+			MethodName: "ServerDeafenUser",
+			Handler:    _VoiceService_ServerDeafenUser_Handler,
+		},
+		{
+			MethodName: "DisconnectUser",
+			Handler:    _VoiceService_DisconnectUser_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

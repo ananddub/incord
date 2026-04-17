@@ -28,6 +28,7 @@ type Handlers struct {
 	Presence *presence.Handler
 	Media    *media.Handler
 	Voice    *voice.Handler
+	VoiceSvc *voice.Service
 }
 
 // NewHandlers wires up all feature services and returns their handlers.
@@ -95,9 +96,11 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 	messageSvc.SetMediaResolver(mediaSvc)
 
 	// Voice (LiveKit SFU)
-	voiceSvc := voice.NewService(cfg.LiveKit, infra.NATS, infra.Authz)
+	voiceSvc := voice.NewService(cfg.LiveKit, infra.NATS, infra.Redis, infra.Authz)
 	voiceSvc.SetDMResolver(channel.NewDMResolver(channelSvc))
+	voiceSvc.SetProfileResolver(userSvc)
 	voiceHandler := voice.NewHandler(voiceSvc)
+	streamHandler.SetVoiceSnapshotProvider(voice.NewVoiceSnapshot(voiceSvc))
 
 	return &Handlers{
 		Auth:     authHandler,
@@ -110,5 +113,6 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 		Presence: presenceHandler,
 		Media:    mediaHandler,
 		Voice:    voiceHandler,
+		VoiceSvc: voiceSvc,
 	}
 }

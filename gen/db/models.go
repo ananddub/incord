@@ -75,12 +75,14 @@ type Guild struct {
 }
 
 type GuildMember struct {
-	GuildID   pgtype.UUID        `json:"guild_id"`
-	UserID    pgtype.UUID        `json:"user_id"`
-	Nickname  string             `json:"nickname"`
-	JoinedAt  pgtype.Timestamptz `json:"joined_at"`
-	Deleted   bool               `json:"deleted"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	GuildID    pgtype.UUID        `json:"guild_id"`
+	UserID     pgtype.UUID        `json:"user_id"`
+	Nickname   string             `json:"nickname"`
+	JoinedAt   pgtype.Timestamptz `json:"joined_at"`
+	Deleted    bool               `json:"deleted"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+	InviteCode *string            `json:"invite_code"`
+	InvitedBy  pgtype.UUID        `json:"invited_by"`
 }
 
 type Invite struct {
@@ -94,6 +96,15 @@ type Invite struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	Deleted   bool               `json:"deleted"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type InviteUse struct {
+	ID         pgtype.UUID        `json:"id"`
+	InviteCode string             `json:"invite_code"`
+	GuildID    pgtype.UUID        `json:"guild_id"`
+	UserID     pgtype.UUID        `json:"user_id"`
+	InviterID  pgtype.UUID        `json:"inviter_id"`
+	UsedAt     pgtype.Timestamptz `json:"used_at"`
 }
 
 type MediaFile struct {

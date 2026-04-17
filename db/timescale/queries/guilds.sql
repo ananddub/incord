@@ -23,9 +23,9 @@ JOIN guild_members gm ON gm.guild_id = g.id
 WHERE gm.user_id = $1 AND gm.deleted = FALSE AND g.deleted = FALSE;
 
 -- name: AddGuildMember :one
-INSERT INTO guild_members (guild_id, user_id, nickname)
-VALUES ($1, $2, $3)
-ON CONFLICT (guild_id, user_id) DO UPDATE SET deleted = FALSE, updated_at = NOW(), nickname = EXCLUDED.nickname
+INSERT INTO guild_members (guild_id, user_id, nickname, invite_code, invited_by)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (guild_id, user_id) DO UPDATE SET deleted = FALSE, updated_at = NOW(), nickname = EXCLUDED.nickname, invite_code = EXCLUDED.invite_code, invited_by = EXCLUDED.invited_by
 RETURNING *;
 
 -- name: RemoveGuildMember :exec
@@ -72,3 +72,27 @@ RETURNING *;
 
 -- name: DeleteInvite :exec
 UPDATE invites SET deleted = TRUE, updated_at = NOW() WHERE code = $1;
+
+-- name: RecordInviteUse :one
+INSERT INTO invite_uses (invite_code, guild_id, user_id, inviter_id)
+VALUES ($1, $2, $3, $4)
+RETURNING *;
+
+-- name: ListInviteUses :many
+SELECT iu.*, u.username, u.display_name, u.avatar_url
+FROM invite_uses iu
+JOIN users u ON u.id = iu.user_id
+WHERE iu.invite_code = $1
+ORDER BY iu.used_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: ListGuildInviteUses :many
+SELECT iu.*, u.username, u.display_name, u.avatar_url
+FROM invite_uses iu
+JOIN users u ON u.id = iu.user_id
+WHERE iu.guild_id = $1
+ORDER BY iu.used_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: CountInviteUsesByCode :one
+SELECT COUNT(*) FROM invite_uses WHERE invite_code = $1;

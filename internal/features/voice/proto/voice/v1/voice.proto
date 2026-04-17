@@ -32,7 +32,45 @@ service VoiceService {
   // LeaveDMCall is called when a participant hangs up. When the last
   // participant leaves, a "call_ended" push is fanned out to all members.
   rpc LeaveDMCall(LeaveDMCallRequest) returns (LeaveDMCallResponse);
+
+  // Self voice controls — each toggle is a separate RPC. Server updates
+  // Redis and broadcasts the full participant list to StreamVoiceState.
+  rpc Mute(VoiceChannelRequest) returns (VoiceParticipantsResponse);
+  rpc Unmute(VoiceChannelRequest) returns (VoiceParticipantsResponse);
+  rpc Deafen(VoiceChannelRequest) returns (VoiceParticipantsResponse);
+  rpc Undeafen(VoiceChannelRequest) returns (VoiceParticipantsResponse);
+  rpc EnableVideo(VoiceChannelRequest) returns (VoiceParticipantsResponse);
+  rpc DisableVideo(VoiceChannelRequest) returns (VoiceParticipantsResponse);
+  rpc StartScreenShare(VoiceChannelRequest) returns (VoiceParticipantsResponse);
+  rpc StopScreenShare(VoiceChannelRequest) returns (VoiceParticipantsResponse);
+
+  // Admin controls — guild owner/moderator can force state on other participants.
+  rpc ServerMuteUser(ServerMuteUserRequest) returns (ServerMuteUserResponse);
+  rpc ServerDeafenUser(ServerDeafenUserRequest) returns (ServerDeafenUserResponse);
+  rpc DisconnectUser(DisconnectUserRequest) returns (DisconnectUserResponse);
 }
+
+// === Admin voice control messages ===
+
+message ServerMuteUserRequest {
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string target_user_id = 2 [(buf.validate.field).string.uuid = true];
+  bool muted = 3;
+}
+message ServerMuteUserResponse {}
+
+message ServerDeafenUserRequest {
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string target_user_id = 2 [(buf.validate.field).string.uuid = true];
+  bool deafened = 3;
+}
+message ServerDeafenUserResponse {}
+
+message DisconnectUserRequest {
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string target_user_id = 2 [(buf.validate.field).string.uuid = true];
+}
+message DisconnectUserResponse {}
 
 message JoinChannelRequest {
   string guild_id = 1 [(buf.validate.field).string.uuid = true];
@@ -59,12 +97,16 @@ message LeaveChannelResponse {}
 
 message VoiceParticipant {
   string user_id = 1;
-  // LiveKit participant identity (== user_id for us).
   string identity = 2;
-  // LiveKit participant SID.
   string sid = 3;
   string name = 4;
   google.protobuf.Timestamp joined_at = 5;
+  bool self_mute = 6;
+  bool self_deaf = 7;
+  bool server_mute = 8;
+  bool server_deaf = 9;
+  bool video = 10;
+  bool screen_share = 11;
 }
 
 message GetChannelParticipantsRequest {
@@ -113,4 +155,16 @@ message LeaveDMCallRequest {
 }
 
 message LeaveDMCallResponse {}
+
+// === Voice state sync ===
+
+// Shared request for all self voice controls — just needs channel_id.
+message VoiceChannelRequest {
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// Returns the full channel participant list after the state change.
+message VoiceParticipantsResponse {
+  repeated VoiceParticipant participants = 1;
+}
 

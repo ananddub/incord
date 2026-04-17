@@ -78,7 +78,12 @@ func (s *Service) CreateChannel(ctx context.Context, userID string, guildID, nam
 	_ = s.nats.Publish(realtime.GuildEvents(guildID), map[string]any{
 		"event":      "CHANNEL_CREATE",
 		"guild_id":   guildID,
-		"channel_id": ch.ID.String(),
+		"channel_id": uuidToString(ch.ID),
+		"name":       ch.Name,
+		"type":       ch.Type,
+		"topic":      ch.Topic,
+		"position":   ch.Position,
+		"parent_id":  uuidToString(ch.ParentID),
 	})
 
 	return ch, nil
@@ -142,6 +147,11 @@ func (s *Service) UpdateChannel(ctx context.Context, userID, channelID string, n
 			"event":      "CHANNEL_UPDATE",
 			"guild_id":   gid,
 			"channel_id": uuidToString(ch.ID),
+			"name":       ch.Name,
+			"type":       ch.Type,
+			"topic":      ch.Topic,
+			"position":   ch.Position,
+			"parent_id":  uuidToString(ch.ParentID),
 		})
 	}
 

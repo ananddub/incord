@@ -19,15 +19,26 @@ type UserDataResolver interface {
 	GetUserFriendIDs(ctx context.Context, userID string) ([]string, error)
 }
 
+// VoiceSnapshotProvider loads the current voice state for initial sync when
+// a client subscribes to StreamVoiceState.
+type VoiceSnapshotProvider interface {
+	GetChannelParticipants(ctx context.Context, channelID string) ([]*streamv1.VoiceStateEvent, error)
+	GetGuildVoiceChannelIDs(ctx context.Context, guildID string) ([]string, error)
+}
+
 type Handler struct {
 	streamv1.UnimplementedStreamServiceServer
-	nats     *realtime.Hub
-	resolver UserDataResolver
+	nats          *realtime.Hub
+	resolver      UserDataResolver
+	voiceSnapshot VoiceSnapshotProvider
 }
 
 func NewHandler(nats *realtime.Hub, resolver UserDataResolver) *Handler {
 	return &Handler{nats: nats, resolver: resolver}
 }
+
+// SetVoiceSnapshotProvider wires the voice snapshot loader.
+func (h *Handler) SetVoiceSnapshotProvider(v VoiceSnapshotProvider) { h.voiceSnapshot = v }
 
 // helper: subscribe to multiple subjects, forward decoded events to gRPC stream
 func streamFromSubjects[T any](h *Handler, ctx context.Context, subjects []string, send func(*T) error) error {
@@ -143,7 +154,10 @@ func (h *Handler) StreamGuildEvents(req *streamv1.StreamGuildEventsRequest, stre
 	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
 }
 
-// StreamVoiceState - voice join/leave across all guilds
+// StreamVoiceState - voice join/leave/mute/video across all guilds.
+// On connect, sends the full current state of every active voice participant
+// across the user's guilds so the client starts with a complete picture.
+// Then streams incremental updates.
 func (h *Handler) StreamVoiceState(req *streamv1.StreamVoiceStateRequest, stream streamv1.StreamService_StreamVoiceStateServer) error {
 	userID := middleware.UserIDFromContext(stream.Context())
 	if userID == "" {
@@ -153,6 +167,30 @@ func (h *Handler) StreamVoiceState(req *streamv1.StreamVoiceStateRequest, stream
 	if err != nil {
 		return status.Error(codes.Internal, "failed to get guilds")
 	}
+	// Send initial snapshot of all current voice participants so the
+	// client renders the correct state immediately on subscribe.
+	if h.voiceSnapshot != nil {
+		for _, gid := range guildIDs {
+			channelIDs, err := h.voiceSnapshot.GetGuildVoiceChannelIDs(stream.Context(), gid)
+			if err != nil {
+				continue
+			}
+			for _, chID := range channelIDs {
+				events, err := h.voiceSnapshot.GetChannelParticipants(stream.Context(), chID)
+				if err != nil {
+					continue
+				}
+				for _, evt := range events {
+					evt.GuildId = gid
+					if err := stream.Send(evt); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+
+	// Then stream incremental updates
 	var subjects []string
 	for _, gid := range guildIDs {
 		subjects = append(subjects, realtime.GuildAllVoice(gid))

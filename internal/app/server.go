@@ -53,14 +53,19 @@ func NewGRPCServer(h *Handlers, jwtSecret string, rdb *redis.Client) *grpc.Serve
 	return srv
 }
 
-// StartMetricsServer starts the Prometheus /metrics and /health HTTP server.
-func StartMetricsServer() {
+// StartMetricsServer starts the Prometheus /metrics, /health, and LiveKit
+// webhook HTTP server. The webhook handler is optional — pass nil to skip.
+func StartMetricsServer(extraHandlers map[string]http.Handler) {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})
+	for path, h := range extraHandlers {
+		mux.Handle(path, h)
+		logger.Log.Info().Str("path", path).Msg("registered HTTP handler")
+	}
 	logger.Log.Info().Msg("metrics server listening on :9100/metrics")
 	if err := http.ListenAndServe(":9100", mux); err != nil {
 		logger.Log.Error().Err(err).Msg("metrics server failed")

@@ -14,3 +14,9 @@ scrape_configs:
       - targets: ["livekit:6789"]
         labels:
           service: "livekit"
+
+  - job_name: "nats"
+    static_configs:
+      - targets: ["nats-exporter:7777"]
+        labels:
+          service: "nats"

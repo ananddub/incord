@@ -9,8 +9,10 @@ import (
 	"github.com/livekit/protocol/auth"
 	livekit "github.com/livekit/protocol/livekit"
 	lksdk "github.com/livekit/server-sdk-go/v2"
+	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	streamv1 "github.com/ananddub/ndiscord_backend/gen/stream/v1"
 	voicev1 "github.com/ananddub/ndiscord_backend/gen/voice/v1"
 	"github.com/ananddub/ndiscord_backend/internal/shared/authz"
 	"github.com/ananddub/ndiscord_backend/internal/shared/config"
@@ -44,14 +46,17 @@ type Service struct {
 	roomClient *lksdk.RoomServiceClient
 	authz      *authz.Client
 	nats       *realtime.Hub
+	redis      *redis.Client
 	dm         DMMembershipResolver
+	profile    UserProfileResolver
 }
 
 // NewService constructs a voice service backed by a LiveKit deployment.
-func NewService(cfg config.LiveKitConfig, nats *realtime.Hub, authzClient ...*authz.Client) *Service {
+func NewService(cfg config.LiveKitConfig, nats *realtime.Hub, rdb *redis.Client, authzClient ...*authz.Client) *Service {
 	s := &Service{
-		cfg:  cfg,
-		nats: nats,
+		cfg:   cfg,
+		nats:  nats,
+		redis: rdb,
 	}
 	if cfg.HTTPURL != "" && cfg.APIKey != "" && cfg.APISecret != "" {
 		s.roomClient = lksdk.NewRoomServiceClient(cfg.HTTPURL, cfg.APIKey, cfg.APISecret)
@@ -86,11 +91,14 @@ func (s *Service) JoinChannel(ctx context.Context, userID, guildID, channelID st
 	roomName := channelID
 
 	// Ensure the room exists (idempotent — CreateRoom returns the existing
-	// room if it already exists).
+	// room if it already exists). Room metadata carries guildID so the
+	// webhook handler can route events to the correct GuildEvents subject.
+	roomMeta := fmt.Sprintf(`{"guildId":"%s","channelId":"%s"}`, guildID, channelID)
 	if _, err := s.roomClient.CreateRoom(ctx, &livekit.CreateRoomRequest{
 		Name:            roomName,
 		EmptyTimeout:    300,
 		MaxParticipants: 100,
+		Metadata:        roomMeta,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to create livekit room: %w", err)
 	}
@@ -100,12 +108,25 @@ func (s *Service) JoinChannel(ctx context.Context, userID, guildID, channelID st
 		return nil, fmt.Errorf("failed to mint token: %w", err)
 	}
 
-	_ = s.nats.Publish(realtime.GuildChannelVoice(guildID, channelID), map[string]any{
-		"event":      "VOICE_STATE_UPDATE",
-		"action":     "join",
-		"user_id":    userID,
-		"channel_id": channelID,
+	// Fetch user profile from DB and store in Redis so other participants
+	// (and StreamVoiceState snapshot) have full profile data.
+	username, avatarURL := "", ""
+	if s.profile != nil {
+		username, avatarURL = s.profile.LookupBasicProfile(ctx, userID)
+	}
+	_ = s.SetParticipant(ctx, ParticipantState{
+		UserID:      userID,
+		Username:    username,
+		DisplayName: username,
+		AvatarURL:   avatarURL,
+		GuildID:     guildID,
+		ChannelID:   channelID,
 	})
+	// Record first-join time if no one was in the channel yet.
+	_, _ = s.EnsureActiveSince(ctx, channelID)
+
+	// Broadcast full participant list so everyone sees the new joiner.
+	s.broadcastChannelState(ctx, channelID, guildID)
 
 	return &JoinChannelResult{
 		URL:       s.cfg.URL,
@@ -121,22 +142,14 @@ func (s *Service) LeaveChannel(ctx context.Context, userID, guildID, channelID s
 	if s.roomClient == nil {
 		return ErrLiveKitUnavailable
 	}
-	_, err := s.roomClient.RemoveParticipant(ctx, &livekit.RoomParticipantIdentity{
+	_, _ = s.roomClient.RemoveParticipant(ctx, &livekit.RoomParticipantIdentity{
 		Room:     channelID,
 		Identity: userID,
 	})
-	// A "participant not found" from LiveKit is fine — user already left.
-	if err != nil {
-		// swallow and still publish the event so listeners update UI
-		_ = err
-	}
 
-	_ = s.nats.Publish(realtime.GuildChannelVoice(guildID, channelID), map[string]any{
-		"event":      "VOICE_STATE_UPDATE",
-		"action":     "leave",
-		"user_id":    userID,
-		"channel_id": channelID,
-	})
+	// Remove from Redis and broadcast updated participant list.
+	_ = s.RemoveParticipant(ctx, channelID, userID)
+	s.broadcastChannelState(ctx, channelID, guildID)
 	return nil
 }
 
@@ -169,8 +182,19 @@ func (s *Service) GetChannelParticipants(ctx context.Context, channelID string) 
 	return out, nil
 }
 
+// UserProfileResolver looks up the basic profile to bake into LiveKit
+// participant metadata so other participants can render names/avatars
+// without a separate user-service call.
+type UserProfileResolver interface {
+	LookupBasicProfile(ctx context.Context, userID string) (username, avatarURL string)
+}
+
+// SetProfileResolver wires the user profile resolver.
+func (s *Service) SetProfileResolver(r UserProfileResolver) { s.profile = r }
+
 // buildToken returns a signed JWT granting the user publish+subscribe rights
-// in the given room for the configured TTL.
+// in the given room for the configured TTL. User metadata (profile JSON) is
+// embedded so other participants see it immediately on join.
 func (s *Service) buildToken(room, identity string) (string, error) {
 	at := auth.NewAccessToken(s.cfg.APIKey, s.cfg.APISecret)
 	grant := &auth.VideoGrant{
@@ -182,10 +206,179 @@ func (s *Service) buildToken(room, identity string) (string, error) {
 	at.SetVideoGrant(grant).
 		SetIdentity(identity).
 		SetValidFor(tokenTTL)
+
+	// Embed user profile as participant metadata — LiveKit stores it and
+	// the webhook relays it, so every client sees username + avatar
+	// without extra lookups.
+	if s.profile != nil {
+		username, avatarURL := s.profile.LookupBasicProfile(context.Background(), identity)
+		meta := fmt.Sprintf(`{"userId":"%s","username":"%s","avatarUrl":"%s"}`, identity, username, avatarURL)
+		at.SetMetadata(meta)
+	}
+
 	return at.ToJWT()
 }
 
 func boolPtr(b bool) *bool { return &b }
+
+// VoiceSnapshot implements stream.VoiceSnapshotProvider — loads current
+// participants from LiveKit for initial state sync on StreamVoiceState
+// connect.
+type VoiceSnapshot struct {
+	svc *Service
+}
+
+func NewVoiceSnapshot(svc *Service) *VoiceSnapshot {
+	return &VoiceSnapshot{svc: svc}
+}
+
+// GetChannelParticipants first checks LiveKit for actual participants,
+// then merges voice state from Redis. Stale Redis entries (user crashed
+// without LeaveChannel) are cleaned up automatically.
+func (v *VoiceSnapshot) GetChannelParticipants(ctx context.Context, channelID string) ([]*streamv1.VoiceStateEvent, error) {
+	// Step 1: Ask LiveKit who's ACTUALLY in the room
+	var liveParticipants map[string]*livekit.ParticipantInfo
+	if v.svc.roomClient != nil {
+		res, err := v.svc.roomClient.ListParticipants(ctx, &livekit.ListParticipantsRequest{
+			Room: channelID,
+		})
+		if err == nil && res != nil {
+			liveParticipants = make(map[string]*livekit.ParticipantInfo, len(res.Participants))
+			for _, p := range res.Participants {
+				liveParticipants[p.Identity] = p
+			}
+		}
+	}
+	// Room active-since = first joiner's timestamp stored in Redis.
+	roomActiveSince := v.svc.GetActiveSince(ctx, channelID)
+
+	// No one in LiveKit → clean Redis and return empty
+	if len(liveParticipants) == 0 {
+		_ = v.svc.ClearChannel(ctx, channelID)
+		return nil, nil
+	}
+
+	// Step 2: Load Redis state for voice toggles (mute/deaf/video/screen)
+	redisStates, _ := v.svc.GetChannelState(ctx, channelID)
+	redisMap := make(map[string]ParticipantState, len(redisStates))
+	for _, s := range redisStates {
+		redisMap[s.UserID] = s
+	}
+
+	// Step 3: Clean stale Redis entries (in Redis but not in LiveKit)
+	for uid := range redisMap {
+		if _, ok := liveParticipants[uid]; !ok {
+			_ = v.svc.RemoveParticipant(ctx, channelID, uid)
+		}
+	}
+
+	// Step 4: Build events — LiveKit = source of truth for who's in,
+	// Redis = source of truth for mute/deaf/video/screen state.
+	var events []*streamv1.VoiceStateEvent
+	for uid, lp := range liveParticipants {
+		rs, hasRedis := redisMap[uid]
+		evt := &streamv1.VoiceStateEvent{
+			Event:           "VOICE_STATE_UPDATE",
+			Action:          "state_sync",
+			ChannelId:       channelID,
+			UserId:          uid,
+			Name:            lp.Name,
+			Sid:             lp.Sid,
+			Metadata:        lp.Metadata,
+			RoomActiveSince: roomActiveSince,
+		}
+		if hasRedis {
+			evt.GuildId = rs.GuildID
+			evt.Name = rs.DisplayName
+			evt.SelfMute = rs.SelfMute
+			evt.SelfDeaf = rs.SelfDeaf
+			evt.Video = rs.Video
+			evt.Streaming = rs.ScreenShare
+			evt.Metadata = fmt.Sprintf(`{"userId":"%s","username":"%s","displayName":"%s","avatarUrl":"%s"}`, rs.UserID, rs.Username, rs.DisplayName, rs.AvatarURL)
+		}
+		if lp.JoinedAt > 0 {
+			evt.Timestamp = timestamppb.New(time.Unix(lp.JoinedAt, 0))
+		}
+		events = append(events, evt)
+	}
+	return events, nil
+}
+
+// GetGuildVoiceChannelIDs scans Redis for active voice channels in a guild.
+func (v *VoiceSnapshot) GetGuildVoiceChannelIDs(ctx context.Context, guildID string) ([]string, error) {
+	if v.svc.redis == nil {
+		return nil, nil
+	}
+	// Scan all voice:* keys and check if any participant belongs to this guild.
+	var channelIDs []string
+	seen := make(map[string]bool)
+	iter := v.svc.redis.Scan(ctx, 0, "voice:*", 100).Iterator()
+	for iter.Next(ctx) {
+		key := iter.Val()
+		chID := key[6:] // strip "voice:" prefix
+		if seen[chID] {
+			continue
+		}
+		states, err := v.svc.GetChannelState(ctx, chID)
+		if err != nil || len(states) == 0 {
+			continue
+		}
+		if states[0].GuildID == guildID {
+			channelIDs = append(channelIDs, chID)
+			seen[chID] = true
+		}
+	}
+	return channelIDs, nil
+}
+
+// hasActiveAudio and hasActiveVideo are defined in webhook.go (same package).
+
+// ServerMuteUser revokes/restores audio publish permission for a participant.
+// LiveKit fires a track_unpublished webhook → the webhook handler emits a
+// NATS event so every subscriber's UI updates automatically.
+func (s *Service) ServerMuteUser(ctx context.Context, channelID, targetID string, muted bool) error {
+	if s.roomClient == nil {
+		return ErrLiveKitUnavailable
+	}
+	_, err := s.roomClient.UpdateParticipant(ctx, &livekit.UpdateParticipantRequest{
+		Room:     channelID,
+		Identity: targetID,
+		Permission: &livekit.ParticipantPermission{
+			CanPublish:   !muted,
+			CanSubscribe: true,
+		},
+	})
+	return err
+}
+
+// ServerDeafenUser revokes/restores subscribe permission so the target
+// can't hear anyone. Also mutes them (can't publish while deaf).
+func (s *Service) ServerDeafenUser(ctx context.Context, channelID, targetID string, deafened bool) error {
+	if s.roomClient == nil {
+		return ErrLiveKitUnavailable
+	}
+	_, err := s.roomClient.UpdateParticipant(ctx, &livekit.UpdateParticipantRequest{
+		Room:     channelID,
+		Identity: targetID,
+		Permission: &livekit.ParticipantPermission{
+			CanPublish:   !deafened,
+			CanSubscribe: !deafened,
+		},
+	})
+	return err
+}
+
+// DisconnectUser kicks a participant from the LiveKit room. LiveKit fires
+// a participant_left webhook → NATS event propagates to all clients.
+func (s *Service) DisconnectUser(ctx context.Context, channelID, targetID string) error {
+	if s.roomClient == nil {
+		return ErrLiveKitUnavailable
+	}
+	_, _ = s.roomClient.RemoveParticipant(ctx, &livekit.RoomParticipantIdentity{
+		Room: channelID, Identity: targetID,
+	})
+	return nil
+}
 
 // ── DM calls ───────────────────────────────────────────────────────────────
 

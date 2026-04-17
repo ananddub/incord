@@ -12,20 +12,28 @@ import (
 )
 
 const addGuildMember = `-- name: AddGuildMember :one
-INSERT INTO guild_members (guild_id, user_id, nickname)
-VALUES ($1, $2, $3)
-ON CONFLICT (guild_id, user_id) DO UPDATE SET deleted = FALSE, updated_at = NOW(), nickname = EXCLUDED.nickname
-RETURNING guild_id, user_id, nickname, joined_at, deleted, updated_at
+INSERT INTO guild_members (guild_id, user_id, nickname, invite_code, invited_by)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (guild_id, user_id) DO UPDATE SET deleted = FALSE, updated_at = NOW(), nickname = EXCLUDED.nickname, invite_code = EXCLUDED.invite_code, invited_by = EXCLUDED.invited_by
+RETURNING guild_id, user_id, nickname, joined_at, deleted, updated_at, invite_code, invited_by
 `
 
 type AddGuildMemberParams struct {
-	GuildID  pgtype.UUID `json:"guild_id"`
-	UserID   pgtype.UUID `json:"user_id"`
-	Nickname string      `json:"nickname"`
+	GuildID    pgtype.UUID `json:"guild_id"`
+	UserID     pgtype.UUID `json:"user_id"`
+	Nickname   string      `json:"nickname"`
+	InviteCode *string     `json:"invite_code"`
+	InvitedBy  pgtype.UUID `json:"invited_by"`
 }
 
 func (q *Queries) AddGuildMember(ctx context.Context, arg AddGuildMemberParams) (GuildMember, error) {
-	row := q.db.QueryRow(ctx, addGuildMember, arg.GuildID, arg.UserID, arg.Nickname)
+	row := q.db.QueryRow(ctx, addGuildMember,
+		arg.GuildID,
+		arg.UserID,
+		arg.Nickname,
+		arg.InviteCode,
+		arg.InvitedBy,
+	)
 	var i GuildMember
 	err := row.Scan(
 		&i.GuildID,
@@ -34,6 +42,8 @@ func (q *Queries) AddGuildMember(ctx context.Context, arg AddGuildMemberParams) 
 		&i.JoinedAt,
 		&i.Deleted,
 		&i.UpdatedAt,
+		&i.InviteCode,
+		&i.InvitedBy,
 	)
 	return i, err
 }
@@ -44,6 +54,17 @@ SELECT COUNT(*) FROM guild_members WHERE guild_id = $1 AND deleted = FALSE
 
 func (q *Queries) CountGuildMembers(ctx context.Context, guildID pgtype.UUID) (int64, error) {
 	row := q.db.QueryRow(ctx, countGuildMembers, guildID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countInviteUsesByCode = `-- name: CountInviteUsesByCode :one
+SELECT COUNT(*) FROM invite_uses WHERE invite_code = $1
+`
+
+func (q *Queries) CountInviteUsesByCode(ctx context.Context, inviteCode string) (int64, error) {
+	row := q.db.QueryRow(ctx, countInviteUsesByCode, inviteCode)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -226,7 +247,7 @@ func (q *Queries) GetGuildByID(ctx context.Context, id pgtype.UUID) (Guild, erro
 }
 
 const getGuildMember = `-- name: GetGuildMember :one
-SELECT guild_id, user_id, nickname, joined_at, deleted, updated_at FROM guild_members WHERE guild_id = $1 AND user_id = $2 AND deleted = FALSE
+SELECT guild_id, user_id, nickname, joined_at, deleted, updated_at, invite_code, invited_by FROM guild_members WHERE guild_id = $1 AND user_id = $2 AND deleted = FALSE
 `
 
 type GetGuildMemberParams struct {
@@ -244,6 +265,8 @@ func (q *Queries) GetGuildMember(ctx context.Context, arg GetGuildMemberParams) 
 		&i.JoinedAt,
 		&i.Deleted,
 		&i.UpdatedAt,
+		&i.InviteCode,
+		&i.InvitedBy,
 	)
 	return i, err
 }
@@ -279,8 +302,65 @@ func (q *Queries) IncrementInviteUses(ctx context.Context, code string) error {
 	return err
 }
 
+const listGuildInviteUses = `-- name: ListGuildInviteUses :many
+SELECT iu.id, iu.invite_code, iu.guild_id, iu.user_id, iu.inviter_id, iu.used_at, u.username, u.display_name, u.avatar_url
+FROM invite_uses iu
+JOIN users u ON u.id = iu.user_id
+WHERE iu.guild_id = $1
+ORDER BY iu.used_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListGuildInviteUsesParams struct {
+	GuildID pgtype.UUID `json:"guild_id"`
+	Limit   int32       `json:"limit"`
+	Offset  int32       `json:"offset"`
+}
+
+type ListGuildInviteUsesRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	InviteCode  string             `json:"invite_code"`
+	GuildID     pgtype.UUID        `json:"guild_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	InviterID   pgtype.UUID        `json:"inviter_id"`
+	UsedAt      pgtype.Timestamptz `json:"used_at"`
+	Username    string             `json:"username"`
+	DisplayName string             `json:"display_name"`
+	AvatarUrl   string             `json:"avatar_url"`
+}
+
+func (q *Queries) ListGuildInviteUses(ctx context.Context, arg ListGuildInviteUsesParams) ([]ListGuildInviteUsesRow, error) {
+	rows, err := q.db.Query(ctx, listGuildInviteUses, arg.GuildID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListGuildInviteUsesRow{}
+	for rows.Next() {
+		var i ListGuildInviteUsesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.InviteCode,
+			&i.GuildID,
+			&i.UserID,
+			&i.InviterID,
+			&i.UsedAt,
+			&i.Username,
+			&i.DisplayName,
+			&i.AvatarUrl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listGuildMembers = `-- name: ListGuildMembers :many
-SELECT guild_id, user_id, nickname, joined_at, deleted, updated_at FROM guild_members
+SELECT guild_id, user_id, nickname, joined_at, deleted, updated_at, invite_code, invited_by FROM guild_members
 WHERE guild_id = $1 AND deleted = FALSE
 ORDER BY joined_at
 LIMIT $2 OFFSET $3
@@ -308,6 +388,65 @@ func (q *Queries) ListGuildMembers(ctx context.Context, arg ListGuildMembersPara
 			&i.JoinedAt,
 			&i.Deleted,
 			&i.UpdatedAt,
+			&i.InviteCode,
+			&i.InvitedBy,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listInviteUses = `-- name: ListInviteUses :many
+SELECT iu.id, iu.invite_code, iu.guild_id, iu.user_id, iu.inviter_id, iu.used_at, u.username, u.display_name, u.avatar_url
+FROM invite_uses iu
+JOIN users u ON u.id = iu.user_id
+WHERE iu.invite_code = $1
+ORDER BY iu.used_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListInviteUsesParams struct {
+	InviteCode string `json:"invite_code"`
+	Limit      int32  `json:"limit"`
+	Offset     int32  `json:"offset"`
+}
+
+type ListInviteUsesRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	InviteCode  string             `json:"invite_code"`
+	GuildID     pgtype.UUID        `json:"guild_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	InviterID   pgtype.UUID        `json:"inviter_id"`
+	UsedAt      pgtype.Timestamptz `json:"used_at"`
+	Username    string             `json:"username"`
+	DisplayName string             `json:"display_name"`
+	AvatarUrl   string             `json:"avatar_url"`
+}
+
+func (q *Queries) ListInviteUses(ctx context.Context, arg ListInviteUsesParams) ([]ListInviteUsesRow, error) {
+	rows, err := q.db.Query(ctx, listInviteUses, arg.InviteCode, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListInviteUsesRow{}
+	for rows.Next() {
+		var i ListInviteUsesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.InviteCode,
+			&i.GuildID,
+			&i.UserID,
+			&i.InviterID,
+			&i.UsedAt,
+			&i.Username,
+			&i.DisplayName,
+			&i.AvatarUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -352,6 +491,38 @@ func (q *Queries) ListUserGuilds(ctx context.Context, userID pgtype.UUID) ([]Gui
 		return nil, err
 	}
 	return items, nil
+}
+
+const recordInviteUse = `-- name: RecordInviteUse :one
+INSERT INTO invite_uses (invite_code, guild_id, user_id, inviter_id)
+VALUES ($1, $2, $3, $4)
+RETURNING id, invite_code, guild_id, user_id, inviter_id, used_at
+`
+
+type RecordInviteUseParams struct {
+	InviteCode string      `json:"invite_code"`
+	GuildID    pgtype.UUID `json:"guild_id"`
+	UserID     pgtype.UUID `json:"user_id"`
+	InviterID  pgtype.UUID `json:"inviter_id"`
+}
+
+func (q *Queries) RecordInviteUse(ctx context.Context, arg RecordInviteUseParams) (InviteUse, error) {
+	row := q.db.QueryRow(ctx, recordInviteUse,
+		arg.InviteCode,
+		arg.GuildID,
+		arg.UserID,
+		arg.InviterID,
+	)
+	var i InviteUse
+	err := row.Scan(
+		&i.ID,
+		&i.InviteCode,
+		&i.GuildID,
+		&i.UserID,
+		&i.InviterID,
+		&i.UsedAt,
+	)
+	return i, err
 }
 
 const removeGuildMember = `-- name: RemoveGuildMember :exec

@@ -11,4 +11,9 @@ rtc:
 keys:
   devkey: secret
 
+webhook:
+  urls:
+    - "http://server:9100/livekit/webhook"
+  api_key: devkey
+
 log_level: info

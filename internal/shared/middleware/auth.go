@@ -23,6 +23,7 @@ var publicMethods = map[string]bool{
 	"/auth.v1.AuthService/Login":         true,
 	"/auth.v1.AuthService/RefreshToken":  true,
 	"/auth.v1.AuthService/ValidateToken": true,
+	"/guild.v1.GuildService/PreviewInvite": true,
 }
 
 func AuthInterceptor(secret string) grpc.UnaryServerInterceptor {
