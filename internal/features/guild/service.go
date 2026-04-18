@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ananddub/ndiscord_backend/gen/db"
+	streamv1 "github.com/ananddub/ndiscord_backend/gen/stream/v1"
 	"github.com/ananddub/ndiscord_backend/internal/shared/authz"
 	"github.com/ananddub/ndiscord_backend/internal/shared/realtime"
 )
@@ -129,7 +130,7 @@ func (s *Service) UploadGuildIcon(ctx context.Context, callerID, guildID pgtype.
 	}
 
 	iconURL := s.ResolveIconURL(ctx, objectKey)
-	s.publishGuildEvent(ctx, guildID, "update", map[string]string{"icon_url": iconURL})
+	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_UPDATE, map[string]string{"icon_url": iconURL})
 
 	return updated, iconURL, nil
 }
@@ -139,13 +140,35 @@ func pgToStr(id pgtype.UUID) string {
 	return uuid.UUID(id.Bytes).String()
 }
 
-func (s *Service) publishGuildEvent(ctx context.Context, guildID pgtype.UUID, action string, extra map[string]string) {
+func (s *Service) publishGuildEvent(ctx context.Context, guildID pgtype.UUID, action streamv1.GuildEventType, extra map[string]string) {
 	gid := pgToStr(guildID)
-	data := map[string]string{"action": action, "guild_id": gid}
-	for k, v := range extra {
-		data[k] = v
+	evt := &streamv1.GuildEvent{
+		Event:   action,
+		Action:  action,
+		GuildId: gid,
 	}
-	_ = s.nats.Publish(realtime.GuildEvents(gid), data)
+	// Map well-known extras into typed fields.
+	for k, v := range extra {
+		switch k {
+		case "user_id":
+			evt.UserId = v
+		case "channel_id":
+			evt.ChannelId = v
+		case "name":
+			evt.Name = v
+		case "icon_url":
+			evt.IconUrl = v
+		case "role_id":
+			evt.RoleId = v
+		case "reason":
+			evt.Reason = v
+		case "parent_id":
+			evt.ParentId = v
+		case "topic":
+			evt.Topic = v
+		}
+	}
+	_ = s.nats.Publish(realtime.GuildEvents(gid), evt)
 }
 
 func (s *Service) CreateGuild(ctx context.Context, ownerID pgtype.UUID, name, description, iconURL string) (db.Guild, error) {
@@ -175,7 +198,7 @@ func (s *Service) CreateGuild(ctx context.Context, ownerID pgtype.UUID, name, de
 	_ = s.authz.AddGuildOwner(ctx, ownerStr, guildStr)
 	_ = s.authz.AddGuildMember(ctx, ownerStr, guildStr)
 
-	s.publishGuildEvent(ctx, guild.ID, "member_add", map[string]string{
+	s.publishGuildEvent(ctx, guild.ID, streamv1.GuildEventType_GUILD_EVENT_MEMBER_ADD, map[string]string{
 		"user_id": ownerStr, "name": name,
 	})
 
@@ -207,7 +230,7 @@ func (s *Service) UpdateGuild(ctx context.Context, callerID, guildID pgtype.UUID
 		return db.Guild{}, fmt.Errorf("failed to update guild: %w", err)
 	}
 
-	s.publishGuildEvent(ctx, guildID, "update", map[string]string{"name": updated.Name})
+	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_UPDATE, map[string]string{"name": updated.Name})
 
 	return updated, nil
 }
@@ -226,7 +249,7 @@ func (s *Service) DeleteGuild(ctx context.Context, callerID, guildID pgtype.UUID
 		return fmt.Errorf("failed to delete guild: %w", err)
 	}
 
-	s.publishGuildEvent(ctx, guildID, "delete", nil)
+	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_DELETE, nil)
 
 	return nil
 }
@@ -385,7 +408,7 @@ func (s *Service) JoinGuild(ctx context.Context, userID pgtype.UUID, inviteCode 
 	guildStr := pgToStr(invite.GuildID)
 	_ = s.authz.AddGuildMember(ctx, userStr, guildStr)
 
-	s.publishGuildEvent(ctx, invite.GuildID, "member_add", map[string]string{
+	s.publishGuildEvent(ctx, invite.GuildID, streamv1.GuildEventType_GUILD_EVENT_MEMBER_ADD, map[string]string{
 		"user_id": userStr,
 	})
 
@@ -443,7 +466,7 @@ func (s *Service) LeaveGuild(ctx context.Context, userID, guildID pgtype.UUID) e
 	guildStr := pgToStr(guildID)
 	_ = s.authz.RemoveGuildMember(ctx, userStr, guildStr)
 
-	s.publishGuildEvent(ctx, guildID, "member_remove", map[string]string{
+	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_MEMBER_REMOVE, map[string]string{
 		"user_id": userStr,
 	})
 
@@ -493,7 +516,7 @@ func (s *Service) KickMember(ctx context.Context, callerID, guildID, targetID pg
 	guildStr := pgToStr(guildID)
 	_ = s.authz.RemoveGuildMember(ctx, targetStr, guildStr)
 
-	s.publishGuildEvent(ctx, guildID, "member_remove", map[string]string{
+	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_MEMBER_REMOVE, map[string]string{
 		"user_id": targetStr,
 	})
 
@@ -532,7 +555,7 @@ func (s *Service) BanMember(ctx context.Context, callerID, guildID, targetID pgt
 	guildStr := pgToStr(guildID)
 	_ = s.authz.RemoveGuildMember(ctx, targetStr, guildStr)
 
-	s.publishGuildEvent(ctx, guildID, "member_ban", map[string]string{
+	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_MEMBER_BAN, map[string]string{
 		"user_id": targetStr,
 		"reason":  reason,
 	})
@@ -560,7 +583,7 @@ func (s *Service) UnbanMember(ctx context.Context, callerID, guildID, targetID p
 		return err
 	}
 
-	s.publishGuildEvent(ctx, guildID, "member_unban", map[string]string{
+	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_MEMBER_UNBAN, map[string]string{
 		"user_id": pgToStr(targetID),
 	})
 
@@ -626,7 +649,7 @@ func (s *Service) CreateRole(ctx context.Context, callerID, guildID pgtype.UUID,
 		return db.Role{}, fmt.Errorf("failed to create role: %w", err)
 	}
 
-	s.publishGuildEvent(ctx, guildID, "role_create", map[string]string{"name": role.Name})
+	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_ROLE_CREATE, map[string]string{"name": role.Name})
 
 	return role, nil
 }
@@ -641,7 +664,7 @@ func (s *Service) UpdateRole(ctx context.Context, callerID, guildID pgtype.UUID,
 		return db.Role{}, fmt.Errorf("failed to update role: %w", err)
 	}
 
-	s.publishGuildEvent(ctx, guildID, "role_update", nil)
+	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_ROLE_UPDATE, nil)
 
 	return role, nil
 }
@@ -660,7 +683,7 @@ func (s *Service) DeleteRole(ctx context.Context, callerID, guildID, roleID pgty
 		return err
 	}
 
-	s.publishGuildEvent(ctx, guildID, "role_delete", nil)
+	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_ROLE_DELETE, nil)
 
 	return nil
 }
@@ -684,7 +707,7 @@ func (s *Service) AssignRole(ctx context.Context, callerID, guildID, targetID, r
 		return err
 	}
 
-	s.publishGuildEvent(ctx, guildID, "role_assign", map[string]string{
+	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_ROLE_ASSIGN, map[string]string{
 		"user_id": pgToStr(targetID),
 	})
 
@@ -703,7 +726,7 @@ func (s *Service) RemoveRole(ctx context.Context, callerID, guildID, targetID, r
 		return err
 	}
 
-	s.publishGuildEvent(ctx, guildID, "role_remove", map[string]string{
+	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_ROLE_REMOVE, map[string]string{
 		"user_id": pgToStr(targetID),
 	})
 
@@ -746,7 +769,7 @@ func (s *Service) TransferOwnership(ctx context.Context, callerID, guildID, newO
 	_ = s.authz.DeleteTuple(ctx, authz.UserKey(callerStr), "owner", authz.GuildKey(guildStr))
 	_ = s.authz.AddGuildOwner(ctx, newOwnerStr, guildStr)
 
-	s.publishGuildEvent(ctx, guildID, "update", map[string]string{
+	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_UPDATE, map[string]string{
 		"transferred_to": newOwnerStr,
 	})
 

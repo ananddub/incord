@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/livekit/protocol/auth"
 	"github.com/livekit/protocol/livekit"
 	"github.com/livekit/protocol/webhook"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
+	streamv1 "github.com/ananddub/ndiscord_backend/gen/stream/v1"
 	"github.com/ananddub/ndiscord_backend/internal/shared/config"
 	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
 	"github.com/ananddub/ndiscord_backend/internal/shared/realtime"
@@ -32,10 +35,6 @@ func parseRoomMeta(r *livekit.Room) roomMeta {
 	return m
 }
 
-// WebhookHandler receives all LiveKit room/participant events via HTTP
-// POST and fans them out over NATS so every connected client gets
-// real-time voice state updates. One instance, always running — the single
-// source of truth for who's in which room, muted/deafened/video/screen.
 type WebhookHandler struct {
 	provider  *auth.SimpleKeyProvider
 	nats      *realtime.Hub
@@ -43,8 +42,6 @@ type WebhookHandler struct {
 	roomMetas sync.Map // room name → roomMeta cache
 }
 
-// NewWebhookHandler creates the handler. Register it on your HTTP mux as
-// POST /livekit/webhook.
 func NewWebhookHandler(cfg config.LiveKitConfig, nats *realtime.Hub, voiceSvc *Service) *WebhookHandler {
 	return &WebhookHandler{
 		provider: auth.NewSimpleKeyProvider(cfg.APIKey, cfg.APISecret),
@@ -65,9 +62,6 @@ func (h *WebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// resolveRoomMeta parses room metadata from the event and caches it. Track
-// events don't carry Room.Metadata, so we fall back to the cached value
-// from an earlier room_started/participant_joined event.
 func (h *WebhookHandler) resolveRoomMeta(event *livekit.WebhookEvent) roomMeta {
 	meta := parseRoomMeta(event.Room)
 	if meta.GuildID != "" {
@@ -96,7 +90,7 @@ func (h *WebhookHandler) handleEvent(event *livekit.WebhookEvent) {
 	switch event.GetEvent() {
 	case "room_started":
 		log.Info().Msg("voice room started")
-		h.publish(meta, "room_started", nil)
+		h.publish(meta, &streamv1.VoiceStateEvent{Action: streamv1.VoiceAction_VOICE_ACTION_ROOM_STARTED})
 
 	case "room_finished":
 		log.Info().Msg("voice room finished")
@@ -104,7 +98,7 @@ func (h *WebhookHandler) handleEvent(event *livekit.WebhookEvent) {
 			_ = h.voiceSvc.ClearChannel(context.Background(), meta.ChannelID)
 			_ = h.voiceSvc.ClearActiveSince(context.Background(), meta.ChannelID)
 		}
-		h.publish(meta, "room_finished", nil)
+		h.publish(meta, &streamv1.VoiceStateEvent{Action: streamv1.VoiceAction_VOICE_ACTION_ROOM_FINISHED})
 		h.roomMetas.Delete(meta.ChannelID)
 
 	case "participant_joined":
@@ -113,11 +107,12 @@ func (h *WebhookHandler) handleEvent(event *livekit.WebhookEvent) {
 			return
 		}
 		log.Info().Str("user", p.Identity).Msg("participant joined")
-		h.publish(meta, "join", map[string]any{
-			"user_id":  p.Identity,
-			"name":     p.Name,
-			"sid":      p.Sid,
-			"metadata": p.Metadata,
+		h.publish(meta, &streamv1.VoiceStateEvent{
+			Action:   streamv1.VoiceAction_VOICE_ACTION_JOIN,
+			UserId:   p.Identity,
+			Name:     p.Name,
+			Sid:      p.Sid,
+			Metadata: p.Metadata,
 		})
 
 	case "participant_left":
@@ -128,10 +123,11 @@ func (h *WebhookHandler) handleEvent(event *livekit.WebhookEvent) {
 		log.Info().Str("user", p.Identity).Msg("participant left")
 		if h.voiceSvc != nil {
 			_ = h.voiceSvc.RemoveParticipant(context.Background(), meta.ChannelID, p.Identity)
-			h.voiceSvc.broadcastChannelState(context.Background(), meta.ChannelID, meta.GuildID)
+			h.voiceSvc.broadcastChannelState(context.Background(), time.Now(), meta.ChannelID, meta.GuildID)
 		}
-		h.publish(meta, "leave", map[string]any{
-			"user_id": p.Identity,
+		h.publish(meta, &streamv1.VoiceStateEvent{
+			Action: streamv1.VoiceAction_VOICE_ACTION_LEAVE,
+			UserId: p.Identity,
 		})
 
 	case "track_published":
@@ -164,24 +160,29 @@ func (h *WebhookHandler) handleEvent(event *livekit.WebhookEvent) {
 	}
 }
 
-// publish sends a VOICE_STATE_UPDATE event on the guild events subject so
-// StreamGuildEvents subscribers get voice state alongside channel/member
-// events in one unified stream. For DM calls (no guildID), falls back to
-// the per-user DmCall subject.
-func (h *WebhookHandler) publish(meta roomMeta, action string, extra map[string]any) {
-	payload := map[string]any{
-		"event":      "VOICE_STATE_UPDATE",
-		"action":     action,
-		"channel_id": meta.ChannelID,
-		"guild_id":   meta.GuildID,
+// publish sends a typed VoiceStateEvent on the guild voice subject so
+// StreamVoiceState subscribers get it alongside every other voice update.
+// Fills in the boilerplate fields (event, channel_id, guild_id, timestamp,
+// room_active_since) so callers only have to populate action + identity +
+// state flags. For DM calls (no guildID), falls back to the per-user DmCall
+// subject.
+func (h *WebhookHandler) publish(meta roomMeta, evt *streamv1.VoiceStateEvent) {
+	if evt == nil {
+		return
 	}
-	for k, v := range extra {
-		payload[k] = v
+	evt.Event = streamv1.VoiceEvent_VOICE_EVENT_STATE_UPDATE
+	evt.ChannelId = meta.ChannelID
+	evt.GuildId = meta.GuildID
+	if evt.Timestamp == nil {
+		evt.Timestamp = timestamppb.Now()
+	}
+	if evt.RoomActiveSince == 0 && h.voiceSvc != nil && meta.ChannelID != "" {
+		evt.RoomActiveSince = h.voiceSvc.GetActiveSince(context.Background(), meta.ChannelID)
 	}
 	if meta.GuildID != "" {
-		_ = h.nats.Publish(realtime.GuildChannelVoice(meta.GuildID, meta.ChannelID), payload)
-	} else if uid, ok := extra["user_id"].(string); ok {
-		_ = h.nats.Publish(realtime.DmCall(uid), payload)
+		_ = h.nats.Publish(realtime.GuildChannelVoice(meta.GuildID, meta.ChannelID), evt)
+	} else if evt.UserId != "" {
+		_ = h.nats.Publish(realtime.DmCall(evt.UserId), evt)
 	}
 }
 
@@ -189,57 +190,59 @@ func (h *WebhookHandler) publish(meta roomMeta, action string, extra map[string]
 // Reads from Redis to include the full state so webhook events don't
 // overwrite gRPC-set fields (e.g. screen_share) with defaults.
 func (h *WebhookHandler) publishTrackEvent(meta roomMeta, p *livekit.ParticipantInfo, t *livekit.TrackInfo, published bool) {
-	trackType := "unknown"
+	trackType := streamv1.VoiceTrackType_VOICE_TRACK_UNSPECIFIED
 	switch t.Source {
 	case livekit.TrackSource_CAMERA:
-		trackType = "video"
+		trackType = streamv1.VoiceTrackType_VOICE_TRACK_VIDEO
 	case livekit.TrackSource_SCREEN_SHARE, livekit.TrackSource_SCREEN_SHARE_AUDIO:
-		trackType = "screen_share"
+		trackType = streamv1.VoiceTrackType_VOICE_TRACK_SCREEN_SHARE
 	case livekit.TrackSource_MICROPHONE:
-		trackType = "audio"
+		trackType = streamv1.VoiceTrackType_VOICE_TRACK_AUDIO
 	}
 
-	extra := map[string]any{
-		"user_id":    p.Identity,
-		"track_type": trackType,
-		"published":  published,
-		"metadata":   p.Metadata,
+	evt := &streamv1.VoiceStateEvent{
+		Action:    streamv1.VoiceAction_VOICE_ACTION_TRACK_UPDATE,
+		UserId:    p.Identity,
+		TrackType: trackType,
+		Published: published,
+		Metadata:  p.Metadata,
 	}
 
 	// Merge Redis state so we don't clobber fields set via gRPC toggles.
 	if h.voiceSvc != nil {
 		if ps, err := h.voiceSvc.GetParticipant(context.Background(), meta.ChannelID, p.Identity); err == nil && ps != nil {
-			extra["self_mute"] = ps.SelfMute
-			extra["self_deaf"] = ps.SelfDeaf
-			extra["video"] = ps.Video
-			extra["streaming"] = ps.ScreenShare
-			extra["name"] = ps.DisplayName
+			evt.SelfMute = ps.SelfMute
+			evt.SelfDeaf = ps.SelfDeaf
+			evt.Video = ps.Video
+			evt.Streaming = ps.ScreenShare
+			evt.Name = ps.DisplayName
 		} else {
-			extra["self_mute"] = !hasActiveAudio(p)
-			extra["video"] = hasActiveVideo(p)
+			evt.SelfMute = !hasActiveAudio(p)
+			evt.Video = hasActiveVideo(p)
 		}
 	}
 
-	h.publish(meta, "track_update", extra)
+	h.publish(meta, evt)
 }
 
 // publishParticipantState sends the full mute/video/screen state from Redis.
 func (h *WebhookHandler) publishParticipantState(meta roomMeta, p *livekit.ParticipantInfo) {
-	extra := map[string]any{
-		"user_id":  p.Identity,
-		"name":     p.Name,
-		"metadata": p.Metadata,
+	evt := &streamv1.VoiceStateEvent{
+		Action:   streamv1.VoiceAction_VOICE_ACTION_STATE_SYNC,
+		UserId:   p.Identity,
+		Name:     p.Name,
+		Metadata: p.Metadata,
 	}
 	if h.voiceSvc != nil {
 		if ps, err := h.voiceSvc.GetParticipant(context.Background(), meta.ChannelID, p.Identity); err == nil && ps != nil {
-			extra["self_mute"] = ps.SelfMute
-			extra["self_deaf"] = ps.SelfDeaf
-			extra["video"] = ps.Video
-			extra["streaming"] = ps.ScreenShare
-			extra["name"] = ps.DisplayName
+			evt.SelfMute = ps.SelfMute
+			evt.SelfDeaf = ps.SelfDeaf
+			evt.Video = ps.Video
+			evt.Streaming = ps.ScreenShare
+			evt.Name = ps.DisplayName
 		}
 	}
-	h.publish(meta, "state_sync", extra)
+	h.publish(meta, evt)
 }
 
 func hasActiveAudio(p *livekit.ParticipantInfo) bool {

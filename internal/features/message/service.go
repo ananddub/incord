@@ -7,7 +7,9 @@ import (
 
 	"github.com/gocql/gocql"
 	"github.com/redis/go-redis/v9"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
+	streamv1 "github.com/ananddub/ndiscord_backend/gen/stream/v1"
 	"github.com/ananddub/ndiscord_backend/internal/shared/authz"
 	"github.com/ananddub/ndiscord_backend/internal/shared/realtime"
 )
@@ -87,22 +89,6 @@ func dedupMentions(ids []string, authorID string) []string {
 	return out
 }
 
-// attachmentMap turns an []Attachment slice into a []map[string]any suitable
-// for JSON-marshalling into a NATS event and proto-decoding on the client.
-func attachmentMaps(atts []Attachment) []map[string]any {
-	out := make([]map[string]any, len(atts))
-	for i, a := range atts {
-		out[i] = map[string]any{
-			"id":           a.ID.String(),
-			"filename":     a.Filename,
-			"url":          a.URL,
-			"content_type": a.ContentType,
-			"size":         a.Size,
-		}
-	}
-	return out
-}
-
 // GetAttachments exposes the persisted attachments for a given message so
 // handlers can hydrate their proto responses.
 func (s *Service) GetAttachments(ctx context.Context, channelID, messageID string) ([]Attachment, error) {
@@ -133,70 +119,79 @@ func (s *Service) loadAttachments(ctx context.Context, channelID, messageID gocq
 // type, pinned, mentions, reactions, forwarded_from) so subscribers don't
 // have to round-trip GetMessage. Used by both DM and guild-channel publish
 // paths — the subject routing happens in publishChannelEvent.
-func (s *Service) buildMessageEvent(ctx context.Context, evtType, channelID, guildID, userID string, msg *Message, atts []Attachment) map[string]any {
-	payload := map[string]any{
-		"type":       evtType,
-		"message_id": msg.ID.String(),
-		"channel_id": channelID,
-		"guild_id":   guildID,
-		"author_id":  msg.AuthorID.String(),
-		"sender_id":  userID,
-		"content":    msg.Content,
-		"msg_type":   msg.Type,
-		"pinned":     msg.Pinned,
-		"deleted":    msg.Deleted,
+// buildMessageEvent builds a typed TextChannelEvent proto. Since the JSON
+// field names match DmChatEvent too, the same payload deserialises cleanly
+// into DmChatEvent on the DM-stream path — guild_id is simply ignored there.
+func (s *Service) buildMessageEvent(ctx context.Context, evtType streamv1.ChatEventType, channelID, guildID, userID string, msg *Message, atts []Attachment) *streamv1.TextChannelEvent {
+	evt := &streamv1.TextChannelEvent{
+		Type:      evtType,
+		MessageId: msg.ID.String(),
+		ChannelId: channelID,
+		GuildId:   guildID,
+		AuthorId:  msg.AuthorID.String(),
+		SenderId:  userID,
+		Content:   msg.Content,
+		MsgType:   int32(msg.Type),
+		Pinned:    msg.Pinned,
+		Deleted:   msg.Deleted,
 	}
-	// Best-effort reactions snapshot — every non-reaction event carries the
-	// full per-emoji counts so clients never have to recompute from deltas.
-	// For reaction_add/reaction_remove events the toggleReaction path also
-	// calls this helper via publishChannelEvent, so both deltas and totals
-	// land in the same message.
+
 	if reactions, err := s.repo.GetReactions(ctx, msg.ChannelID, msg.ID, msg.AuthorID); err == nil && len(reactions) > 0 {
-		out := make([]map[string]any, len(reactions))
+		evt.Reactions = make([]*streamv1.ChatReactionCount, len(reactions))
 		for i, r := range reactions {
-			out[i] = map[string]any{
-				"emoji": r.Emoji,
-				"count": r.Count,
-				"me":    r.Me,
+			evt.Reactions[i] = &streamv1.ChatReactionCount{
+				Emoji: r.Emoji,
+				Count: r.Count,
+				Me:    r.Me,
 			}
 		}
-		payload["reactions"] = out
 	}
 	var zeroUUID gocql.UUID
 	if msg.ReplyToID != zeroUUID {
-		payload["reply_to_id"] = msg.ReplyToID.String()
+		evt.ReplyToId = msg.ReplyToID.String()
 	}
 	if msg.EditedAt != nil {
-		payload["edited_at"] = msg.EditedAt.Format(time.RFC3339Nano)
+		evt.EditedAt = msg.EditedAt.Format(time.RFC3339Nano)
 	}
 	if !msg.CreatedAt.IsZero() {
-		payload["created_at"] = msg.CreatedAt.Format(time.RFC3339Nano)
+		evt.CreatedAt = msg.CreatedAt.Format(time.RFC3339Nano)
 	}
 	if len(atts) > 0 {
-		payload["attachments"] = attachmentMaps(atts)
+		evt.Attachments = make([]*streamv1.ChatAttachment, len(atts))
+		for i, a := range atts {
+			evt.Attachments[i] = &streamv1.ChatAttachment{
+				Id:          a.ID.String(),
+				Filename:    a.Filename,
+				Url:         a.URL,
+				ContentType: a.ContentType,
+				Size:        a.Size,
+			}
+		}
 	}
 	if msg.ForwardedFromMessageID != zeroUUID {
-		payload["forwarded_from"] = map[string]any{
-			"channel_id": msg.ForwardedFromChannelID.String(),
-			"message_id": msg.ForwardedFromMessageID.String(),
-			"author_id":  msg.ForwardedFromAuthorID.String(),
+		evt.ForwardedFrom = &streamv1.ChatForwardedReference{
+			ChannelId: msg.ForwardedFromChannelID.String(),
+			MessageId: msg.ForwardedFromMessageID.String(),
+			AuthorId:  msg.ForwardedFromAuthorID.String(),
 		}
 	}
 	if len(msg.MentionUserIDs) > 0 {
-		ids := make([]string, len(msg.MentionUserIDs))
+		evt.MentionUserIds = make([]string, len(msg.MentionUserIDs))
 		for i, m := range msg.MentionUserIDs {
-			ids[i] = m.String()
+			evt.MentionUserIds[i] = m.String()
 		}
-		payload["mention_user_ids"] = ids
 	}
-	return payload
+	return evt
 }
 
 // publishChannelEvent fans out a message event to the right subject: a
 // single guild-channel subject for guild messages, or per-member DM subjects
 // so every member (including the sender's other devices) gets synced.
-func (s *Service) publishChannelEvent(ctx context.Context, guildID, channelID string, payload map[string]any) {
-	if s.nats == nil {
+// publishChannelEvent accepts the typed TextChannelEvent proto. Its JSON
+// field names overlap fully with DmChatEvent, so the same payload round-trips
+// cleanly into a DmChatEvent on the DM stream path (guild_id is ignored).
+func (s *Service) publishChannelEvent(ctx context.Context, guildID, channelID string, payload *streamv1.TextChannelEvent) {
+	if s.nats == nil || payload == nil {
 		return
 	}
 	if guildID != "" {
@@ -369,7 +364,7 @@ func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, c
 	}
 
 	s.publishChannelEvent(ctx, guildID, channelID,
-		s.buildMessageEvent(ctx, "create", channelID, guildID, userID, msg, attachments))
+		s.buildMessageEvent(ctx, streamv1.ChatEventType_CHAT_EVENT_CREATE, channelID, guildID, userID, msg, attachments))
 
 	return msg, attachments, nil
 }
@@ -433,7 +428,7 @@ func (s *Service) EditMessage(ctx context.Context, userID, channelID, guildID, m
 
 	atts := s.loadAttachments(ctx, chUUID, msgUUID)
 	s.publishChannelEvent(ctx, guildID, channelID,
-		s.buildMessageEvent(ctx, "update", channelID, guildID, userID, existing, atts))
+		s.buildMessageEvent(ctx, streamv1.ChatEventType_CHAT_EVENT_UPDATE, channelID, guildID, userID, existing, atts))
 
 	return existing, nil
 }
@@ -472,7 +467,7 @@ func (s *Service) DeleteMessage(ctx context.Context, userID, channelID, guildID,
 	// can drop the message without a follow-up fetch.
 	existing.Deleted = true
 	s.publishChannelEvent(ctx, guildID, channelID,
-		s.buildMessageEvent(ctx, "delete", channelID, guildID, userID, existing, nil))
+		s.buildMessageEvent(ctx, streamv1.ChatEventType_CHAT_EVENT_DELETE, channelID, guildID, userID, existing, nil))
 
 	return nil
 }
@@ -542,9 +537,9 @@ func (s *Service) setPinned(ctx context.Context, userID, channelID, guildID, mes
 	}
 	msg.Pinned = pinned
 	atts := s.loadAttachments(ctx, chUUID, msgUUID)
-	evtType := "pin"
+	evtType := streamv1.ChatEventType_CHAT_EVENT_PIN
 	if !pinned {
-		evtType = "unpin"
+		evtType = streamv1.ChatEventType_CHAT_EVENT_UNPIN
 	}
 	s.publishChannelEvent(ctx, guildID, channelID,
 		s.buildMessageEvent(ctx, evtType, channelID, guildID, userID, msg, atts))
@@ -597,9 +592,9 @@ func (s *Service) toggleReaction(ctx context.Context, userID, channelID, guildID
 		}
 	}
 
-	evtType := "reaction_remove"
+	evtType := streamv1.ChatEventType_CHAT_EVENT_REACTION_REMOVE
 	if add {
-		evtType = "reaction_add"
+		evtType = streamv1.ChatEventType_CHAT_EVENT_REACTION_ADD
 	}
 	// Build the rich snapshot via buildMessageEvent so the event carries the
 	// full per-emoji reactions list + attachments + reply info — receivers
@@ -609,9 +604,9 @@ func (s *Service) toggleReaction(ctx context.Context, userID, channelID, guildID
 	// receives an authoritative state snapshot on every mutation.
 	atts := s.loadAttachments(ctx, chUUID, msgUUID)
 	payload := s.buildMessageEvent(ctx, evtType, channelID, guildID, userID, msg, atts)
-	// Reaction-specific fields that aren't part of the generic message snapshot.
-	payload["user_id"] = userID
-	payload["emoji"] = emoji
+	// Reaction-specific field. The reactor's identity already rides on
+	// SenderId (set by buildMessageEvent), so no separate user_id is needed.
+	payload.Emoji = emoji
 	s.publishChannelEvent(ctx, guildID, channelID, payload)
 	return nil
 }
@@ -636,14 +631,16 @@ func (s *Service) AckMessage(ctx context.Context, userID, channelID, guildID, me
 
 	// Broadcast a "read_receipt" event so other members of the channel
 	// (and the user's own other devices) can render "seen by X" indicators
-	// in real time.
-	payload := map[string]any{
-		"type":       "read_receipt",
-		"channel_id": channelID,
-		"message_id": messageID,
-		"user_id":    userID,
-		"sender_id":  userID,
-		"read_at":    time.Now().Format(time.RFC3339Nano),
+	// in real time. Reusing TextChannelEvent keeps the publish subject and
+	// JSON shape aligned with the rest of the message stream.
+	payload := &streamv1.TextChannelEvent{
+		Type:      streamv1.ChatEventType_CHAT_EVENT_READ_RECEIPT,
+		ChannelId: channelID,
+		GuildId:   guildID,
+		MessageId: messageID,
+		SenderId:  userID,
+		AuthorId:  userID,
+		EditedAt:  time.Now().Format(time.RFC3339Nano),
 	}
 	s.publishChannelEvent(ctx, guildID, channelID, payload)
 
@@ -661,11 +658,13 @@ func (s *Service) StartTyping(ctx context.Context, userID, channelID, guildID st
 		return fmt.Errorf("failed to set typing indicator: %w", err)
 	}
 
-	// Publish typing event
-	typingEvt := map[string]any{
-		"event":      "TYPING_START",
-		"channel_id": channelID,
-		"user_id":    userID,
+	// Publish typing event as a typed proto so stream subscribers decode
+	// directly into TypingEvent without field-name drift risk.
+	typingEvt := &streamv1.TypingEvent{
+		ChannelId: channelID,
+		GuildId:   guildID,
+		UserId:    userID,
+		Timestamp: timestamppb.Now(),
 	}
 	if guildID != "" {
 		_ = s.nats.Publish(realtime.GuildChannelTyping(guildID, channelID), typingEvt)

@@ -10,8 +10,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/minio/minio-go/v7"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/ananddub/ndiscord_backend/gen/db"
+	streamv1 "github.com/ananddub/ndiscord_backend/gen/stream/v1"
 	"github.com/ananddub/ndiscord_backend/internal/shared/realtime"
 )
 
@@ -45,20 +47,38 @@ func pgIDToStr(id pgtype.UUID) string {
 	return uuid.UUID(id.Bytes).String()
 }
 
-// publishFriendActivity publishes a FriendActivityEvent payload to the given
+// presenceStatusFromString maps the persisted status column into the
+// PresenceStatus enum. Unknown values fall back to UNSPECIFIED.
+func presenceStatusFromString(s string) streamv1.PresenceStatus {
+	switch s {
+	case "online":
+		return streamv1.PresenceStatus_PRESENCE_STATUS_ONLINE
+	case "idle":
+		return streamv1.PresenceStatus_PRESENCE_STATUS_IDLE
+	case "dnd":
+		return streamv1.PresenceStatus_PRESENCE_STATUS_DND
+	case "offline":
+		return streamv1.PresenceStatus_PRESENCE_STATUS_OFFLINE
+	}
+	return streamv1.PresenceStatus_PRESENCE_STATUS_UNSPECIFIED
+}
+
+// publishFriendActivity publishes a typed FriendActivityEvent to the given
 // user's realtime subject. Nil-safe: does nothing if NATS is not wired.
-// Timestamp is intentionally omitted — the proto's google.protobuf.Timestamp
-// can't be decoded by encoding/json from a plain RFC3339 string, and the
-// client knows when they received the event anyway.
-func (s *Service) publishFriendActivity(toUserID, event string, extra map[string]any) {
+// The caller supplies the already-enriched proto (username/status/etc);
+// this helper stamps the event name and timestamp.
+func (s *Service) publishFriendActivity(toUserID string, event streamv1.FriendEventType, evt *streamv1.FriendActivityEvent) {
 	if s.nats == nil {
 		return
 	}
-	payload := map[string]any{"event": event}
-	for k, v := range extra {
-		payload[k] = v
+	if evt == nil {
+		evt = &streamv1.FriendActivityEvent{}
 	}
-	_ = s.nats.Publish(realtime.FriendActivity(toUserID), payload)
+	evt.Event = event
+	if evt.Timestamp == nil {
+		evt.Timestamp = timestamppb.Now()
+	}
+	_ = s.nats.Publish(realtime.FriendActivity(toUserID), evt)
 }
 
 // LookupBasicProfile returns the username and resolved avatar URL for the
@@ -77,22 +97,21 @@ func (s *Service) LookupBasicProfile(ctx context.Context, userID string) (string
 	return u.Username, s.ResolveAvatarURL(ctx, u.AvatarUrl)
 }
 
-// friendPayload loads the given user and returns a payload keyed on the
-// FriendActivityEvent proto field names (user_id, username, status,
-// custom_status, avatar_url). Used to enrich outgoing friend/presence events
-// so the recipient doesn't just see a bare UUID.
-func (s *Service) friendPayload(ctx context.Context, actorID pgtype.UUID) map[string]any {
+// friendPayload loads the given user and returns a typed FriendActivityEvent
+// with the actor's profile fields populated. Used to enrich outgoing
+// friend/presence events so the recipient doesn't just see a bare UUID.
+func (s *Service) friendPayload(ctx context.Context, actorID pgtype.UUID) *streamv1.FriendActivityEvent {
 	u, err := s.repo.GetUserByID(ctx, actorID)
 	if err != nil {
-		return map[string]any{"user_id": pgIDToStr(actorID)}
+		return &streamv1.FriendActivityEvent{UserId: pgIDToStr(actorID)}
 	}
-	return map[string]any{
-		"user_id":       pgIDToStr(u.ID),
-		"username":      u.Username,
-		"display_name":  u.DisplayName,
-		"status":        u.Status,
-		"custom_status": u.Status,
-		"avatar_url":    s.ResolveAvatarURL(ctx, u.AvatarUrl),
+	return &streamv1.FriendActivityEvent{
+		UserId:       pgIDToStr(u.ID),
+		Username:     u.Username,
+		DisplayName:  u.DisplayName,
+		Status:       presenceStatusFromString(u.Status),
+		CustomStatus: u.Status,
+		AvatarUrl:    s.ResolveAvatarURL(ctx, u.AvatarUrl),
 	}
 }
 
@@ -171,11 +190,11 @@ func (s *Service) UploadAvatar(ctx context.Context, userID pgtype.UUID, filename
 	}
 
 	avatarURL := s.ResolveAvatarURL(ctx, objectKey)
-	s.publishFriendActivity(pgIDToStr(updated.ID), "profile_update", map[string]any{
-		"user_id":      pgIDToStr(updated.ID),
-		"username":     updated.Username,
-		"display_name": updated.DisplayName,
-		"avatar_url":   avatarURL,
+	s.publishFriendActivity(pgIDToStr(updated.ID), streamv1.FriendEventType_FRIEND_EVENT_PROFILE_UPDATE, &streamv1.FriendActivityEvent{
+		UserId:      pgIDToStr(updated.ID),
+		Username:    updated.Username,
+		DisplayName: updated.DisplayName,
+		AvatarUrl:   avatarURL,
 	})
 
 	return updated, avatarURL, nil
@@ -207,11 +226,11 @@ func (s *Service) UpdateUsername(ctx context.Context, id pgtype.UUID, username s
 		return db.User{}, err
 	}
 
-	s.publishFriendActivity(pgIDToStr(user.ID), "profile_update", map[string]any{
-		"user_id":      pgIDToStr(user.ID),
-		"username":     user.Username,
-		"display_name": user.DisplayName,
-		"avatar_url":   s.ResolveAvatarURL(ctx, user.AvatarUrl),
+	s.publishFriendActivity(pgIDToStr(user.ID), streamv1.FriendEventType_FRIEND_EVENT_PROFILE_UPDATE, &streamv1.FriendActivityEvent{
+		UserId:      pgIDToStr(user.ID),
+		Username:    user.Username,
+		DisplayName: user.DisplayName,
+		AvatarUrl:   s.ResolveAvatarURL(ctx, user.AvatarUrl),
 	})
 
 	return user, nil
@@ -225,13 +244,13 @@ func (s *Service) UpdateUser(ctx context.Context, params db.UpdateUserParams) (d
 
 	// Broadcast profile update to the user's own subject; friends subscribe
 	// to this subject via StreamFriendActivity.
-	s.publishFriendActivity(pgIDToStr(user.ID), "profile_update", map[string]any{
-		"user_id":       pgIDToStr(user.ID),
-		"username":      user.Username,
-		"display_name":  user.DisplayName,
-		"status":        user.Status,
-		"custom_status": user.Status,
-		"avatar_url":    s.ResolveAvatarURL(ctx, user.AvatarUrl),
+	s.publishFriendActivity(pgIDToStr(user.ID), streamv1.FriendEventType_FRIEND_EVENT_PROFILE_UPDATE, &streamv1.FriendActivityEvent{
+		UserId:       pgIDToStr(user.ID),
+		Username:     user.Username,
+		DisplayName:  user.DisplayName,
+		Status:       presenceStatusFromString(user.Status),
+		CustomStatus: user.Status,
+		AvatarUrl:    s.ResolveAvatarURL(ctx, user.AvatarUrl),
 	})
 
 	return user, nil
@@ -250,13 +269,13 @@ func (s *Service) UpdateStatus(ctx context.Context, id pgtype.UUID, newStatus st
 		return db.User{}, fmt.Errorf("failed to update status: %w", err)
 	}
 
-	s.publishFriendActivity(pgIDToStr(user.ID), "presence_update", map[string]any{
-		"user_id":       pgIDToStr(user.ID),
-		"username":      user.Username,
-		"display_name":  user.DisplayName,
-		"status":        user.Status,
-		"custom_status": user.Status,
-		"avatar_url":    s.ResolveAvatarURL(ctx, user.AvatarUrl),
+	s.publishFriendActivity(pgIDToStr(user.ID), streamv1.FriendEventType_FRIEND_EVENT_PRESENCE_UPDATE, &streamv1.FriendActivityEvent{
+		UserId:       pgIDToStr(user.ID),
+		Username:     user.Username,
+		DisplayName:  user.DisplayName,
+		Status:       presenceStatusFromString(user.Status),
+		CustomStatus: user.Status,
+		AvatarUrl:    s.ResolveAvatarURL(ctx, user.AvatarUrl),
 	})
 
 	return user, nil
@@ -317,7 +336,7 @@ func (s *Service) SendFriendRequest(ctx context.Context, userID, targetID pgtype
 	}
 
 	// Notify the target: "X sent you a friend request".
-	s.publishFriendActivity(pgIDToStr(targetID), "friend_request", s.friendPayload(ctx, userID))
+	s.publishFriendActivity(pgIDToStr(targetID), streamv1.FriendEventType_FRIEND_EVENT_REQUEST, s.friendPayload(ctx, userID))
 
 	return friendship, nil
 }
@@ -359,18 +378,14 @@ func (s *Service) AcceptFriendRequest(ctx context.Context, userID, requesterID p
 	// Notify the requester: "X accepted your friend request" with the DM
 	// channel id so the client can jump straight into the conversation.
 	payloadForRequester := s.friendPayload(ctx, userID)
-	if dmChannelID != "" {
-		payloadForRequester["channel_id"] = dmChannelID
-	}
-	s.publishFriendActivity(pgIDToStr(requesterID), "friend_accepted", payloadForRequester)
+	payloadForRequester.ChannelId = dmChannelID
+	s.publishFriendActivity(pgIDToStr(requesterID), streamv1.FriendEventType_FRIEND_EVENT_ACCEPTED, payloadForRequester)
 
 	// Also notify the accepter so both ends get the channel id for an
 	// instant UI transition.
 	payloadForAccepter := s.friendPayload(ctx, requesterID)
-	if dmChannelID != "" {
-		payloadForAccepter["channel_id"] = dmChannelID
-	}
-	s.publishFriendActivity(pgIDToStr(userID), "friend_accepted", payloadForAccepter)
+	payloadForAccepter.ChannelId = dmChannelID
+	s.publishFriendActivity(pgIDToStr(userID), streamv1.FriendEventType_FRIEND_EVENT_ACCEPTED, payloadForAccepter)
 
 	return friendship, nil
 }
@@ -395,7 +410,7 @@ func (s *Service) DeclineFriendRequest(ctx context.Context, userID, requesterID 
 	}
 
 	// Notify the requester: "X declined your friend request".
-	s.publishFriendActivity(pgIDToStr(requesterID), "friend_declined", s.friendPayload(ctx, userID))
+	s.publishFriendActivity(pgIDToStr(requesterID), streamv1.FriendEventType_FRIEND_EVENT_DECLINED, s.friendPayload(ctx, userID))
 
 	return nil
 }
@@ -425,7 +440,7 @@ func (s *Service) CancelFriendRequest(ctx context.Context, userID, targetID pgty
 
 	// Notify the target so their incoming-requests list updates in realtime:
 	// "X cancelled the request they sent you".
-	s.publishFriendActivity(pgIDToStr(targetID), "friend_request_cancelled", s.friendPayload(ctx, userID))
+	s.publishFriendActivity(pgIDToStr(targetID), streamv1.FriendEventType_FRIEND_EVENT_REQUEST_CANCELLED, s.friendPayload(ctx, userID))
 
 	return nil
 }
@@ -450,7 +465,7 @@ func (s *Service) RemoveFriend(ctx context.Context, userID, friendID pgtype.UUID
 	}
 
 	// Notify the removed friend: "X removed you".
-	s.publishFriendActivity(pgIDToStr(friendID), "friend_removed", s.friendPayload(ctx, userID))
+	s.publishFriendActivity(pgIDToStr(friendID), streamv1.FriendEventType_FRIEND_EVENT_REMOVED, s.friendPayload(ctx, userID))
 
 	return nil
 }

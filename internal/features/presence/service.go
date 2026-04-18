@@ -10,6 +10,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	presencev1 "github.com/ananddub/ndiscord_backend/gen/presence/v1"
+	streamv1 "github.com/ananddub/ndiscord_backend/gen/stream/v1"
 	"github.com/ananddub/ndiscord_backend/internal/shared/realtime"
 )
 
@@ -42,12 +43,21 @@ func (s *Service) SetUserResolver(r UserInfoResolver) {
 	s.resolver = r
 }
 
-// statusToString maps the presence enum to the string used on the wire.
+// statusToString maps the presence enum to the string used for the
+// hash-stored column (Redis persistence, not the wire).
 var statusToString = map[presencev1.Status]string{
 	presencev1.Status_STATUS_ONLINE:  "online",
 	presencev1.Status_STATUS_IDLE:    "idle",
 	presencev1.Status_STATUS_DND:     "dnd",
 	presencev1.Status_STATUS_OFFLINE: "offline",
+}
+
+// statusToStream maps the presence enum to the stream proto enum.
+var statusToStream = map[presencev1.Status]streamv1.PresenceStatus{
+	presencev1.Status_STATUS_ONLINE:  streamv1.PresenceStatus_PRESENCE_STATUS_ONLINE,
+	presencev1.Status_STATUS_IDLE:    streamv1.PresenceStatus_PRESENCE_STATUS_IDLE,
+	presencev1.Status_STATUS_DND:     streamv1.PresenceStatus_PRESENCE_STATUS_DND,
+	presencev1.Status_STATUS_OFFLINE: streamv1.PresenceStatus_PRESENCE_STATUS_OFFLINE,
 }
 
 // publishPresence fans out a presence_update event on the user's FriendActivity
@@ -57,16 +67,17 @@ func (s *Service) publishPresence(ctx context.Context, userID string, status pre
 	if s.nats == nil {
 		return
 	}
-	payload := map[string]any{
-		"event":         "presence_update",
-		"user_id":       userID,
-		"status":        statusToString[status],
-		"custom_status": customStatus,
+	payload := &streamv1.FriendActivityEvent{
+		Event:        streamv1.FriendEventType_FRIEND_EVENT_PRESENCE_UPDATE,
+		UserId:       userID,
+		Status:       statusToStream[status],
+		CustomStatus: customStatus,
+		Timestamp:    timestamppb.Now(),
 	}
 	if s.resolver != nil {
 		username, avatarURL := s.resolver.LookupBasicProfile(ctx, userID)
-		payload["username"] = username
-		payload["avatar_url"] = avatarURL
+		payload.Username = username
+		payload.AvatarUrl = avatarURL
 	}
 	_ = s.nats.Publish(realtime.FriendActivity(userID), payload)
 }

@@ -33,7 +33,6 @@ func NewHandler(nats *realtime.Hub, resolver UserDataResolver) *Handler {
 	return &Handler{nats: nats, resolver: resolver}
 }
 
-// SetVoiceSnapshotProvider wires the voice snapshot loader.
 func (h *Handler) SetVoiceSnapshotProvider(v VoiceSnapshotProvider) { h.voiceSnapshot = v }
 
 func streamFromSubjects[T any](h *Handler, ctx context.Context, subjects []string, send func(*T) error) error {
@@ -65,19 +64,15 @@ func streamFromSubjects[T any](h *Handler, ctx context.Context, subjects []strin
 	}
 }
 
-// StreamDmChat - all DM messages across all user's DM channels
 func (h *Handler) StreamDmChat(req *streamv1.StreamDmChatRequest, stream streamv1.StreamService_StreamDmChatServer) error {
 	userID := middleware.UserIDFromContext(stream.Context())
 	if userID == "" {
 		return status.Error(codes.Unauthenticated, "not authenticated")
 	}
-	// Single wildcard subscription for all DM messages
 	subjects := []string{realtime.DmAllMessages(userID)}
 	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
 }
 
-// StreamDmChannels - DM channel lifecycle events (create/update/delete)
-// for every channel the caller is a member of.
 func (h *Handler) StreamDmChannels(req *streamv1.StreamDmChannelsRequest, stream streamv1.StreamService_StreamDmChannelsServer) error {
 	userID := middleware.UserIDFromContext(stream.Context())
 	if userID == "" {
@@ -112,7 +107,6 @@ func (h *Handler) StreamTextChannels(req *streamv1.StreamTextChannelsRequest, st
 	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
 }
 
-// StreamVoiceChat - text chat in voice channels across all guilds
 func (h *Handler) StreamVoiceChat(req *streamv1.StreamVoiceChatRequest, stream streamv1.StreamService_StreamVoiceChatServer) error {
 	userID := middleware.UserIDFromContext(stream.Context())
 	if userID == "" {
@@ -188,7 +182,6 @@ func (h *Handler) StreamTyping(req *streamv1.StreamTypingRequest, stream streamv
 	}
 	guildIDs, _ := h.resolver.GetUserGuildIDs(stream.Context(), userID)
 
-	// DM typing wildcard + per-guild typing wildcards
 	subjects := []string{realtime.DmAllTyping(userID)}
 	for _, gid := range guildIDs {
 		subjects = append(subjects, realtime.GuildAllTyping(gid))

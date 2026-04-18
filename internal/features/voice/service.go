@@ -28,19 +28,11 @@ var (
 	ErrDMResolverMissing       = errors.New("dm resolver not configured")
 )
 
-// DMMembershipResolver lets the voice service check DM channel membership
-// and fan out call-signalling events to every member without a hard
-// dependency on the channel package.
 type DMMembershipResolver interface {
-	// IsMember reports whether userID is a member of the given DM channel.
 	IsDMMember(ctx context.Context, channelID, userID string) (bool, error)
-	// Members returns every user_id in the given DM channel.
 	DMMembers(ctx context.Context, channelID string) ([]string, error)
 }
 
-// Service wraps the LiveKit room service client and issues access tokens.
-// The SFU (LiveKit) handles all media — this service only deals with auth,
-// room lifecycle, and participant bookkeeping.
 type Service struct {
 	cfg        config.LiveKitConfig
 	roomClient *lksdk.RoomServiceClient
@@ -51,7 +43,6 @@ type Service struct {
 	profile    UserProfileResolver
 }
 
-// NewService constructs a voice service backed by a LiveKit deployment.
 func NewService(cfg config.LiveKitConfig, nats *realtime.Hub, rdb *redis.Client, authzClient ...*authz.Client) *Service {
 	s := &Service{
 		cfg:   cfg,
@@ -67,10 +58,8 @@ func NewService(cfg config.LiveKitConfig, nats *realtime.Hub, rdb *redis.Client,
 	return s
 }
 
-// SetDMResolver wires the DM membership resolver used by DM call RPCs.
 func (s *Service) SetDMResolver(r DMMembershipResolver) { s.dm = r }
 
-// JoinChannelResult holds the LiveKit connection info returned to clients.
 type JoinChannelResult struct {
 	URL       string
 	Token     string
@@ -78,8 +67,6 @@ type JoinChannelResult struct {
 	ExpiresIn int32
 }
 
-// JoinChannel ensures a LiveKit room exists for the given channel and mints
-// a short-lived JWT the client can use to connect directly to the SFU.
 func (s *Service) JoinChannel(ctx context.Context, userID, guildID, channelID string) (*JoinChannelResult, error) {
 	if s.roomClient == nil {
 		return nil, ErrLiveKitUnavailable
@@ -90,9 +77,6 @@ func (s *Service) JoinChannel(ctx context.Context, userID, guildID, channelID st
 
 	roomName := channelID
 
-	// Ensure the room exists (idempotent — CreateRoom returns the existing
-	// room if it already exists). Room metadata carries guildID so the
-	// webhook handler can route events to the correct GuildEvents subject.
 	roomMeta := fmt.Sprintf(`{"guildId":"%s","channelId":"%s"}`, guildID, channelID)
 	if _, err := s.roomClient.CreateRoom(ctx, &livekit.CreateRoomRequest{
 		Name:            roomName,
@@ -108,8 +92,6 @@ func (s *Service) JoinChannel(ctx context.Context, userID, guildID, channelID st
 		return nil, fmt.Errorf("failed to mint token: %w", err)
 	}
 
-	// Fetch user profile from DB and store in Redis so other participants
-	// (and StreamVoiceState snapshot) have full profile data.
 	username, avatarURL := "", ""
 	if s.profile != nil {
 		username, avatarURL = s.profile.LookupBasicProfile(ctx, userID)
@@ -122,11 +104,9 @@ func (s *Service) JoinChannel(ctx context.Context, userID, guildID, channelID st
 		GuildID:     guildID,
 		ChannelID:   channelID,
 	})
-	// Record first-join time if no one was in the channel yet.
 	_, _ = s.EnsureActiveSince(ctx, channelID)
 
-	// Broadcast full participant list so everyone sees the new joiner.
-	s.broadcastChannelState(ctx, channelID, guildID)
+	s.broadcastChannelState(ctx, time.Now(), channelID, guildID)
 
 	return &JoinChannelResult{
 		URL:       s.cfg.URL,
@@ -136,8 +116,6 @@ func (s *Service) JoinChannel(ctx context.Context, userID, guildID, channelID st
 	}, nil
 }
 
-// LeaveChannel kicks the identity out of the LiveKit room. Most clients just
-// disconnect locally, but this is exposed so a server-initiated removal works.
 func (s *Service) LeaveChannel(ctx context.Context, userID, guildID, channelID string) error {
 	if s.roomClient == nil {
 		return ErrLiveKitUnavailable
@@ -149,7 +127,7 @@ func (s *Service) LeaveChannel(ctx context.Context, userID, guildID, channelID s
 
 	// Remove from Redis and broadcast updated participant list.
 	_ = s.RemoveParticipant(ctx, channelID, userID)
-	s.broadcastChannelState(ctx, channelID, guildID)
+	s.broadcastChannelState(ctx, time.Now(), channelID, guildID)
 	return nil
 }
 
@@ -221,9 +199,6 @@ func (s *Service) buildToken(room, identity string) (string, error) {
 
 func boolPtr(b bool) *bool { return &b }
 
-// VoiceSnapshot implements stream.VoiceSnapshotProvider — loads current
-// participants from LiveKit for initial state sync on StreamVoiceState
-// connect.
 type VoiceSnapshot struct {
 	svc *Service
 }
@@ -232,11 +207,7 @@ func NewVoiceSnapshot(svc *Service) *VoiceSnapshot {
 	return &VoiceSnapshot{svc: svc}
 }
 
-// GetChannelParticipants first checks LiveKit for actual participants,
-// then merges voice state from Redis. Stale Redis entries (user crashed
-// without LeaveChannel) are cleaned up automatically.
 func (v *VoiceSnapshot) GetChannelParticipants(ctx context.Context, channelID string) ([]*streamv1.VoiceStateEvent, error) {
-	// Step 1: Ask LiveKit who's ACTUALLY in the room
 	var liveParticipants map[string]*livekit.ParticipantInfo
 	if v.svc.roomClient != nil {
 		res, err := v.svc.roomClient.ListParticipants(ctx, &livekit.ListParticipantsRequest{
@@ -262,8 +233,8 @@ func (v *VoiceSnapshot) GetChannelParticipants(ctx context.Context, channelID st
 		events := make([]*streamv1.VoiceStateEvent, len(redisStates))
 		for i, rs := range redisStates {
 			events[i] = &streamv1.VoiceStateEvent{
-				Event:           "VOICE_STATE_UPDATE",
-				Action:          "state_sync",
+				Event:           streamv1.VoiceEvent_VOICE_EVENT_STATE_UPDATE,
+				Action:          streamv1.VoiceAction_VOICE_ACTION_STATE_SYNC,
 				ChannelId:       channelID,
 				GuildId:         rs.GuildID,
 				UserId:          rs.UserID,
@@ -299,8 +270,8 @@ func (v *VoiceSnapshot) GetChannelParticipants(ctx context.Context, channelID st
 	for uid, lp := range liveParticipants {
 		rs, hasRedis := redisMap[uid]
 		evt := &streamv1.VoiceStateEvent{
-			Event:           "VOICE_STATE_UPDATE",
-			Action:          "state_sync",
+			Event:           streamv1.VoiceEvent_VOICE_EVENT_STATE_UPDATE,
+			Action:          streamv1.VoiceAction_VOICE_ACTION_STATE_SYNC,
 			ChannelId:       channelID,
 			UserId:          uid,
 			Name:            lp.Name,
@@ -441,11 +412,12 @@ func (s *Service) StartDMCall(ctx context.Context, callerID, channelID string, v
 	// themselves so their other devices can mirror the active-call state
 	// (e.g. show "call in progress on another device").
 	members, _ := s.dm.DMMembers(ctx, channelID)
-	payload := map[string]any{
-		"type":       "call_incoming",
-		"channel_id": channelID,
-		"caller_id":  callerID,
-		"video":      video,
+	payload := &streamv1.DmCallEvent{
+		Type:      streamv1.DmCallType_DM_CALL_INCOMING,
+		ChannelId: channelID,
+		CallerId:  callerID,
+		Video:     video,
+		Timestamp: timestamppb.Now(),
 	}
 	for _, mid := range members {
 		_ = s.nats.Publish(realtime.DmCall(mid), payload)
@@ -495,11 +467,12 @@ func (s *Service) JoinDMCall(ctx context.Context, userID, channelID string, vide
 	}
 
 	members, _ := s.dm.DMMembers(ctx, channelID)
-	payload := map[string]any{
-		"type":           "call_accepted",
-		"channel_id":     channelID,
-		"participant_id": userID,
-		"video":          video,
+	payload := &streamv1.DmCallEvent{
+		Type:          streamv1.DmCallType_DM_CALL_ACCEPTED,
+		ChannelId:     channelID,
+		ParticipantId: userID,
+		Video:         video,
+		Timestamp:     timestamppb.Now(),
 	}
 	for _, mid := range members {
 		_ = s.nats.Publish(realtime.DmCall(mid), payload)
@@ -528,10 +501,11 @@ func (s *Service) RejectDMCall(ctx context.Context, userID, channelID string) er
 	}
 
 	members, _ := s.dm.DMMembers(ctx, channelID)
-	payload := map[string]any{
-		"type":           "call_rejected",
-		"channel_id":     channelID,
-		"participant_id": userID,
+	payload := &streamv1.DmCallEvent{
+		Type:          streamv1.DmCallType_DM_CALL_REJECTED,
+		ChannelId:     channelID,
+		ParticipantId: userID,
+		Timestamp:     timestamppb.Now(),
 	}
 	for _, mid := range members {
 		_ = s.nats.Publish(realtime.DmCall(mid), payload)
@@ -562,10 +536,11 @@ func (s *Service) LeaveDMCall(ctx context.Context, userID, channelID string) err
 	})
 
 	members, _ := s.dm.DMMembers(ctx, channelID)
-	leftPayload := map[string]any{
-		"type":           "participant_left",
-		"channel_id":     channelID,
-		"participant_id": userID,
+	leftPayload := &streamv1.DmCallEvent{
+		Type:          streamv1.DmCallType_DM_CALL_PARTICIPANT_LEFT,
+		ChannelId:     channelID,
+		ParticipantId: userID,
+		Timestamp:     timestamppb.Now(),
 	}
 	for _, mid := range members {
 		_ = s.nats.Publish(realtime.DmCall(mid), leftPayload)
@@ -577,9 +552,10 @@ func (s *Service) LeaveDMCall(ctx context.Context, userID, channelID string) err
 		Room: channelID,
 	})
 	if err == nil && len(remaining.Participants) == 0 {
-		endPayload := map[string]any{
-			"type":       "call_ended",
-			"channel_id": channelID,
+		endPayload := &streamv1.DmCallEvent{
+			Type:      streamv1.DmCallType_DM_CALL_ENDED,
+			ChannelId: channelID,
+			Timestamp: timestamppb.Now(),
 		}
 		for _, mid := range members {
 			_ = s.nats.Publish(realtime.DmCall(mid), endPayload)

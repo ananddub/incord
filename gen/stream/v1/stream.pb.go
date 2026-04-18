@@ -22,6 +22,568 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Chat events — used for DmChatEvent.type, TextChannelEvent.type and
+// VoiceChatEvent.type.
+type ChatEventType int32
+
+const (
+	ChatEventType_CHAT_EVENT_UNSPECIFIED     ChatEventType = 0
+	ChatEventType_CHAT_EVENT_CREATE          ChatEventType = 1
+	ChatEventType_CHAT_EVENT_UPDATE          ChatEventType = 2
+	ChatEventType_CHAT_EVENT_DELETE          ChatEventType = 3
+	ChatEventType_CHAT_EVENT_PIN             ChatEventType = 4
+	ChatEventType_CHAT_EVENT_UNPIN           ChatEventType = 5
+	ChatEventType_CHAT_EVENT_REACTION_ADD    ChatEventType = 6
+	ChatEventType_CHAT_EVENT_REACTION_REMOVE ChatEventType = 7
+	ChatEventType_CHAT_EVENT_READ_RECEIPT    ChatEventType = 8
+)
+
+// Enum value maps for ChatEventType.
+var (
+	ChatEventType_name = map[int32]string{
+		0: "CHAT_EVENT_UNSPECIFIED",
+		1: "CHAT_EVENT_CREATE",
+		2: "CHAT_EVENT_UPDATE",
+		3: "CHAT_EVENT_DELETE",
+		4: "CHAT_EVENT_PIN",
+		5: "CHAT_EVENT_UNPIN",
+		6: "CHAT_EVENT_REACTION_ADD",
+		7: "CHAT_EVENT_REACTION_REMOVE",
+		8: "CHAT_EVENT_READ_RECEIPT",
+	}
+	ChatEventType_value = map[string]int32{
+		"CHAT_EVENT_UNSPECIFIED":     0,
+		"CHAT_EVENT_CREATE":          1,
+		"CHAT_EVENT_UPDATE":          2,
+		"CHAT_EVENT_DELETE":          3,
+		"CHAT_EVENT_PIN":             4,
+		"CHAT_EVENT_UNPIN":           5,
+		"CHAT_EVENT_REACTION_ADD":    6,
+		"CHAT_EVENT_REACTION_REMOVE": 7,
+		"CHAT_EVENT_READ_RECEIPT":    8,
+	}
+)
+
+func (x ChatEventType) Enum() *ChatEventType {
+	p := new(ChatEventType)
+	*p = x
+	return p
+}
+
+func (x ChatEventType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ChatEventType) Descriptor() protoreflect.EnumDescriptor {
+	return file_stream_v1_stream_proto_enumTypes[0].Descriptor()
+}
+
+func (ChatEventType) Type() protoreflect.EnumType {
+	return &file_stream_v1_stream_proto_enumTypes[0]
+}
+
+func (x ChatEventType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ChatEventType.Descriptor instead.
+func (ChatEventType) EnumDescriptor() ([]byte, []int) {
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{0}
+}
+
+// DM channel lifecycle — used for DmChannelEvent.type.
+type ChannelLifecycleType int32
+
+const (
+	ChannelLifecycleType_CHANNEL_LIFECYCLE_UNSPECIFIED ChannelLifecycleType = 0
+	ChannelLifecycleType_CHANNEL_LIFECYCLE_CREATE      ChannelLifecycleType = 1
+	ChannelLifecycleType_CHANNEL_LIFECYCLE_UPDATE      ChannelLifecycleType = 2
+	ChannelLifecycleType_CHANNEL_LIFECYCLE_DELETE      ChannelLifecycleType = 3
+)
+
+// Enum value maps for ChannelLifecycleType.
+var (
+	ChannelLifecycleType_name = map[int32]string{
+		0: "CHANNEL_LIFECYCLE_UNSPECIFIED",
+		1: "CHANNEL_LIFECYCLE_CREATE",
+		2: "CHANNEL_LIFECYCLE_UPDATE",
+		3: "CHANNEL_LIFECYCLE_DELETE",
+	}
+	ChannelLifecycleType_value = map[string]int32{
+		"CHANNEL_LIFECYCLE_UNSPECIFIED": 0,
+		"CHANNEL_LIFECYCLE_CREATE":      1,
+		"CHANNEL_LIFECYCLE_UPDATE":      2,
+		"CHANNEL_LIFECYCLE_DELETE":      3,
+	}
+)
+
+func (x ChannelLifecycleType) Enum() *ChannelLifecycleType {
+	p := new(ChannelLifecycleType)
+	*p = x
+	return p
+}
+
+func (x ChannelLifecycleType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ChannelLifecycleType) Descriptor() protoreflect.EnumDescriptor {
+	return file_stream_v1_stream_proto_enumTypes[1].Descriptor()
+}
+
+func (ChannelLifecycleType) Type() protoreflect.EnumType {
+	return &file_stream_v1_stream_proto_enumTypes[1]
+}
+
+func (x ChannelLifecycleType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ChannelLifecycleType.Descriptor instead.
+func (ChannelLifecycleType) EnumDescriptor() ([]byte, []int) {
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{1}
+}
+
+// DM call signalling — used for DmCallEvent.type.
+type DmCallType int32
+
+const (
+	DmCallType_DM_CALL_UNSPECIFIED      DmCallType = 0
+	DmCallType_DM_CALL_INCOMING         DmCallType = 1
+	DmCallType_DM_CALL_ACCEPTED         DmCallType = 2
+	DmCallType_DM_CALL_REJECTED         DmCallType = 3
+	DmCallType_DM_CALL_ENDED            DmCallType = 4
+	DmCallType_DM_CALL_PARTICIPANT_LEFT DmCallType = 5
+)
+
+// Enum value maps for DmCallType.
+var (
+	DmCallType_name = map[int32]string{
+		0: "DM_CALL_UNSPECIFIED",
+		1: "DM_CALL_INCOMING",
+		2: "DM_CALL_ACCEPTED",
+		3: "DM_CALL_REJECTED",
+		4: "DM_CALL_ENDED",
+		5: "DM_CALL_PARTICIPANT_LEFT",
+	}
+	DmCallType_value = map[string]int32{
+		"DM_CALL_UNSPECIFIED":      0,
+		"DM_CALL_INCOMING":         1,
+		"DM_CALL_ACCEPTED":         2,
+		"DM_CALL_REJECTED":         3,
+		"DM_CALL_ENDED":            4,
+		"DM_CALL_PARTICIPANT_LEFT": 5,
+	}
+)
+
+func (x DmCallType) Enum() *DmCallType {
+	p := new(DmCallType)
+	*p = x
+	return p
+}
+
+func (x DmCallType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DmCallType) Descriptor() protoreflect.EnumDescriptor {
+	return file_stream_v1_stream_proto_enumTypes[2].Descriptor()
+}
+
+func (DmCallType) Type() protoreflect.EnumType {
+	return &file_stream_v1_stream_proto_enumTypes[2]
+}
+
+func (x DmCallType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DmCallType.Descriptor instead.
+func (DmCallType) EnumDescriptor() ([]byte, []int) {
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{2}
+}
+
+// Voice event — used for VoiceStateEvent.event (currently single-valued
+// but defined as an enum so hardcoded strings never leak back in).
+type VoiceEvent int32
+
+const (
+	VoiceEvent_VOICE_EVENT_UNSPECIFIED  VoiceEvent = 0
+	VoiceEvent_VOICE_EVENT_STATE_UPDATE VoiceEvent = 1
+)
+
+// Enum value maps for VoiceEvent.
+var (
+	VoiceEvent_name = map[int32]string{
+		0: "VOICE_EVENT_UNSPECIFIED",
+		1: "VOICE_EVENT_STATE_UPDATE",
+	}
+	VoiceEvent_value = map[string]int32{
+		"VOICE_EVENT_UNSPECIFIED":  0,
+		"VOICE_EVENT_STATE_UPDATE": 1,
+	}
+)
+
+func (x VoiceEvent) Enum() *VoiceEvent {
+	p := new(VoiceEvent)
+	*p = x
+	return p
+}
+
+func (x VoiceEvent) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (VoiceEvent) Descriptor() protoreflect.EnumDescriptor {
+	return file_stream_v1_stream_proto_enumTypes[3].Descriptor()
+}
+
+func (VoiceEvent) Type() protoreflect.EnumType {
+	return &file_stream_v1_stream_proto_enumTypes[3]
+}
+
+func (x VoiceEvent) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use VoiceEvent.Descriptor instead.
+func (VoiceEvent) EnumDescriptor() ([]byte, []int) {
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{3}
+}
+
+// Voice action — used for VoiceStateEvent.action.
+type VoiceAction int32
+
+const (
+	VoiceAction_VOICE_ACTION_UNSPECIFIED        VoiceAction = 0
+	VoiceAction_VOICE_ACTION_JOIN               VoiceAction = 1
+	VoiceAction_VOICE_ACTION_LEAVE              VoiceAction = 2
+	VoiceAction_VOICE_ACTION_PARTICIPANT_JOINED VoiceAction = 3
+	VoiceAction_VOICE_ACTION_PARTICIPANT_LEFT   VoiceAction = 4
+	VoiceAction_VOICE_ACTION_TRACK_UPDATE       VoiceAction = 5
+	VoiceAction_VOICE_ACTION_STATE_SYNC         VoiceAction = 6
+	VoiceAction_VOICE_ACTION_STATE_UPDATE       VoiceAction = 7
+	VoiceAction_VOICE_ACTION_ROOM_STARTED       VoiceAction = 8
+	VoiceAction_VOICE_ACTION_ROOM_FINISHED      VoiceAction = 9
+)
+
+// Enum value maps for VoiceAction.
+var (
+	VoiceAction_name = map[int32]string{
+		0: "VOICE_ACTION_UNSPECIFIED",
+		1: "VOICE_ACTION_JOIN",
+		2: "VOICE_ACTION_LEAVE",
+		3: "VOICE_ACTION_PARTICIPANT_JOINED",
+		4: "VOICE_ACTION_PARTICIPANT_LEFT",
+		5: "VOICE_ACTION_TRACK_UPDATE",
+		6: "VOICE_ACTION_STATE_SYNC",
+		7: "VOICE_ACTION_STATE_UPDATE",
+		8: "VOICE_ACTION_ROOM_STARTED",
+		9: "VOICE_ACTION_ROOM_FINISHED",
+	}
+	VoiceAction_value = map[string]int32{
+		"VOICE_ACTION_UNSPECIFIED":        0,
+		"VOICE_ACTION_JOIN":               1,
+		"VOICE_ACTION_LEAVE":              2,
+		"VOICE_ACTION_PARTICIPANT_JOINED": 3,
+		"VOICE_ACTION_PARTICIPANT_LEFT":   4,
+		"VOICE_ACTION_TRACK_UPDATE":       5,
+		"VOICE_ACTION_STATE_SYNC":         6,
+		"VOICE_ACTION_STATE_UPDATE":       7,
+		"VOICE_ACTION_ROOM_STARTED":       8,
+		"VOICE_ACTION_ROOM_FINISHED":      9,
+	}
+)
+
+func (x VoiceAction) Enum() *VoiceAction {
+	p := new(VoiceAction)
+	*p = x
+	return p
+}
+
+func (x VoiceAction) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (VoiceAction) Descriptor() protoreflect.EnumDescriptor {
+	return file_stream_v1_stream_proto_enumTypes[4].Descriptor()
+}
+
+func (VoiceAction) Type() protoreflect.EnumType {
+	return &file_stream_v1_stream_proto_enumTypes[4]
+}
+
+func (x VoiceAction) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use VoiceAction.Descriptor instead.
+func (VoiceAction) EnumDescriptor() ([]byte, []int) {
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{4}
+}
+
+// Voice track kind — used for VoiceStateEvent.track_type.
+type VoiceTrackType int32
+
+const (
+	VoiceTrackType_VOICE_TRACK_UNSPECIFIED  VoiceTrackType = 0
+	VoiceTrackType_VOICE_TRACK_AUDIO        VoiceTrackType = 1
+	VoiceTrackType_VOICE_TRACK_VIDEO        VoiceTrackType = 2
+	VoiceTrackType_VOICE_TRACK_SCREEN_SHARE VoiceTrackType = 3
+)
+
+// Enum value maps for VoiceTrackType.
+var (
+	VoiceTrackType_name = map[int32]string{
+		0: "VOICE_TRACK_UNSPECIFIED",
+		1: "VOICE_TRACK_AUDIO",
+		2: "VOICE_TRACK_VIDEO",
+		3: "VOICE_TRACK_SCREEN_SHARE",
+	}
+	VoiceTrackType_value = map[string]int32{
+		"VOICE_TRACK_UNSPECIFIED":  0,
+		"VOICE_TRACK_AUDIO":        1,
+		"VOICE_TRACK_VIDEO":        2,
+		"VOICE_TRACK_SCREEN_SHARE": 3,
+	}
+)
+
+func (x VoiceTrackType) Enum() *VoiceTrackType {
+	p := new(VoiceTrackType)
+	*p = x
+	return p
+}
+
+func (x VoiceTrackType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (VoiceTrackType) Descriptor() protoreflect.EnumDescriptor {
+	return file_stream_v1_stream_proto_enumTypes[5].Descriptor()
+}
+
+func (VoiceTrackType) Type() protoreflect.EnumType {
+	return &file_stream_v1_stream_proto_enumTypes[5]
+}
+
+func (x VoiceTrackType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use VoiceTrackType.Descriptor instead.
+func (VoiceTrackType) EnumDescriptor() ([]byte, []int) {
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{5}
+}
+
+// Friend/presence activity — used for FriendActivityEvent.event.
+type FriendEventType int32
+
+const (
+	FriendEventType_FRIEND_EVENT_UNSPECIFIED       FriendEventType = 0
+	FriendEventType_FRIEND_EVENT_PRESENCE_UPDATE   FriendEventType = 1
+	FriendEventType_FRIEND_EVENT_PROFILE_UPDATE    FriendEventType = 2
+	FriendEventType_FRIEND_EVENT_REQUEST           FriendEventType = 3
+	FriendEventType_FRIEND_EVENT_ACCEPTED          FriendEventType = 4
+	FriendEventType_FRIEND_EVENT_DECLINED          FriendEventType = 5
+	FriendEventType_FRIEND_EVENT_REMOVED           FriendEventType = 6
+	FriendEventType_FRIEND_EVENT_REQUEST_CANCELLED FriendEventType = 7
+)
+
+// Enum value maps for FriendEventType.
+var (
+	FriendEventType_name = map[int32]string{
+		0: "FRIEND_EVENT_UNSPECIFIED",
+		1: "FRIEND_EVENT_PRESENCE_UPDATE",
+		2: "FRIEND_EVENT_PROFILE_UPDATE",
+		3: "FRIEND_EVENT_REQUEST",
+		4: "FRIEND_EVENT_ACCEPTED",
+		5: "FRIEND_EVENT_DECLINED",
+		6: "FRIEND_EVENT_REMOVED",
+		7: "FRIEND_EVENT_REQUEST_CANCELLED",
+	}
+	FriendEventType_value = map[string]int32{
+		"FRIEND_EVENT_UNSPECIFIED":       0,
+		"FRIEND_EVENT_PRESENCE_UPDATE":   1,
+		"FRIEND_EVENT_PROFILE_UPDATE":    2,
+		"FRIEND_EVENT_REQUEST":           3,
+		"FRIEND_EVENT_ACCEPTED":          4,
+		"FRIEND_EVENT_DECLINED":          5,
+		"FRIEND_EVENT_REMOVED":           6,
+		"FRIEND_EVENT_REQUEST_CANCELLED": 7,
+	}
+)
+
+func (x FriendEventType) Enum() *FriendEventType {
+	p := new(FriendEventType)
+	*p = x
+	return p
+}
+
+func (x FriendEventType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (FriendEventType) Descriptor() protoreflect.EnumDescriptor {
+	return file_stream_v1_stream_proto_enumTypes[6].Descriptor()
+}
+
+func (FriendEventType) Type() protoreflect.EnumType {
+	return &file_stream_v1_stream_proto_enumTypes[6]
+}
+
+func (x FriendEventType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use FriendEventType.Descriptor instead.
+func (FriendEventType) EnumDescriptor() ([]byte, []int) {
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{6}
+}
+
+// User presence — used for FriendActivityEvent.status and wherever a
+// human-readable presence string is emitted.
+type PresenceStatus int32
+
+const (
+	PresenceStatus_PRESENCE_STATUS_UNSPECIFIED PresenceStatus = 0
+	PresenceStatus_PRESENCE_STATUS_ONLINE      PresenceStatus = 1
+	PresenceStatus_PRESENCE_STATUS_IDLE        PresenceStatus = 2
+	PresenceStatus_PRESENCE_STATUS_DND         PresenceStatus = 3
+	PresenceStatus_PRESENCE_STATUS_OFFLINE     PresenceStatus = 4
+)
+
+// Enum value maps for PresenceStatus.
+var (
+	PresenceStatus_name = map[int32]string{
+		0: "PRESENCE_STATUS_UNSPECIFIED",
+		1: "PRESENCE_STATUS_ONLINE",
+		2: "PRESENCE_STATUS_IDLE",
+		3: "PRESENCE_STATUS_DND",
+		4: "PRESENCE_STATUS_OFFLINE",
+	}
+	PresenceStatus_value = map[string]int32{
+		"PRESENCE_STATUS_UNSPECIFIED": 0,
+		"PRESENCE_STATUS_ONLINE":      1,
+		"PRESENCE_STATUS_IDLE":        2,
+		"PRESENCE_STATUS_DND":         3,
+		"PRESENCE_STATUS_OFFLINE":     4,
+	}
+)
+
+func (x PresenceStatus) Enum() *PresenceStatus {
+	p := new(PresenceStatus)
+	*p = x
+	return p
+}
+
+func (x PresenceStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (PresenceStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_stream_v1_stream_proto_enumTypes[7].Descriptor()
+}
+
+func (PresenceStatus) Type() protoreflect.EnumType {
+	return &file_stream_v1_stream_proto_enumTypes[7]
+}
+
+func (x PresenceStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use PresenceStatus.Descriptor instead.
+func (PresenceStatus) EnumDescriptor() ([]byte, []int) {
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{7}
+}
+
+// Guild-level event — used for GuildEvent.event (+ GuildEvent.action,
+// which currently mirrors event).
+type GuildEventType int32
+
+const (
+	GuildEventType_GUILD_EVENT_UNSPECIFIED    GuildEventType = 0
+	GuildEventType_GUILD_EVENT_MEMBER_ADD     GuildEventType = 1
+	GuildEventType_GUILD_EVENT_MEMBER_REMOVE  GuildEventType = 2
+	GuildEventType_GUILD_EVENT_MEMBER_BAN     GuildEventType = 3
+	GuildEventType_GUILD_EVENT_MEMBER_UNBAN   GuildEventType = 4
+	GuildEventType_GUILD_EVENT_UPDATE         GuildEventType = 5
+	GuildEventType_GUILD_EVENT_DELETE         GuildEventType = 6
+	GuildEventType_GUILD_EVENT_ROLE_CREATE    GuildEventType = 7
+	GuildEventType_GUILD_EVENT_ROLE_UPDATE    GuildEventType = 8
+	GuildEventType_GUILD_EVENT_ROLE_DELETE    GuildEventType = 9
+	GuildEventType_GUILD_EVENT_ROLE_ASSIGN    GuildEventType = 10
+	GuildEventType_GUILD_EVENT_ROLE_REMOVE    GuildEventType = 11
+	GuildEventType_GUILD_EVENT_CHANNEL_CREATE GuildEventType = 12
+	GuildEventType_GUILD_EVENT_CHANNEL_UPDATE GuildEventType = 13
+	GuildEventType_GUILD_EVENT_CHANNEL_DELETE GuildEventType = 14
+)
+
+// Enum value maps for GuildEventType.
+var (
+	GuildEventType_name = map[int32]string{
+		0:  "GUILD_EVENT_UNSPECIFIED",
+		1:  "GUILD_EVENT_MEMBER_ADD",
+		2:  "GUILD_EVENT_MEMBER_REMOVE",
+		3:  "GUILD_EVENT_MEMBER_BAN",
+		4:  "GUILD_EVENT_MEMBER_UNBAN",
+		5:  "GUILD_EVENT_UPDATE",
+		6:  "GUILD_EVENT_DELETE",
+		7:  "GUILD_EVENT_ROLE_CREATE",
+		8:  "GUILD_EVENT_ROLE_UPDATE",
+		9:  "GUILD_EVENT_ROLE_DELETE",
+		10: "GUILD_EVENT_ROLE_ASSIGN",
+		11: "GUILD_EVENT_ROLE_REMOVE",
+		12: "GUILD_EVENT_CHANNEL_CREATE",
+		13: "GUILD_EVENT_CHANNEL_UPDATE",
+		14: "GUILD_EVENT_CHANNEL_DELETE",
+	}
+	GuildEventType_value = map[string]int32{
+		"GUILD_EVENT_UNSPECIFIED":    0,
+		"GUILD_EVENT_MEMBER_ADD":     1,
+		"GUILD_EVENT_MEMBER_REMOVE":  2,
+		"GUILD_EVENT_MEMBER_BAN":     3,
+		"GUILD_EVENT_MEMBER_UNBAN":   4,
+		"GUILD_EVENT_UPDATE":         5,
+		"GUILD_EVENT_DELETE":         6,
+		"GUILD_EVENT_ROLE_CREATE":    7,
+		"GUILD_EVENT_ROLE_UPDATE":    8,
+		"GUILD_EVENT_ROLE_DELETE":    9,
+		"GUILD_EVENT_ROLE_ASSIGN":    10,
+		"GUILD_EVENT_ROLE_REMOVE":    11,
+		"GUILD_EVENT_CHANNEL_CREATE": 12,
+		"GUILD_EVENT_CHANNEL_UPDATE": 13,
+		"GUILD_EVENT_CHANNEL_DELETE": 14,
+	}
+)
+
+func (x GuildEventType) Enum() *GuildEventType {
+	p := new(GuildEventType)
+	*p = x
+	return p
+}
+
+func (x GuildEventType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (GuildEventType) Descriptor() protoreflect.EnumDescriptor {
+	return file_stream_v1_stream_proto_enumTypes[8].Descriptor()
+}
+
+func (GuildEventType) Type() protoreflect.EnumType {
+	return &file_stream_v1_stream_proto_enumTypes[8]
+}
+
+func (x GuildEventType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use GuildEventType.Descriptor instead.
+func (GuildEventType) EnumDescriptor() ([]byte, []int) {
+	return file_stream_v1_stream_proto_rawDescGZIP(), []int{8}
+}
+
 // ChatAttachment mirrors message.v1.Attachment for stream payloads so the
 // stream feature doesn't pull in the whole message proto. Reused by every
 // chat-like event (DM + guild text + guild voice chat).
@@ -267,12 +829,10 @@ func (*StreamDmChatRequest) Descriptor() ([]byte, []int) {
 }
 
 type DmChatEvent struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// One of: "create", "update", "delete", "pin", "unpin",
-	// "reaction_add", "reaction_remove", "read_receipt".
-	Type      string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	ChannelId string `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	MessageId string `protobuf:"bytes,3,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Type      ChatEventType          `protobuf:"varint,1,opt,name=type,proto3,enum=stream.v1.ChatEventType" json:"type,omitempty"`
+	ChannelId string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	MessageId string                 `protobuf:"bytes,3,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
 	// The user who initiated the event (sender/editor/reactor/etc.).
 	SenderId string `protobuf:"bytes,4,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
 	// Message author — present on create/update/delete/pin/unpin.
@@ -334,11 +894,11 @@ func (*DmChatEvent) Descriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *DmChatEvent) GetType() string {
+func (x *DmChatEvent) GetType() ChatEventType {
 	if x != nil {
 		return x.Type
 	}
-	return ""
+	return ChatEventType_CHAT_EVENT_UNSPECIFIED
 }
 
 func (x *DmChatEvent) GetChannelId() string {
@@ -574,8 +1134,8 @@ func (x *DmChannelMember) GetStatus() string {
 
 type DmChannelEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"` // "create", "update", "delete"
-	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`     // channel id
+	Type          ChannelLifecycleType   `protobuf:"varint,1,opt,name=type,proto3,enum=stream.v1.ChannelLifecycleType" json:"type,omitempty"`
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"` // channel id
 	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	ChannelType   int32                  `protobuf:"varint,4,opt,name=channel_type,json=channelType,proto3" json:"channel_type,omitempty"` // 5=DM, 6=GROUP_DM
 	Members       []*DmChannelMember     `protobuf:"bytes,5,rep,name=members,proto3" json:"members,omitempty"`
@@ -613,11 +1173,11 @@ func (*DmChannelEvent) Descriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *DmChannelEvent) GetType() string {
+func (x *DmChannelEvent) GetType() ChannelLifecycleType {
 	if x != nil {
 		return x.Type
 	}
-	return ""
+	return ChannelLifecycleType_CHANNEL_LIFECYCLE_UNSPECIFIED
 }
 
 func (x *DmChannelEvent) GetId() string {
@@ -685,14 +1245,9 @@ func (*StreamDmCallsRequest) Descriptor() ([]byte, []int) {
 }
 
 type DmCallEvent struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// "call_incoming" — ring the recipient; caller_id populated.
-	// "call_accepted" — a recipient joined; participant_id populated.
-	// "call_rejected" — a recipient declined; participant_id populated.
-	// "call_ended"    — last participant left; no participant_id.
-	// "participant_left" — a participant hung up mid-call.
-	Type      string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	ChannelId string `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Type      DmCallType             `protobuf:"varint,1,opt,name=type,proto3,enum=stream.v1.DmCallType" json:"type,omitempty"`
+	ChannelId string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
 	// The user who initiated the call (present on every event so late
 	// subscribers can identify the ongoing call).
 	CallerId string `protobuf:"bytes,3,opt,name=caller_id,json=callerId,proto3" json:"caller_id,omitempty"`
@@ -735,11 +1290,11 @@ func (*DmCallEvent) Descriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *DmCallEvent) GetType() string {
+func (x *DmCallEvent) GetType() DmCallType {
 	if x != nil {
 		return x.Type
 	}
-	return ""
+	return DmCallType_DM_CALL_UNSPECIFIED
 }
 
 func (x *DmCallEvent) GetChannelId() string {
@@ -817,13 +1372,11 @@ func (*StreamTextChannelsRequest) Descriptor() ([]byte, []int) {
 // channel subscribers can render replies, attachments, reactions and
 // mentions without additional round trips.
 type TextChannelEvent struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// One of: "create", "update", "delete", "pin", "unpin",
-	// "reaction_add", "reaction_remove".
-	Type      string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	GuildId   string `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
-	ChannelId string `protobuf:"bytes,3,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	MessageId string `protobuf:"bytes,4,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Type      ChatEventType          `protobuf:"varint,1,opt,name=type,proto3,enum=stream.v1.ChatEventType" json:"type,omitempty"`
+	GuildId   string                 `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
+	ChannelId string                 `protobuf:"bytes,3,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	MessageId string                 `protobuf:"bytes,4,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
 	// Message author — present on create/update/delete/pin/unpin.
 	AuthorId string `protobuf:"bytes,5,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty"`
 	// On "update" this is the new content; on "create" it's the initial
@@ -879,11 +1432,11 @@ func (*TextChannelEvent) Descriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{11}
 }
 
-func (x *TextChannelEvent) GetType() string {
+func (x *TextChannelEvent) GetType() ChatEventType {
 	if x != nil {
 		return x.Type
 	}
-	return ""
+	return ChatEventType_CHAT_EVENT_UNSPECIFIED
 }
 
 func (x *TextChannelEvent) GetGuildId() string {
@@ -1052,7 +1605,7 @@ func (*StreamVoiceChatRequest) Descriptor() ([]byte, []int) {
 // that happens inside a voice channel.
 type VoiceChatEvent struct {
 	state          protoimpl.MessageState  `protogen:"open.v1"`
-	Type           string                  `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	Type           ChatEventType           `protobuf:"varint,1,opt,name=type,proto3,enum=stream.v1.ChatEventType" json:"type,omitempty"`
 	GuildId        string                  `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
 	ChannelId      string                  `protobuf:"bytes,3,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
 	MessageId      string                  `protobuf:"bytes,4,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
@@ -1105,11 +1658,11 @@ func (*VoiceChatEvent) Descriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *VoiceChatEvent) GetType() string {
+func (x *VoiceChatEvent) GetType() ChatEventType {
 	if x != nil {
 		return x.Type
 	}
-	return ""
+	return ChatEventType_CHAT_EVENT_UNSPECIFIED
 }
 
 func (x *VoiceChatEvent) GetGuildId() string {
@@ -1276,7 +1829,7 @@ func (*StreamGuildEventsRequest) Descriptor() ([]byte, []int) {
 
 type GuildEvent struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
-	Event     string                 `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"` // "member_add", "member_remove", "update", "delete", "role_create", "CHANNEL_CREATE", "CHANNEL_UPDATE", "CHANNEL_DELETE" etc
+	Event     GuildEventType         `protobuf:"varint,1,opt,name=event,proto3,enum=stream.v1.GuildEventType" json:"event,omitempty"`
 	GuildId   string                 `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
 	UserId    string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	ChannelId string                 `protobuf:"bytes,4,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
@@ -1284,9 +1837,17 @@ type GuildEvent struct {
 	Type      int64                  `protobuf:"varint,6,opt,name=type,proto3" json:"type,omitempty"`
 	Timestamp *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// Channel-specific fields (CHANNEL_CREATE/UPDATE).
-	Topic         string `protobuf:"bytes,8,opt,name=topic,proto3" json:"topic,omitempty"`
-	Position      int32  `protobuf:"varint,9,opt,name=position,proto3" json:"position,omitempty"`
-	ParentId      string `protobuf:"bytes,10,opt,name=parent_id,json=parentId,proto3" json:"parent_id,omitempty"`
+	Topic    string `protobuf:"bytes,8,opt,name=topic,proto3" json:"topic,omitempty"`
+	Position int32  `protobuf:"varint,9,opt,name=position,proto3" json:"position,omitempty"`
+	ParentId string `protobuf:"bytes,10,opt,name=parent_id,json=parentId,proto3" json:"parent_id,omitempty"`
+	// Guild icon URL on "update" icon change.
+	IconUrl string `protobuf:"bytes,11,opt,name=icon_url,json=iconUrl,proto3" json:"icon_url,omitempty"`
+	// Role id on role_* events.
+	RoleId string `protobuf:"bytes,12,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
+	// Reason on member_ban.
+	Reason string `protobuf:"bytes,13,opt,name=reason,proto3" json:"reason,omitempty"`
+	// Set by publishGuildEvent; mirrors `event`.
+	Action        GuildEventType `protobuf:"varint,14,opt,name=action,proto3,enum=stream.v1.GuildEventType" json:"action,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1321,11 +1882,11 @@ func (*GuildEvent) Descriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{15}
 }
 
-func (x *GuildEvent) GetEvent() string {
+func (x *GuildEvent) GetEvent() GuildEventType {
 	if x != nil {
 		return x.Event
 	}
-	return ""
+	return GuildEventType_GUILD_EVENT_UNSPECIFIED
 }
 
 func (x *GuildEvent) GetGuildId() string {
@@ -1391,6 +1952,34 @@ func (x *GuildEvent) GetParentId() string {
 	return ""
 }
 
+func (x *GuildEvent) GetIconUrl() string {
+	if x != nil {
+		return x.IconUrl
+	}
+	return ""
+}
+
+func (x *GuildEvent) GetRoleId() string {
+	if x != nil {
+		return x.RoleId
+	}
+	return ""
+}
+
+func (x *GuildEvent) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *GuildEvent) GetAction() GuildEventType {
+	if x != nil {
+		return x.Action
+	}
+	return GuildEventType_GUILD_EVENT_UNSPECIFIED
+}
+
 type StreamVoiceStateRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -1428,9 +2017,8 @@ func (*StreamVoiceStateRequest) Descriptor() ([]byte, []int) {
 }
 
 type VoiceStateEvent struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Always "VOICE_STATE_UPDATE".
-	Event     string                 `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Event     VoiceEvent             `protobuf:"varint,1,opt,name=event,proto3,enum=stream.v1.VoiceEvent" json:"event,omitempty"`
 	GuildId   string                 `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
 	ChannelId string                 `protobuf:"bytes,3,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
 	UserId    string                 `protobuf:"bytes,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
@@ -1439,17 +2027,14 @@ type VoiceStateEvent struct {
 	Video     bool                   `protobuf:"varint,7,opt,name=video,proto3" json:"video,omitempty"`
 	Streaming bool                   `protobuf:"varint,8,opt,name=streaming,proto3" json:"streaming,omitempty"`
 	Timestamp *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	// "join", "leave", "participant_joined", "participant_left",
-	// "track_update", "state_sync", "room_started", "room_finished"
-	Action string `protobuf:"bytes,10,opt,name=action,proto3" json:"action,omitempty"`
+	Action    VoiceAction            `protobuf:"varint,10,opt,name=action,proto3,enum=stream.v1.VoiceAction" json:"action,omitempty"`
 	// LiveKit participant SID.
 	Sid string `protobuf:"bytes,11,opt,name=sid,proto3" json:"sid,omitempty"`
 	// Display name from LiveKit participant.
 	Name string `protobuf:"bytes,12,opt,name=name,proto3" json:"name,omitempty"`
 	// Participant metadata JSON: {"userId","username","avatarUrl"}.
-	Metadata string `protobuf:"bytes,13,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	// On track_update: "audio", "video", "screen_share".
-	TrackType string `protobuf:"bytes,14,opt,name=track_type,json=trackType,proto3" json:"track_type,omitempty"`
+	Metadata  string         `protobuf:"bytes,13,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	TrackType VoiceTrackType `protobuf:"varint,14,opt,name=track_type,json=trackType,proto3,enum=stream.v1.VoiceTrackType" json:"track_type,omitempty"`
 	// On track_update: true = published, false = unpublished.
 	Published bool `protobuf:"varint,15,opt,name=published,proto3" json:"published,omitempty"`
 	// Unix timestamp (seconds) when the LiveKit room for this channel
@@ -1489,11 +2074,11 @@ func (*VoiceStateEvent) Descriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{17}
 }
 
-func (x *VoiceStateEvent) GetEvent() string {
+func (x *VoiceStateEvent) GetEvent() VoiceEvent {
 	if x != nil {
 		return x.Event
 	}
-	return ""
+	return VoiceEvent_VOICE_EVENT_UNSPECIFIED
 }
 
 func (x *VoiceStateEvent) GetGuildId() string {
@@ -1552,11 +2137,11 @@ func (x *VoiceStateEvent) GetTimestamp() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *VoiceStateEvent) GetAction() string {
+func (x *VoiceStateEvent) GetAction() VoiceAction {
 	if x != nil {
 		return x.Action
 	}
-	return ""
+	return VoiceAction_VOICE_ACTION_UNSPECIFIED
 }
 
 func (x *VoiceStateEvent) GetSid() string {
@@ -1580,11 +2165,11 @@ func (x *VoiceStateEvent) GetMetadata() string {
 	return ""
 }
 
-func (x *VoiceStateEvent) GetTrackType() string {
+func (x *VoiceStateEvent) GetTrackType() VoiceTrackType {
 	if x != nil {
 		return x.TrackType
 	}
-	return ""
+	return VoiceTrackType_VOICE_TRACK_UNSPECIFIED
 }
 
 func (x *VoiceStateEvent) GetPublished() bool {
@@ -1743,11 +2328,11 @@ func (*StreamFriendActivityRequest) Descriptor() ([]byte, []int) {
 
 type FriendActivityEvent struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
-	Event  string                 `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"` // "presence_update", "profile_update", "friend_request", "friend_accepted", "friend_declined", "friend_removed"
+	Event  FriendEventType        `protobuf:"varint,1,opt,name=event,proto3,enum=stream.v1.FriendEventType" json:"event,omitempty"`
 	UserId string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// Full unique handle in "name#1234" format.
 	Username     string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
-	Status       string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	Status       PresenceStatus         `protobuf:"varint,4,opt,name=status,proto3,enum=stream.v1.PresenceStatus" json:"status,omitempty"`
 	CustomStatus string                 `protobuf:"bytes,5,opt,name=custom_status,json=customStatus,proto3" json:"custom_status,omitempty"`
 	AvatarUrl    string                 `protobuf:"bytes,6,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
 	Timestamp    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
@@ -1790,11 +2375,11 @@ func (*FriendActivityEvent) Descriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{21}
 }
 
-func (x *FriendActivityEvent) GetEvent() string {
+func (x *FriendActivityEvent) GetEvent() FriendEventType {
 	if x != nil {
 		return x.Event
 	}
-	return ""
+	return FriendEventType_FRIEND_EVENT_UNSPECIFIED
 }
 
 func (x *FriendActivityEvent) GetUserId() string {
@@ -1811,11 +2396,11 @@ func (x *FriendActivityEvent) GetUsername() string {
 	return ""
 }
 
-func (x *FriendActivityEvent) GetStatus() string {
+func (x *FriendActivityEvent) GetStatus() PresenceStatus {
 	if x != nil {
 		return x.Status
 	}
-	return ""
+	return PresenceStatus_PRESENCE_STATUS_UNSPECIFIED
 }
 
 func (x *FriendActivityEvent) GetCustomStatus() string {
@@ -1874,9 +2459,9 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\n" +
 	"message_id\x18\x02 \x01(\tR\tmessageId\x12\x1b\n" +
 	"\tauthor_id\x18\x03 \x01(\tR\bauthorId\"\x15\n" +
-	"\x13StreamDmChatRequest\"\x99\x05\n" +
-	"\vDmChatEvent\x12\x12\n" +
-	"\x04type\x18\x01 \x01(\tR\x04type\x12\x1d\n" +
+	"\x13StreamDmChatRequest\"\xb3\x05\n" +
+	"\vDmChatEvent\x12,\n" +
+	"\x04type\x18\x01 \x01(\x0e2\x18.stream.v1.ChatEventTypeR\x04type\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x02 \x01(\tR\tchannelId\x12\x1d\n" +
 	"\n" +
@@ -1905,25 +2490,25 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x1d\n" +
 	"\n" +
 	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12\x16\n" +
-	"\x06status\x18\x05 \x01(\tR\x06status\"\xa1\x01\n" +
-	"\x0eDmChannelEvent\x12\x12\n" +
-	"\x04type\x18\x01 \x01(\tR\x04type\x12\x0e\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\"\xc2\x01\n" +
+	"\x0eDmChannelEvent\x123\n" +
+	"\x04type\x18\x01 \x01(\x0e2\x1f.stream.v1.ChannelLifecycleTypeR\x04type\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12!\n" +
 	"\fchannel_type\x18\x04 \x01(\x05R\vchannelType\x124\n" +
 	"\amembers\x18\x05 \x03(\v2\x1a.stream.v1.DmChannelMemberR\amembers\"\x16\n" +
-	"\x14StreamDmCallsRequest\"\xd4\x01\n" +
-	"\vDmCallEvent\x12\x12\n" +
-	"\x04type\x18\x01 \x01(\tR\x04type\x12\x1d\n" +
+	"\x14StreamDmCallsRequest\"\xeb\x01\n" +
+	"\vDmCallEvent\x12)\n" +
+	"\x04type\x18\x01 \x01(\x0e2\x15.stream.v1.DmCallTypeR\x04type\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x02 \x01(\tR\tchannelId\x12\x1b\n" +
 	"\tcaller_id\x18\x03 \x01(\tR\bcallerId\x12%\n" +
 	"\x0eparticipant_id\x18\x04 \x01(\tR\rparticipantId\x12\x14\n" +
 	"\x05video\x18\x05 \x01(\bR\x05video\x128\n" +
 	"\ttimestamp\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\x1b\n" +
-	"\x19StreamTextChannelsRequest\"\xb9\x05\n" +
-	"\x10TextChannelEvent\x12\x12\n" +
-	"\x04type\x18\x01 \x01(\tR\x04type\x12\x19\n" +
+	"\x19StreamTextChannelsRequest\"\xd3\x05\n" +
+	"\x10TextChannelEvent\x12,\n" +
+	"\x04type\x18\x01 \x01(\x0e2\x18.stream.v1.ChatEventTypeR\x04type\x12\x19\n" +
 	"\bguild_id\x18\x02 \x01(\tR\aguildId\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x03 \x01(\tR\tchannelId\x12\x1d\n" +
@@ -1946,9 +2531,9 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\x10mention_user_ids\x18\x11 \x03(\tR\x0ementionUserIds\x12:\n" +
 	"\treactions\x18\x12 \x03(\v2\x1c.stream.v1.ChatReactionCountR\treactions\x12H\n" +
 	"\x0eforwarded_from\x18\x13 \x01(\v2!.stream.v1.ChatForwardedReferenceR\rforwardedFrom\"\x18\n" +
-	"\x16StreamVoiceChatRequest\"\xb7\x05\n" +
-	"\x0eVoiceChatEvent\x12\x12\n" +
-	"\x04type\x18\x01 \x01(\tR\x04type\x12\x19\n" +
+	"\x16StreamVoiceChatRequest\"\xd1\x05\n" +
+	"\x0eVoiceChatEvent\x12,\n" +
+	"\x04type\x18\x01 \x01(\x0e2\x18.stream.v1.ChatEventTypeR\x04type\x12\x19\n" +
 	"\bguild_id\x18\x02 \x01(\tR\aguildId\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x03 \x01(\tR\tchannelId\x12\x1d\n" +
@@ -1971,10 +2556,10 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\x10mention_user_ids\x18\x11 \x03(\tR\x0ementionUserIds\x12:\n" +
 	"\treactions\x18\x12 \x03(\v2\x1c.stream.v1.ChatReactionCountR\treactions\x12H\n" +
 	"\x0eforwarded_from\x18\x13 \x01(\v2!.stream.v1.ChatForwardedReferenceR\rforwardedFrom\"\x1a\n" +
-	"\x18StreamGuildEventsRequest\"\xa6\x02\n" +
+	"\x18StreamGuildEventsRequest\"\xc0\x03\n" +
 	"\n" +
-	"GuildEvent\x12\x14\n" +
-	"\x05event\x18\x01 \x01(\tR\x05event\x12\x19\n" +
+	"GuildEvent\x12/\n" +
+	"\x05event\x18\x01 \x01(\x0e2\x19.stream.v1.GuildEventTypeR\x05event\x12\x19\n" +
 	"\bguild_id\x18\x02 \x01(\tR\aguildId\x12\x17\n" +
 	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x1d\n" +
 	"\n" +
@@ -1985,10 +2570,14 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\x05topic\x18\b \x01(\tR\x05topic\x12\x1a\n" +
 	"\bposition\x18\t \x01(\x05R\bposition\x12\x1b\n" +
 	"\tparent_id\x18\n" +
-	" \x01(\tR\bparentId\"\x19\n" +
-	"\x17StreamVoiceStateRequest\"\xe5\x03\n" +
-	"\x0fVoiceStateEvent\x12\x14\n" +
-	"\x05event\x18\x01 \x01(\tR\x05event\x12\x19\n" +
+	" \x01(\tR\bparentId\x12\x19\n" +
+	"\bicon_url\x18\v \x01(\tR\aiconUrl\x12\x17\n" +
+	"\arole_id\x18\f \x01(\tR\x06roleId\x12\x16\n" +
+	"\x06reason\x18\r \x01(\tR\x06reason\x121\n" +
+	"\x06action\x18\x0e \x01(\x0e2\x19.stream.v1.GuildEventTypeR\x06action\"\x19\n" +
+	"\x17StreamVoiceStateRequest\"\xaf\x04\n" +
+	"\x0fVoiceStateEvent\x12+\n" +
+	"\x05event\x18\x01 \x01(\x0e2\x15.stream.v1.VoiceEventR\x05event\x12\x19\n" +
 	"\bguild_id\x18\x02 \x01(\tR\aguildId\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x03 \x01(\tR\tchannelId\x12\x17\n" +
@@ -1997,14 +2586,14 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\tself_deaf\x18\x06 \x01(\bR\bselfDeaf\x12\x14\n" +
 	"\x05video\x18\a \x01(\bR\x05video\x12\x1c\n" +
 	"\tstreaming\x18\b \x01(\bR\tstreaming\x128\n" +
-	"\ttimestamp\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x16\n" +
+	"\ttimestamp\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12.\n" +
 	"\x06action\x18\n" +
-	" \x01(\tR\x06action\x12\x10\n" +
+	" \x01(\x0e2\x16.stream.v1.VoiceActionR\x06action\x12\x10\n" +
 	"\x03sid\x18\v \x01(\tR\x03sid\x12\x12\n" +
 	"\x04name\x18\f \x01(\tR\x04name\x12\x1a\n" +
-	"\bmetadata\x18\r \x01(\tR\bmetadata\x12\x1d\n" +
+	"\bmetadata\x18\r \x01(\tR\bmetadata\x128\n" +
 	"\n" +
-	"track_type\x18\x0e \x01(\tR\ttrackType\x12\x1c\n" +
+	"track_type\x18\x0e \x01(\x0e2\x19.stream.v1.VoiceTrackTypeR\ttrackType\x12\x1c\n" +
 	"\tpublished\x18\x0f \x01(\bR\tpublished\x12*\n" +
 	"\x11room_active_since\x18\x10 \x01(\x03R\x0froomActiveSince\"\x15\n" +
 	"\x13StreamTypingRequest\"\x9a\x01\n" +
@@ -2014,19 +2603,94 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\bguild_id\x18\x02 \x01(\tR\aguildId\x12\x17\n" +
 	"\auser_id\x18\x03 \x01(\tR\x06userId\x128\n" +
 	"\ttimestamp\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\x1d\n" +
-	"\x1bStreamFriendActivityRequest\"\xb8\x02\n" +
-	"\x13FriendActivityEvent\x12\x14\n" +
-	"\x05event\x18\x01 \x01(\tR\x05event\x12\x17\n" +
+	"\x1bStreamFriendActivityRequest\"\xef\x02\n" +
+	"\x13FriendActivityEvent\x120\n" +
+	"\x05event\x18\x01 \x01(\x0e2\x1a.stream.v1.FriendEventTypeR\x05event\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1a\n" +
-	"\busername\x18\x03 \x01(\tR\busername\x12\x16\n" +
-	"\x06status\x18\x04 \x01(\tR\x06status\x12#\n" +
+	"\busername\x18\x03 \x01(\tR\busername\x121\n" +
+	"\x06status\x18\x04 \x01(\x0e2\x19.stream.v1.PresenceStatusR\x06status\x12#\n" +
 	"\rcustom_status\x18\x05 \x01(\tR\fcustomStatus\x12\x1d\n" +
 	"\n" +
 	"avatar_url\x18\x06 \x01(\tR\tavatarUrl\x128\n" +
 	"\ttimestamp\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\b \x01(\tR\tchannelId\x12!\n" +
-	"\fdisplay_name\x18\t \x01(\tR\vdisplayName2\xfd\x05\n" +
+	"\fdisplay_name\x18\t \x01(\tR\vdisplayName*\xf4\x01\n" +
+	"\rChatEventType\x12\x1a\n" +
+	"\x16CHAT_EVENT_UNSPECIFIED\x10\x00\x12\x15\n" +
+	"\x11CHAT_EVENT_CREATE\x10\x01\x12\x15\n" +
+	"\x11CHAT_EVENT_UPDATE\x10\x02\x12\x15\n" +
+	"\x11CHAT_EVENT_DELETE\x10\x03\x12\x12\n" +
+	"\x0eCHAT_EVENT_PIN\x10\x04\x12\x14\n" +
+	"\x10CHAT_EVENT_UNPIN\x10\x05\x12\x1b\n" +
+	"\x17CHAT_EVENT_REACTION_ADD\x10\x06\x12\x1e\n" +
+	"\x1aCHAT_EVENT_REACTION_REMOVE\x10\a\x12\x1b\n" +
+	"\x17CHAT_EVENT_READ_RECEIPT\x10\b*\x93\x01\n" +
+	"\x14ChannelLifecycleType\x12!\n" +
+	"\x1dCHANNEL_LIFECYCLE_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18CHANNEL_LIFECYCLE_CREATE\x10\x01\x12\x1c\n" +
+	"\x18CHANNEL_LIFECYCLE_UPDATE\x10\x02\x12\x1c\n" +
+	"\x18CHANNEL_LIFECYCLE_DELETE\x10\x03*\x98\x01\n" +
+	"\n" +
+	"DmCallType\x12\x17\n" +
+	"\x13DM_CALL_UNSPECIFIED\x10\x00\x12\x14\n" +
+	"\x10DM_CALL_INCOMING\x10\x01\x12\x14\n" +
+	"\x10DM_CALL_ACCEPTED\x10\x02\x12\x14\n" +
+	"\x10DM_CALL_REJECTED\x10\x03\x12\x11\n" +
+	"\rDM_CALL_ENDED\x10\x04\x12\x1c\n" +
+	"\x18DM_CALL_PARTICIPANT_LEFT\x10\x05*G\n" +
+	"\n" +
+	"VoiceEvent\x12\x1b\n" +
+	"\x17VOICE_EVENT_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18VOICE_EVENT_STATE_UPDATE\x10\x01*\xbc\x02\n" +
+	"\vVoiceAction\x12\x1c\n" +
+	"\x18VOICE_ACTION_UNSPECIFIED\x10\x00\x12\x15\n" +
+	"\x11VOICE_ACTION_JOIN\x10\x01\x12\x16\n" +
+	"\x12VOICE_ACTION_LEAVE\x10\x02\x12#\n" +
+	"\x1fVOICE_ACTION_PARTICIPANT_JOINED\x10\x03\x12!\n" +
+	"\x1dVOICE_ACTION_PARTICIPANT_LEFT\x10\x04\x12\x1d\n" +
+	"\x19VOICE_ACTION_TRACK_UPDATE\x10\x05\x12\x1b\n" +
+	"\x17VOICE_ACTION_STATE_SYNC\x10\x06\x12\x1d\n" +
+	"\x19VOICE_ACTION_STATE_UPDATE\x10\a\x12\x1d\n" +
+	"\x19VOICE_ACTION_ROOM_STARTED\x10\b\x12\x1e\n" +
+	"\x1aVOICE_ACTION_ROOM_FINISHED\x10\t*y\n" +
+	"\x0eVoiceTrackType\x12\x1b\n" +
+	"\x17VOICE_TRACK_UNSPECIFIED\x10\x00\x12\x15\n" +
+	"\x11VOICE_TRACK_AUDIO\x10\x01\x12\x15\n" +
+	"\x11VOICE_TRACK_VIDEO\x10\x02\x12\x1c\n" +
+	"\x18VOICE_TRACK_SCREEN_SHARE\x10\x03*\x80\x02\n" +
+	"\x0fFriendEventType\x12\x1c\n" +
+	"\x18FRIEND_EVENT_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cFRIEND_EVENT_PRESENCE_UPDATE\x10\x01\x12\x1f\n" +
+	"\x1bFRIEND_EVENT_PROFILE_UPDATE\x10\x02\x12\x18\n" +
+	"\x14FRIEND_EVENT_REQUEST\x10\x03\x12\x19\n" +
+	"\x15FRIEND_EVENT_ACCEPTED\x10\x04\x12\x19\n" +
+	"\x15FRIEND_EVENT_DECLINED\x10\x05\x12\x18\n" +
+	"\x14FRIEND_EVENT_REMOVED\x10\x06\x12\"\n" +
+	"\x1eFRIEND_EVENT_REQUEST_CANCELLED\x10\a*\x9d\x01\n" +
+	"\x0ePresenceStatus\x12\x1f\n" +
+	"\x1bPRESENCE_STATUS_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16PRESENCE_STATUS_ONLINE\x10\x01\x12\x18\n" +
+	"\x14PRESENCE_STATUS_IDLE\x10\x02\x12\x17\n" +
+	"\x13PRESENCE_STATUS_DND\x10\x03\x12\x1b\n" +
+	"\x17PRESENCE_STATUS_OFFLINE\x10\x04*\xc3\x03\n" +
+	"\x0eGuildEventType\x12\x1b\n" +
+	"\x17GUILD_EVENT_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16GUILD_EVENT_MEMBER_ADD\x10\x01\x12\x1d\n" +
+	"\x19GUILD_EVENT_MEMBER_REMOVE\x10\x02\x12\x1a\n" +
+	"\x16GUILD_EVENT_MEMBER_BAN\x10\x03\x12\x1c\n" +
+	"\x18GUILD_EVENT_MEMBER_UNBAN\x10\x04\x12\x16\n" +
+	"\x12GUILD_EVENT_UPDATE\x10\x05\x12\x16\n" +
+	"\x12GUILD_EVENT_DELETE\x10\x06\x12\x1b\n" +
+	"\x17GUILD_EVENT_ROLE_CREATE\x10\a\x12\x1b\n" +
+	"\x17GUILD_EVENT_ROLE_UPDATE\x10\b\x12\x1b\n" +
+	"\x17GUILD_EVENT_ROLE_DELETE\x10\t\x12\x1b\n" +
+	"\x17GUILD_EVENT_ROLE_ASSIGN\x10\n" +
+	"\x12\x1b\n" +
+	"\x17GUILD_EVENT_ROLE_REMOVE\x10\v\x12\x1e\n" +
+	"\x1aGUILD_EVENT_CHANNEL_CREATE\x10\f\x12\x1e\n" +
+	"\x1aGUILD_EVENT_CHANNEL_UPDATE\x10\r\x12\x1e\n" +
+	"\x1aGUILD_EVENT_CHANNEL_DELETE\x10\x0e2\xfd\x05\n" +
 	"\rStreamService\x12H\n" +
 	"\fStreamDmChat\x12\x1e.stream.v1.StreamDmChatRequest\x1a\x16.stream.v1.DmChatEvent0\x01\x12S\n" +
 	"\x10StreamDmChannels\x12\".stream.v1.StreamDmChannelsRequest\x1a\x19.stream.v1.DmChannelEvent0\x01\x12J\n" +
@@ -2050,74 +2714,96 @@ func file_stream_v1_stream_proto_rawDescGZIP() []byte {
 	return file_stream_v1_stream_proto_rawDescData
 }
 
+var file_stream_v1_stream_proto_enumTypes = make([]protoimpl.EnumInfo, 9)
 var file_stream_v1_stream_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_stream_v1_stream_proto_goTypes = []any{
-	(*ChatAttachment)(nil),              // 0: stream.v1.ChatAttachment
-	(*ChatReactionCount)(nil),           // 1: stream.v1.ChatReactionCount
-	(*ChatForwardedReference)(nil),      // 2: stream.v1.ChatForwardedReference
-	(*StreamDmChatRequest)(nil),         // 3: stream.v1.StreamDmChatRequest
-	(*DmChatEvent)(nil),                 // 4: stream.v1.DmChatEvent
-	(*StreamDmChannelsRequest)(nil),     // 5: stream.v1.StreamDmChannelsRequest
-	(*DmChannelMember)(nil),             // 6: stream.v1.DmChannelMember
-	(*DmChannelEvent)(nil),              // 7: stream.v1.DmChannelEvent
-	(*StreamDmCallsRequest)(nil),        // 8: stream.v1.StreamDmCallsRequest
-	(*DmCallEvent)(nil),                 // 9: stream.v1.DmCallEvent
-	(*StreamTextChannelsRequest)(nil),   // 10: stream.v1.StreamTextChannelsRequest
-	(*TextChannelEvent)(nil),            // 11: stream.v1.TextChannelEvent
-	(*StreamVoiceChatRequest)(nil),      // 12: stream.v1.StreamVoiceChatRequest
-	(*VoiceChatEvent)(nil),              // 13: stream.v1.VoiceChatEvent
-	(*StreamGuildEventsRequest)(nil),    // 14: stream.v1.StreamGuildEventsRequest
-	(*GuildEvent)(nil),                  // 15: stream.v1.GuildEvent
-	(*StreamVoiceStateRequest)(nil),     // 16: stream.v1.StreamVoiceStateRequest
-	(*VoiceStateEvent)(nil),             // 17: stream.v1.VoiceStateEvent
-	(*StreamTypingRequest)(nil),         // 18: stream.v1.StreamTypingRequest
-	(*TypingEvent)(nil),                 // 19: stream.v1.TypingEvent
-	(*StreamFriendActivityRequest)(nil), // 20: stream.v1.StreamFriendActivityRequest
-	(*FriendActivityEvent)(nil),         // 21: stream.v1.FriendActivityEvent
-	(*timestamppb.Timestamp)(nil),       // 22: google.protobuf.Timestamp
+	(ChatEventType)(0),                  // 0: stream.v1.ChatEventType
+	(ChannelLifecycleType)(0),           // 1: stream.v1.ChannelLifecycleType
+	(DmCallType)(0),                     // 2: stream.v1.DmCallType
+	(VoiceEvent)(0),                     // 3: stream.v1.VoiceEvent
+	(VoiceAction)(0),                    // 4: stream.v1.VoiceAction
+	(VoiceTrackType)(0),                 // 5: stream.v1.VoiceTrackType
+	(FriendEventType)(0),                // 6: stream.v1.FriendEventType
+	(PresenceStatus)(0),                 // 7: stream.v1.PresenceStatus
+	(GuildEventType)(0),                 // 8: stream.v1.GuildEventType
+	(*ChatAttachment)(nil),              // 9: stream.v1.ChatAttachment
+	(*ChatReactionCount)(nil),           // 10: stream.v1.ChatReactionCount
+	(*ChatForwardedReference)(nil),      // 11: stream.v1.ChatForwardedReference
+	(*StreamDmChatRequest)(nil),         // 12: stream.v1.StreamDmChatRequest
+	(*DmChatEvent)(nil),                 // 13: stream.v1.DmChatEvent
+	(*StreamDmChannelsRequest)(nil),     // 14: stream.v1.StreamDmChannelsRequest
+	(*DmChannelMember)(nil),             // 15: stream.v1.DmChannelMember
+	(*DmChannelEvent)(nil),              // 16: stream.v1.DmChannelEvent
+	(*StreamDmCallsRequest)(nil),        // 17: stream.v1.StreamDmCallsRequest
+	(*DmCallEvent)(nil),                 // 18: stream.v1.DmCallEvent
+	(*StreamTextChannelsRequest)(nil),   // 19: stream.v1.StreamTextChannelsRequest
+	(*TextChannelEvent)(nil),            // 20: stream.v1.TextChannelEvent
+	(*StreamVoiceChatRequest)(nil),      // 21: stream.v1.StreamVoiceChatRequest
+	(*VoiceChatEvent)(nil),              // 22: stream.v1.VoiceChatEvent
+	(*StreamGuildEventsRequest)(nil),    // 23: stream.v1.StreamGuildEventsRequest
+	(*GuildEvent)(nil),                  // 24: stream.v1.GuildEvent
+	(*StreamVoiceStateRequest)(nil),     // 25: stream.v1.StreamVoiceStateRequest
+	(*VoiceStateEvent)(nil),             // 26: stream.v1.VoiceStateEvent
+	(*StreamTypingRequest)(nil),         // 27: stream.v1.StreamTypingRequest
+	(*TypingEvent)(nil),                 // 28: stream.v1.TypingEvent
+	(*StreamFriendActivityRequest)(nil), // 29: stream.v1.StreamFriendActivityRequest
+	(*FriendActivityEvent)(nil),         // 30: stream.v1.FriendActivityEvent
+	(*timestamppb.Timestamp)(nil),       // 31: google.protobuf.Timestamp
 }
 var file_stream_v1_stream_proto_depIdxs = []int32{
-	22, // 0: stream.v1.DmChatEvent.timestamp:type_name -> google.protobuf.Timestamp
-	0,  // 1: stream.v1.DmChatEvent.attachments:type_name -> stream.v1.ChatAttachment
-	1,  // 2: stream.v1.DmChatEvent.reactions:type_name -> stream.v1.ChatReactionCount
-	2,  // 3: stream.v1.DmChatEvent.forwarded_from:type_name -> stream.v1.ChatForwardedReference
-	6,  // 4: stream.v1.DmChannelEvent.members:type_name -> stream.v1.DmChannelMember
-	22, // 5: stream.v1.DmCallEvent.timestamp:type_name -> google.protobuf.Timestamp
-	22, // 6: stream.v1.TextChannelEvent.timestamp:type_name -> google.protobuf.Timestamp
-	0,  // 7: stream.v1.TextChannelEvent.attachments:type_name -> stream.v1.ChatAttachment
-	1,  // 8: stream.v1.TextChannelEvent.reactions:type_name -> stream.v1.ChatReactionCount
-	2,  // 9: stream.v1.TextChannelEvent.forwarded_from:type_name -> stream.v1.ChatForwardedReference
-	22, // 10: stream.v1.VoiceChatEvent.timestamp:type_name -> google.protobuf.Timestamp
-	0,  // 11: stream.v1.VoiceChatEvent.attachments:type_name -> stream.v1.ChatAttachment
-	1,  // 12: stream.v1.VoiceChatEvent.reactions:type_name -> stream.v1.ChatReactionCount
-	2,  // 13: stream.v1.VoiceChatEvent.forwarded_from:type_name -> stream.v1.ChatForwardedReference
-	22, // 14: stream.v1.GuildEvent.timestamp:type_name -> google.protobuf.Timestamp
-	22, // 15: stream.v1.VoiceStateEvent.timestamp:type_name -> google.protobuf.Timestamp
-	22, // 16: stream.v1.TypingEvent.timestamp:type_name -> google.protobuf.Timestamp
-	22, // 17: stream.v1.FriendActivityEvent.timestamp:type_name -> google.protobuf.Timestamp
-	3,  // 18: stream.v1.StreamService.StreamDmChat:input_type -> stream.v1.StreamDmChatRequest
-	5,  // 19: stream.v1.StreamService.StreamDmChannels:input_type -> stream.v1.StreamDmChannelsRequest
-	8,  // 20: stream.v1.StreamService.StreamDmCalls:input_type -> stream.v1.StreamDmCallsRequest
-	10, // 21: stream.v1.StreamService.StreamTextChannels:input_type -> stream.v1.StreamTextChannelsRequest
-	12, // 22: stream.v1.StreamService.StreamVoiceChat:input_type -> stream.v1.StreamVoiceChatRequest
-	14, // 23: stream.v1.StreamService.StreamGuildEvents:input_type -> stream.v1.StreamGuildEventsRequest
-	16, // 24: stream.v1.StreamService.StreamVoiceState:input_type -> stream.v1.StreamVoiceStateRequest
-	18, // 25: stream.v1.StreamService.StreamTyping:input_type -> stream.v1.StreamTypingRequest
-	20, // 26: stream.v1.StreamService.StreamFriendActivity:input_type -> stream.v1.StreamFriendActivityRequest
-	4,  // 27: stream.v1.StreamService.StreamDmChat:output_type -> stream.v1.DmChatEvent
-	7,  // 28: stream.v1.StreamService.StreamDmChannels:output_type -> stream.v1.DmChannelEvent
-	9,  // 29: stream.v1.StreamService.StreamDmCalls:output_type -> stream.v1.DmCallEvent
-	11, // 30: stream.v1.StreamService.StreamTextChannels:output_type -> stream.v1.TextChannelEvent
-	13, // 31: stream.v1.StreamService.StreamVoiceChat:output_type -> stream.v1.VoiceChatEvent
-	15, // 32: stream.v1.StreamService.StreamGuildEvents:output_type -> stream.v1.GuildEvent
-	17, // 33: stream.v1.StreamService.StreamVoiceState:output_type -> stream.v1.VoiceStateEvent
-	19, // 34: stream.v1.StreamService.StreamTyping:output_type -> stream.v1.TypingEvent
-	21, // 35: stream.v1.StreamService.StreamFriendActivity:output_type -> stream.v1.FriendActivityEvent
-	27, // [27:36] is the sub-list for method output_type
-	18, // [18:27] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	0,  // 0: stream.v1.DmChatEvent.type:type_name -> stream.v1.ChatEventType
+	31, // 1: stream.v1.DmChatEvent.timestamp:type_name -> google.protobuf.Timestamp
+	9,  // 2: stream.v1.DmChatEvent.attachments:type_name -> stream.v1.ChatAttachment
+	10, // 3: stream.v1.DmChatEvent.reactions:type_name -> stream.v1.ChatReactionCount
+	11, // 4: stream.v1.DmChatEvent.forwarded_from:type_name -> stream.v1.ChatForwardedReference
+	1,  // 5: stream.v1.DmChannelEvent.type:type_name -> stream.v1.ChannelLifecycleType
+	15, // 6: stream.v1.DmChannelEvent.members:type_name -> stream.v1.DmChannelMember
+	2,  // 7: stream.v1.DmCallEvent.type:type_name -> stream.v1.DmCallType
+	31, // 8: stream.v1.DmCallEvent.timestamp:type_name -> google.protobuf.Timestamp
+	0,  // 9: stream.v1.TextChannelEvent.type:type_name -> stream.v1.ChatEventType
+	31, // 10: stream.v1.TextChannelEvent.timestamp:type_name -> google.protobuf.Timestamp
+	9,  // 11: stream.v1.TextChannelEvent.attachments:type_name -> stream.v1.ChatAttachment
+	10, // 12: stream.v1.TextChannelEvent.reactions:type_name -> stream.v1.ChatReactionCount
+	11, // 13: stream.v1.TextChannelEvent.forwarded_from:type_name -> stream.v1.ChatForwardedReference
+	0,  // 14: stream.v1.VoiceChatEvent.type:type_name -> stream.v1.ChatEventType
+	31, // 15: stream.v1.VoiceChatEvent.timestamp:type_name -> google.protobuf.Timestamp
+	9,  // 16: stream.v1.VoiceChatEvent.attachments:type_name -> stream.v1.ChatAttachment
+	10, // 17: stream.v1.VoiceChatEvent.reactions:type_name -> stream.v1.ChatReactionCount
+	11, // 18: stream.v1.VoiceChatEvent.forwarded_from:type_name -> stream.v1.ChatForwardedReference
+	8,  // 19: stream.v1.GuildEvent.event:type_name -> stream.v1.GuildEventType
+	31, // 20: stream.v1.GuildEvent.timestamp:type_name -> google.protobuf.Timestamp
+	8,  // 21: stream.v1.GuildEvent.action:type_name -> stream.v1.GuildEventType
+	3,  // 22: stream.v1.VoiceStateEvent.event:type_name -> stream.v1.VoiceEvent
+	31, // 23: stream.v1.VoiceStateEvent.timestamp:type_name -> google.protobuf.Timestamp
+	4,  // 24: stream.v1.VoiceStateEvent.action:type_name -> stream.v1.VoiceAction
+	5,  // 25: stream.v1.VoiceStateEvent.track_type:type_name -> stream.v1.VoiceTrackType
+	31, // 26: stream.v1.TypingEvent.timestamp:type_name -> google.protobuf.Timestamp
+	6,  // 27: stream.v1.FriendActivityEvent.event:type_name -> stream.v1.FriendEventType
+	7,  // 28: stream.v1.FriendActivityEvent.status:type_name -> stream.v1.PresenceStatus
+	31, // 29: stream.v1.FriendActivityEvent.timestamp:type_name -> google.protobuf.Timestamp
+	12, // 30: stream.v1.StreamService.StreamDmChat:input_type -> stream.v1.StreamDmChatRequest
+	14, // 31: stream.v1.StreamService.StreamDmChannels:input_type -> stream.v1.StreamDmChannelsRequest
+	17, // 32: stream.v1.StreamService.StreamDmCalls:input_type -> stream.v1.StreamDmCallsRequest
+	19, // 33: stream.v1.StreamService.StreamTextChannels:input_type -> stream.v1.StreamTextChannelsRequest
+	21, // 34: stream.v1.StreamService.StreamVoiceChat:input_type -> stream.v1.StreamVoiceChatRequest
+	23, // 35: stream.v1.StreamService.StreamGuildEvents:input_type -> stream.v1.StreamGuildEventsRequest
+	25, // 36: stream.v1.StreamService.StreamVoiceState:input_type -> stream.v1.StreamVoiceStateRequest
+	27, // 37: stream.v1.StreamService.StreamTyping:input_type -> stream.v1.StreamTypingRequest
+	29, // 38: stream.v1.StreamService.StreamFriendActivity:input_type -> stream.v1.StreamFriendActivityRequest
+	13, // 39: stream.v1.StreamService.StreamDmChat:output_type -> stream.v1.DmChatEvent
+	16, // 40: stream.v1.StreamService.StreamDmChannels:output_type -> stream.v1.DmChannelEvent
+	18, // 41: stream.v1.StreamService.StreamDmCalls:output_type -> stream.v1.DmCallEvent
+	20, // 42: stream.v1.StreamService.StreamTextChannels:output_type -> stream.v1.TextChannelEvent
+	22, // 43: stream.v1.StreamService.StreamVoiceChat:output_type -> stream.v1.VoiceChatEvent
+	24, // 44: stream.v1.StreamService.StreamGuildEvents:output_type -> stream.v1.GuildEvent
+	26, // 45: stream.v1.StreamService.StreamVoiceState:output_type -> stream.v1.VoiceStateEvent
+	28, // 46: stream.v1.StreamService.StreamTyping:output_type -> stream.v1.TypingEvent
+	30, // 47: stream.v1.StreamService.StreamFriendActivity:output_type -> stream.v1.FriendActivityEvent
+	39, // [39:48] is the sub-list for method output_type
+	30, // [30:39] is the sub-list for method input_type
+	30, // [30:30] is the sub-list for extension type_name
+	30, // [30:30] is the sub-list for extension extendee
+	0,  // [0:30] is the sub-list for field type_name
 }
 
 func init() { file_stream_v1_stream_proto_init() }
@@ -2130,13 +2816,14 @@ func file_stream_v1_stream_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_stream_v1_stream_proto_rawDesc), len(file_stream_v1_stream_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      9,
 			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_stream_v1_stream_proto_goTypes,
 		DependencyIndexes: file_stream_v1_stream_proto_depIdxs,
+		EnumInfos:         file_stream_v1_stream_proto_enumTypes,
 		MessageInfos:      file_stream_v1_stream_proto_msgTypes,
 	}.Build()
 	File_stream_v1_stream_proto = out.File

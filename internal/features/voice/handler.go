@@ -11,19 +11,15 @@ import (
 	"github.com/ananddub/ndiscord_backend/internal/shared/middleware"
 )
 
-// Handler implements the VoiceServiceServer gRPC interface.
 type Handler struct {
 	voicev1.UnimplementedVoiceServiceServer
 	service *Service
 }
 
-// NewHandler creates a new voice Handler.
 func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-// JoinChannel returns the LiveKit URL + JWT the client should use to connect
-// directly to the SFU.
 func (h *Handler) JoinChannel(ctx context.Context, req *voicev1.JoinChannelRequest) (*voicev1.JoinChannelResponse, error) {
 	userID := middleware.UserIDFromContext(ctx)
 	if userID == "" {
@@ -46,7 +42,6 @@ func (h *Handler) JoinChannel(ctx context.Context, req *voicev1.JoinChannelReque
 	}, nil
 }
 
-// LeaveChannel tells LiveKit to evict the caller from the room.
 func (h *Handler) LeaveChannel(ctx context.Context, req *voicev1.LeaveChannelRequest) (*voicev1.LeaveChannelResponse, error) {
 	userID := middleware.UserIDFromContext(ctx)
 	if userID == "" {
@@ -233,4 +228,3 @@ func (h *Handler) GetChannelParticipants(ctx context.Context, req *voicev1.GetCh
 		Participants: participants,
 	}, nil
 }
-

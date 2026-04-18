@@ -119,10 +119,10 @@ func TestCancelFriendRequest(t *testing.T) {
 	var sawRequest, sawCancel bool
 	for _, e := range received {
 		t.Logf("bob event: %s user=%s username=%q", e.Event, e.UserId, e.Username)
-		if e.Event == "friend_request" && e.UserId == alice.ID {
+		if e.Event == streamv1.FriendEventType_FRIEND_EVENT_REQUEST && e.UserId == alice.ID {
 			sawRequest = true
 		}
-		if e.Event == "friend_request_cancelled" && e.UserId == alice.ID {
+		if e.Event == streamv1.FriendEventType_FRIEND_EVENT_REQUEST_CANCELLED && e.UserId == alice.ID {
 			sawCancel = true
 			assert.NotEmpty(t, e.Username, "cancel event should include sender username")
 		}

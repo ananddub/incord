@@ -6,6 +6,118 @@ option go_package = "github.com/ananddub/ndiscord_backend/gen/stream/v1;streamv1
 
 import "google/protobuf/timestamp.proto";
 
+// === Enums ===
+//
+// These enums are paired with hand-written Wire() helpers in wire.go that
+// translate each value into the exact snake_case/upper-case string used on
+// the NATS wire. Message fields stay typed as `string` so subscribers
+// (including external clients) don't have to change their JSON decoders;
+// publishers should always go through `Enum_VALUE.Wire()` instead of
+// hand-typing the tag string.
+
+// Chat events — used for DmChatEvent.type, TextChannelEvent.type and
+// VoiceChatEvent.type.
+enum ChatEventType {
+  CHAT_EVENT_UNSPECIFIED = 0;
+  CHAT_EVENT_CREATE = 1;
+  CHAT_EVENT_UPDATE = 2;
+  CHAT_EVENT_DELETE = 3;
+  CHAT_EVENT_PIN = 4;
+  CHAT_EVENT_UNPIN = 5;
+  CHAT_EVENT_REACTION_ADD = 6;
+  CHAT_EVENT_REACTION_REMOVE = 7;
+  CHAT_EVENT_READ_RECEIPT = 8;
+}
+
+// DM channel lifecycle — used for DmChannelEvent.type.
+enum ChannelLifecycleType {
+  CHANNEL_LIFECYCLE_UNSPECIFIED = 0;
+  CHANNEL_LIFECYCLE_CREATE = 1;
+  CHANNEL_LIFECYCLE_UPDATE = 2;
+  CHANNEL_LIFECYCLE_DELETE = 3;
+}
+
+// DM call signalling — used for DmCallEvent.type.
+enum DmCallType {
+  DM_CALL_UNSPECIFIED = 0;
+  DM_CALL_INCOMING = 1;
+  DM_CALL_ACCEPTED = 2;
+  DM_CALL_REJECTED = 3;
+  DM_CALL_ENDED = 4;
+  DM_CALL_PARTICIPANT_LEFT = 5;
+}
+
+// Voice event — used for VoiceStateEvent.event (currently single-valued
+// but defined as an enum so hardcoded strings never leak back in).
+enum VoiceEvent {
+  VOICE_EVENT_UNSPECIFIED = 0;
+  VOICE_EVENT_STATE_UPDATE = 1;
+}
+
+// Voice action — used for VoiceStateEvent.action.
+enum VoiceAction {
+  VOICE_ACTION_UNSPECIFIED = 0;
+  VOICE_ACTION_JOIN = 1;
+  VOICE_ACTION_LEAVE = 2;
+  VOICE_ACTION_PARTICIPANT_JOINED = 3;
+  VOICE_ACTION_PARTICIPANT_LEFT = 4;
+  VOICE_ACTION_TRACK_UPDATE = 5;
+  VOICE_ACTION_STATE_SYNC = 6;
+  VOICE_ACTION_STATE_UPDATE = 7;
+  VOICE_ACTION_ROOM_STARTED = 8;
+  VOICE_ACTION_ROOM_FINISHED = 9;
+}
+
+// Voice track kind — used for VoiceStateEvent.track_type.
+enum VoiceTrackType {
+  VOICE_TRACK_UNSPECIFIED = 0;
+  VOICE_TRACK_AUDIO = 1;
+  VOICE_TRACK_VIDEO = 2;
+  VOICE_TRACK_SCREEN_SHARE = 3;
+}
+
+// Friend/presence activity — used for FriendActivityEvent.event.
+enum FriendEventType {
+  FRIEND_EVENT_UNSPECIFIED = 0;
+  FRIEND_EVENT_PRESENCE_UPDATE = 1;
+  FRIEND_EVENT_PROFILE_UPDATE = 2;
+  FRIEND_EVENT_REQUEST = 3;
+  FRIEND_EVENT_ACCEPTED = 4;
+  FRIEND_EVENT_DECLINED = 5;
+  FRIEND_EVENT_REMOVED = 6;
+  FRIEND_EVENT_REQUEST_CANCELLED = 7;
+}
+
+// User presence — used for FriendActivityEvent.status and wherever a
+// human-readable presence string is emitted.
+enum PresenceStatus {
+  PRESENCE_STATUS_UNSPECIFIED = 0;
+  PRESENCE_STATUS_ONLINE = 1;
+  PRESENCE_STATUS_IDLE = 2;
+  PRESENCE_STATUS_DND = 3;
+  PRESENCE_STATUS_OFFLINE = 4;
+}
+
+// Guild-level event — used for GuildEvent.event (+ GuildEvent.action,
+// which currently mirrors event).
+enum GuildEventType {
+  GUILD_EVENT_UNSPECIFIED = 0;
+  GUILD_EVENT_MEMBER_ADD = 1;
+  GUILD_EVENT_MEMBER_REMOVE = 2;
+  GUILD_EVENT_MEMBER_BAN = 3;
+  GUILD_EVENT_MEMBER_UNBAN = 4;
+  GUILD_EVENT_UPDATE = 5;
+  GUILD_EVENT_DELETE = 6;
+  GUILD_EVENT_ROLE_CREATE = 7;
+  GUILD_EVENT_ROLE_UPDATE = 8;
+  GUILD_EVENT_ROLE_DELETE = 9;
+  GUILD_EVENT_ROLE_ASSIGN = 10;
+  GUILD_EVENT_ROLE_REMOVE = 11;
+  GUILD_EVENT_CHANNEL_CREATE = 12;
+  GUILD_EVENT_CHANNEL_UPDATE = 13;
+  GUILD_EVENT_CHANNEL_DELETE = 14;
+}
+
 service StreamService {
   rpc StreamDmChat(StreamDmChatRequest) returns (stream DmChatEvent);
 
@@ -65,9 +177,7 @@ message ChatForwardedReference {
 message StreamDmChatRequest {}
 
 message DmChatEvent {
-  // One of: "create", "update", "delete", "pin", "unpin",
-  // "reaction_add", "reaction_remove", "read_receipt".
-  string type = 1;
+  ChatEventType type = 1;
   string channel_id = 2;
   string message_id = 3;
   // The user who initiated the event (sender/editor/reactor/etc.).
@@ -112,7 +222,7 @@ message DmChannelMember {
 }
 
 message DmChannelEvent {
-  string type = 1;          // "create", "update", "delete"
+  ChannelLifecycleType type = 1;
   string id = 2;            // channel id
   string name = 3;
   int32 channel_type = 4;   // 5=DM, 6=GROUP_DM
@@ -124,12 +234,7 @@ message DmChannelEvent {
 message StreamDmCallsRequest {}
 
 message DmCallEvent {
-  // "call_incoming" — ring the recipient; caller_id populated.
-  // "call_accepted" — a recipient joined; participant_id populated.
-  // "call_rejected" — a recipient declined; participant_id populated.
-  // "call_ended"    — last participant left; no participant_id.
-  // "participant_left" — a participant hung up mid-call.
-  string type = 1;
+  DmCallType type = 1;
   string channel_id = 2;
   // The user who initiated the call (present on every event so late
   // subscribers can identify the ongoing call).
@@ -149,9 +254,7 @@ message StreamTextChannelsRequest {}
 // channel subscribers can render replies, attachments, reactions and
 // mentions without additional round trips.
 message TextChannelEvent {
-  // One of: "create", "update", "delete", "pin", "unpin",
-  // "reaction_add", "reaction_remove".
-  string type = 1;
+  ChatEventType type = 1;
   string guild_id = 2;
   string channel_id = 3;
   string message_id = 4;
@@ -185,7 +288,7 @@ message StreamVoiceChatRequest {}
 // VoiceChatEvent is identical in shape to TextChannelEvent — text chat
 // that happens inside a voice channel.
 message VoiceChatEvent {
-  string type = 1;
+  ChatEventType type = 1;
   string guild_id = 2;
   string channel_id = 3;
   string message_id = 4;
@@ -211,7 +314,7 @@ message VoiceChatEvent {
 message StreamGuildEventsRequest {}
 
 message GuildEvent {
-  string event = 1;      // "member_add", "member_remove", "update", "delete", "role_create", "CHANNEL_CREATE", "CHANNEL_UPDATE", "CHANNEL_DELETE" etc
+  GuildEventType event = 1;
   string guild_id = 2;
   string user_id = 3;
   string channel_id = 4;
@@ -222,6 +325,14 @@ message GuildEvent {
   string topic = 8;
   int32 position = 9;
   string parent_id = 10;
+  // Guild icon URL on "update" icon change.
+  string icon_url = 11;
+  // Role id on role_* events.
+  string role_id = 12;
+  // Reason on member_ban.
+  string reason = 13;
+  // Set by publishGuildEvent; mirrors `event`.
+  GuildEventType action = 14;
 }
 
 // === Voice State (all guilds, auto-detect) ===
@@ -229,8 +340,7 @@ message GuildEvent {
 message StreamVoiceStateRequest {}
 
 message VoiceStateEvent {
-  // Always "VOICE_STATE_UPDATE".
-  string event = 1;
+  VoiceEvent event = 1;
   string guild_id = 2;
   string channel_id = 3;
   string user_id = 4;
@@ -239,17 +349,14 @@ message VoiceStateEvent {
   bool video = 7;
   bool streaming = 8;
   google.protobuf.Timestamp timestamp = 9;
-  // "join", "leave", "participant_joined", "participant_left",
-  // "track_update", "state_sync", "room_started", "room_finished"
-  string action = 10;
+  VoiceAction action = 10;
   // LiveKit participant SID.
   string sid = 11;
   // Display name from LiveKit participant.
   string name = 12;
   // Participant metadata JSON: {"userId","username","avatarUrl"}.
   string metadata = 13;
-  // On track_update: "audio", "video", "screen_share".
-  string track_type = 14;
+  VoiceTrackType track_type = 14;
   // On track_update: true = published, false = unpublished.
   bool published = 15;
   // Unix timestamp (seconds) when the LiveKit room for this channel
@@ -273,11 +380,11 @@ message TypingEvent {
 message StreamFriendActivityRequest {}
 
 message FriendActivityEvent {
-  string event = 1;      // "presence_update", "profile_update", "friend_request", "friend_accepted", "friend_declined", "friend_removed"
+  FriendEventType event = 1;
   string user_id = 2;
   // Full unique handle in "name#1234" format.
   string username = 3;
-  string status = 4;
+  PresenceStatus status = 4;
   string custom_status = 5;
   string avatar_url = 6;
   google.protobuf.Timestamp timestamp = 7;

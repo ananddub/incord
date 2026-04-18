@@ -92,7 +92,7 @@ func TestFriendEventEnriched(t *testing.T) {
 	// Find the friend_request event and assert it has Alice's username.
 	var friendReq *streamv1.FriendActivityEvent
 	for _, e := range received {
-		if e.Event == "friend_request" {
+		if e.Event == streamv1.FriendEventType_FRIEND_EVENT_REQUEST {
 			friendReq = e
 			break
 		}
@@ -106,7 +106,7 @@ func TestFriendEventEnriched(t *testing.T) {
 	// Find the presence_update event after the friendship and assert username.
 	var presenceEvt *streamv1.FriendActivityEvent
 	for _, e := range received {
-		if e.Event == "presence_update" {
+		if e.Event == streamv1.FriendEventType_FRIEND_EVENT_PRESENCE_UPDATE {
 			presenceEvt = e
 			break
 		}
