@@ -7,36 +7,22 @@ option go_package = "github.com/ananddub/ndiscord_backend/gen/stream/v1;streamv1
 import "google/protobuf/timestamp.proto";
 
 service StreamService {
-  // DM: all DM messages across all DM channels (auto-detect user's DMs)
   rpc StreamDmChat(StreamDmChatRequest) returns (stream DmChatEvent);
 
-  // DM channel lifecycle: fires when a DM channel is created/updated/deleted
-  // or the caller's membership in one changes. Each event carries the full
-  // member profile list so clients can render the channel without a follow-up
-  // ListDMChannelMembers call.
   rpc StreamDmChannels(StreamDmChannelsRequest) returns (stream DmChannelEvent);
 
-  // DM call signalling: incoming call ring, accept, reject, end, and
-  // per-participant join/leave events. One subscription per user covers
-  // every DM channel they're in.
   rpc StreamDmCalls(StreamDmCallsRequest) returns (stream DmCallEvent);
 
-  // Guild text channels: all text messages across all guilds user is in
   rpc StreamTextChannels(StreamTextChannelsRequest) returns (stream TextChannelEvent);
 
-  // Guild voice chat: text chat in voice channels across all guilds
   rpc StreamVoiceChat(StreamVoiceChatRequest) returns (stream VoiceChatEvent);
 
-  // Guild events: member join/leave, role changes etc across all guilds
   rpc StreamGuildEvents(StreamGuildEventsRequest) returns (stream GuildEvent);
 
-  // Voice state: join/leave/mute across all voice channels in all guilds
   rpc StreamVoiceState(StreamVoiceStateRequest) returns (stream VoiceStateEvent);
 
-  // Typing: across all channels user is in
   rpc StreamTyping(StreamTypingRequest) returns (stream TypingEvent);
 
-  // Friend activity: presence, profile updates
   rpc StreamFriendActivity(StreamFriendActivityRequest) returns (stream FriendActivityEvent);
 }
 
@@ -225,12 +211,17 @@ message VoiceChatEvent {
 message StreamGuildEventsRequest {}
 
 message GuildEvent {
-  string event = 1;      // "member_add", "member_remove", "update", "delete", "role_create" etc
+  string event = 1;      // "member_add", "member_remove", "update", "delete", "role_create", "CHANNEL_CREATE", "CHANNEL_UPDATE", "CHANNEL_DELETE" etc
   string guild_id = 2;
   string user_id = 3;
   string channel_id = 4;
   string name = 5;
-  google.protobuf.Timestamp timestamp = 6;
+  int64 type = 6;
+  google.protobuf.Timestamp timestamp = 7;
+  // Channel-specific fields (CHANNEL_CREATE/UPDATE).
+  string topic = 8;
+  int32 position = 9;
+  string parent_id = 10;
 }
 
 // === Voice State (all guilds, auto-detect) ===

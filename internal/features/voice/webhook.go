@@ -102,6 +102,7 @@ func (h *WebhookHandler) handleEvent(event *livekit.WebhookEvent) {
 		log.Info().Msg("voice room finished")
 		if h.voiceSvc != nil {
 			_ = h.voiceSvc.ClearChannel(context.Background(), meta.ChannelID)
+			_ = h.voiceSvc.ClearActiveSince(context.Background(), meta.ChannelID)
 		}
 		h.publish(meta, "room_finished", nil)
 		h.roomMetas.Delete(meta.ChannelID)

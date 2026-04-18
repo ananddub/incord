@@ -12,15 +12,11 @@ import (
 	"github.com/ananddub/ndiscord_backend/internal/shared/realtime"
 )
 
-// UserDataResolver provides the user's guild memberships and friend list for
-// stream subscriptions.
 type UserDataResolver interface {
 	GetUserGuildIDs(ctx context.Context, userID string) ([]string, error)
 	GetUserFriendIDs(ctx context.Context, userID string) ([]string, error)
 }
 
-// VoiceSnapshotProvider loads the current voice state for initial sync when
-// a client subscribes to StreamVoiceState.
 type VoiceSnapshotProvider interface {
 	GetChannelParticipants(ctx context.Context, channelID string) ([]*streamv1.VoiceStateEvent, error)
 	GetGuildVoiceChannelIDs(ctx context.Context, guildID string) ([]string, error)
@@ -40,7 +36,6 @@ func NewHandler(nats *realtime.Hub, resolver UserDataResolver) *Handler {
 // SetVoiceSnapshotProvider wires the voice snapshot loader.
 func (h *Handler) SetVoiceSnapshotProvider(v VoiceSnapshotProvider) { h.voiceSnapshot = v }
 
-// helper: subscribe to multiple subjects, forward decoded events to gRPC stream
 func streamFromSubjects[T any](h *Handler, ctx context.Context, subjects []string, send func(*T) error) error {
 	if len(subjects) == 0 {
 		<-ctx.Done()
@@ -92,8 +87,6 @@ func (h *Handler) StreamDmChannels(req *streamv1.StreamDmChannelsRequest, stream
 	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
 }
 
-// StreamDmCalls - DM voice-call signalling events (ring, accept, reject,
-// end, participant join/leave) for every DM channel the caller is in.
 func (h *Handler) StreamDmCalls(req *streamv1.StreamDmCallsRequest, stream streamv1.StreamService_StreamDmCallsServer) error {
 	userID := middleware.UserIDFromContext(stream.Context())
 	if userID == "" {
@@ -103,7 +96,6 @@ func (h *Handler) StreamDmCalls(req *streamv1.StreamDmCallsRequest, stream strea
 	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
 }
 
-// StreamTextChannels - all text messages across all guilds user is in
 func (h *Handler) StreamTextChannels(req *streamv1.StreamTextChannelsRequest, stream streamv1.StreamService_StreamTextChannelsServer) error {
 	userID := middleware.UserIDFromContext(stream.Context())
 	if userID == "" {
@@ -137,7 +129,6 @@ func (h *Handler) StreamVoiceChat(req *streamv1.StreamVoiceChatRequest, stream s
 	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
 }
 
-// StreamGuildEvents - events across all guilds user is in
 func (h *Handler) StreamGuildEvents(req *streamv1.StreamGuildEventsRequest, stream streamv1.StreamService_StreamGuildEventsServer) error {
 	userID := middleware.UserIDFromContext(stream.Context())
 	if userID == "" {
@@ -154,10 +145,6 @@ func (h *Handler) StreamGuildEvents(req *streamv1.StreamGuildEventsRequest, stre
 	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
 }
 
-// StreamVoiceState - voice join/leave/mute/video across all guilds.
-// On connect, sends the full current state of every active voice participant
-// across the user's guilds so the client starts with a complete picture.
-// Then streams incremental updates.
 func (h *Handler) StreamVoiceState(req *streamv1.StreamVoiceStateRequest, stream streamv1.StreamService_StreamVoiceStateServer) error {
 	userID := middleware.UserIDFromContext(stream.Context())
 	if userID == "" {
@@ -167,8 +154,6 @@ func (h *Handler) StreamVoiceState(req *streamv1.StreamVoiceStateRequest, stream
 	if err != nil {
 		return status.Error(codes.Internal, "failed to get guilds")
 	}
-	// Send initial snapshot of all current voice participants so the
-	// client renders the correct state immediately on subscribe.
 	if h.voiceSnapshot != nil {
 		for _, gid := range guildIDs {
 			channelIDs, err := h.voiceSnapshot.GetGuildVoiceChannelIDs(stream.Context(), gid)
@@ -189,8 +174,6 @@ func (h *Handler) StreamVoiceState(req *streamv1.StreamVoiceStateRequest, stream
 			}
 		}
 	}
-
-	// Then stream incremental updates
 	var subjects []string
 	for _, gid := range guildIDs {
 		subjects = append(subjects, realtime.GuildAllVoice(gid))
@@ -198,7 +181,6 @@ func (h *Handler) StreamVoiceState(req *streamv1.StreamVoiceStateRequest, stream
 	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
 }
 
-// StreamTyping - typing across all channels user is in
 func (h *Handler) StreamTyping(req *streamv1.StreamTypingRequest, stream streamv1.StreamService_StreamTypingServer) error {
 	userID := middleware.UserIDFromContext(stream.Context())
 	if userID == "" {
@@ -214,15 +196,6 @@ func (h *Handler) StreamTyping(req *streamv1.StreamTypingRequest, stream streamv
 	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
 }
 
-// StreamFriendActivity - presence + profile updates + friend requests.
-//
-// The caller listens on:
-//   - their OWN subject — to receive targeted events like "X sent you a friend
-//     request" or "X accepted your request"
-//   - each FRIEND's subject — to receive ambient events like presence/profile
-//     updates that a friend publishes to their own subject
-//
-// When the friend list changes mid-stream, the client is expected to reconnect.
 func (h *Handler) StreamFriendActivity(req *streamv1.StreamFriendActivityRequest, stream streamv1.StreamService_StreamFriendActivityServer) error {
 	userID := middleware.UserIDFromContext(stream.Context())
 	if userID == "" {

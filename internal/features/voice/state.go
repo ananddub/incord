@@ -92,12 +92,44 @@ func (s *Service) SetParticipant(ctx context.Context, ps ParticipantState) error
 	return s.redis.HSet(ctx, voiceKey(ps.ChannelID), ps.UserID, data).Err()
 }
 
-// RemoveParticipant removes a user from the channel's Redis hash.
+// RemoveParticipant removes a user from the channel's Redis hash and
+// broadcasts a "leave" event on the guild voice subject so every client
+// can drop this user from their UI. If the channel becomes empty also
+// clears the active_since marker so the next joiner starts a fresh timer.
 func (s *Service) RemoveParticipant(ctx context.Context, channelID, userID string) error {
 	if s.redis == nil {
 		return nil
 	}
-	return s.redis.HDel(ctx, voiceKey(channelID), userID).Err()
+	// Read guild_id BEFORE deleting so the leave event can be routed.
+	guildID := ""
+	if ps, _ := s.GetParticipant(ctx, channelID, userID); ps != nil {
+		guildID = ps.GuildID
+	}
+
+	if err := s.redis.HDel(ctx, voiceKey(channelID), userID).Err(); err != nil {
+		return err
+	}
+
+	// Explicit leave event so other clients drop this user from their UI.
+	// Include room_active_since so late subscribers still get the correct
+	// session start time for the channel.
+	if guildID != "" && s.nats != nil {
+		_ = s.nats.Publish(realtime.GuildChannelVoice(guildID, channelID), map[string]any{
+			"event":             "VOICE_STATE_UPDATE",
+			"action":            "leave",
+			"channel_id":        channelID,
+			"guild_id":          guildID,
+			"user_id":           userID,
+			"room_active_since": s.GetActiveSince(ctx, channelID),
+		})
+	}
+
+	// If no one is left, clear everything.
+	if n, err := s.redis.HLen(ctx, voiceKey(channelID)).Result(); err == nil && n == 0 {
+		_ = s.redis.Del(ctx, voiceKey(channelID)).Err()
+		_ = s.ClearActiveSince(ctx, channelID)
+	}
+	return nil
 }
 
 // ClearChannel removes all participants from a channel (room destroyed).

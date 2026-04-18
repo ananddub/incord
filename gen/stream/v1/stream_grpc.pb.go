@@ -34,28 +34,14 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type StreamServiceClient interface {
-	// DM: all DM messages across all DM channels (auto-detect user's DMs)
 	StreamDmChat(ctx context.Context, in *StreamDmChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DmChatEvent], error)
-	// DM channel lifecycle: fires when a DM channel is created/updated/deleted
-	// or the caller's membership in one changes. Each event carries the full
-	// member profile list so clients can render the channel without a follow-up
-	// ListDMChannelMembers call.
 	StreamDmChannels(ctx context.Context, in *StreamDmChannelsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DmChannelEvent], error)
-	// DM call signalling: incoming call ring, accept, reject, end, and
-	// per-participant join/leave events. One subscription per user covers
-	// every DM channel they're in.
 	StreamDmCalls(ctx context.Context, in *StreamDmCallsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DmCallEvent], error)
-	// Guild text channels: all text messages across all guilds user is in
 	StreamTextChannels(ctx context.Context, in *StreamTextChannelsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TextChannelEvent], error)
-	// Guild voice chat: text chat in voice channels across all guilds
 	StreamVoiceChat(ctx context.Context, in *StreamVoiceChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[VoiceChatEvent], error)
-	// Guild events: member join/leave, role changes etc across all guilds
 	StreamGuildEvents(ctx context.Context, in *StreamGuildEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GuildEvent], error)
-	// Voice state: join/leave/mute across all voice channels in all guilds
 	StreamVoiceState(ctx context.Context, in *StreamVoiceStateRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[VoiceStateEvent], error)
-	// Typing: across all channels user is in
 	StreamTyping(ctx context.Context, in *StreamTypingRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TypingEvent], error)
-	// Friend activity: presence, profile updates
 	StreamFriendActivity(ctx context.Context, in *StreamFriendActivityRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[FriendActivityEvent], error)
 }
 
@@ -242,28 +228,14 @@ type StreamService_StreamFriendActivityClient = grpc.ServerStreamingClient[Frien
 // All implementations must embed UnimplementedStreamServiceServer
 // for forward compatibility.
 type StreamServiceServer interface {
-	// DM: all DM messages across all DM channels (auto-detect user's DMs)
 	StreamDmChat(*StreamDmChatRequest, grpc.ServerStreamingServer[DmChatEvent]) error
-	// DM channel lifecycle: fires when a DM channel is created/updated/deleted
-	// or the caller's membership in one changes. Each event carries the full
-	// member profile list so clients can render the channel without a follow-up
-	// ListDMChannelMembers call.
 	StreamDmChannels(*StreamDmChannelsRequest, grpc.ServerStreamingServer[DmChannelEvent]) error
-	// DM call signalling: incoming call ring, accept, reject, end, and
-	// per-participant join/leave events. One subscription per user covers
-	// every DM channel they're in.
 	StreamDmCalls(*StreamDmCallsRequest, grpc.ServerStreamingServer[DmCallEvent]) error
-	// Guild text channels: all text messages across all guilds user is in
 	StreamTextChannels(*StreamTextChannelsRequest, grpc.ServerStreamingServer[TextChannelEvent]) error
-	// Guild voice chat: text chat in voice channels across all guilds
 	StreamVoiceChat(*StreamVoiceChatRequest, grpc.ServerStreamingServer[VoiceChatEvent]) error
-	// Guild events: member join/leave, role changes etc across all guilds
 	StreamGuildEvents(*StreamGuildEventsRequest, grpc.ServerStreamingServer[GuildEvent]) error
-	// Voice state: join/leave/mute across all voice channels in all guilds
 	StreamVoiceState(*StreamVoiceStateRequest, grpc.ServerStreamingServer[VoiceStateEvent]) error
-	// Typing: across all channels user is in
 	StreamTyping(*StreamTypingRequest, grpc.ServerStreamingServer[TypingEvent]) error
-	// Friend activity: presence, profile updates
 	StreamFriendActivity(*StreamFriendActivityRequest, grpc.ServerStreamingServer[FriendActivityEvent]) error
 	mustEmbedUnimplementedStreamServiceServer()
 }

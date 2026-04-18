@@ -1275,13 +1275,18 @@ func (*StreamGuildEventsRequest) Descriptor() ([]byte, []int) {
 }
 
 type GuildEvent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Event         string                 `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"` // "member_add", "member_remove", "update", "delete", "role_create" etc
-	GuildId       string                 `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
-	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	ChannelId     string                 `protobuf:"bytes,4,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	Name          string                 `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"`
-	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Event     string                 `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"` // "member_add", "member_remove", "update", "delete", "role_create", "CHANNEL_CREATE", "CHANNEL_UPDATE", "CHANNEL_DELETE" etc
+	GuildId   string                 `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
+	UserId    string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	ChannelId string                 `protobuf:"bytes,4,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	Name      string                 `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"`
+	Type      int64                  `protobuf:"varint,6,opt,name=type,proto3" json:"type,omitempty"`
+	Timestamp *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	// Channel-specific fields (CHANNEL_CREATE/UPDATE).
+	Topic         string `protobuf:"bytes,8,opt,name=topic,proto3" json:"topic,omitempty"`
+	Position      int32  `protobuf:"varint,9,opt,name=position,proto3" json:"position,omitempty"`
+	ParentId      string `protobuf:"bytes,10,opt,name=parent_id,json=parentId,proto3" json:"parent_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1351,11 +1356,39 @@ func (x *GuildEvent) GetName() string {
 	return ""
 }
 
+func (x *GuildEvent) GetType() int64 {
+	if x != nil {
+		return x.Type
+	}
+	return 0
+}
+
 func (x *GuildEvent) GetTimestamp() *timestamppb.Timestamp {
 	if x != nil {
 		return x.Timestamp
 	}
 	return nil
+}
+
+func (x *GuildEvent) GetTopic() string {
+	if x != nil {
+		return x.Topic
+	}
+	return ""
+}
+
+func (x *GuildEvent) GetPosition() int32 {
+	if x != nil {
+		return x.Position
+	}
+	return 0
+}
+
+func (x *GuildEvent) GetParentId() string {
+	if x != nil {
+		return x.ParentId
+	}
+	return ""
 }
 
 type StreamVoiceStateRequest struct {
@@ -1938,7 +1971,7 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\x10mention_user_ids\x18\x11 \x03(\tR\x0ementionUserIds\x12:\n" +
 	"\treactions\x18\x12 \x03(\v2\x1c.stream.v1.ChatReactionCountR\treactions\x12H\n" +
 	"\x0eforwarded_from\x18\x13 \x01(\v2!.stream.v1.ChatForwardedReferenceR\rforwardedFrom\"\x1a\n" +
-	"\x18StreamGuildEventsRequest\"\xc3\x01\n" +
+	"\x18StreamGuildEventsRequest\"\xa6\x02\n" +
 	"\n" +
 	"GuildEvent\x12\x14\n" +
 	"\x05event\x18\x01 \x01(\tR\x05event\x12\x19\n" +
@@ -1946,8 +1979,13 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x04 \x01(\tR\tchannelId\x12\x12\n" +
-	"\x04name\x18\x05 \x01(\tR\x04name\x128\n" +
-	"\ttimestamp\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\x19\n" +
+	"\x04name\x18\x05 \x01(\tR\x04name\x12\x12\n" +
+	"\x04type\x18\x06 \x01(\x03R\x04type\x128\n" +
+	"\ttimestamp\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x14\n" +
+	"\x05topic\x18\b \x01(\tR\x05topic\x12\x1a\n" +
+	"\bposition\x18\t \x01(\x05R\bposition\x12\x1b\n" +
+	"\tparent_id\x18\n" +
+	" \x01(\tR\bparentId\"\x19\n" +
 	"\x17StreamVoiceStateRequest\"\xe5\x03\n" +
 	"\x0fVoiceStateEvent\x12\x14\n" +
 	"\x05event\x18\x01 \x01(\tR\x05event\x12\x19\n" +

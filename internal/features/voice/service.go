@@ -252,10 +252,31 @@ func (v *VoiceSnapshot) GetChannelParticipants(ctx context.Context, channelID st
 	// Room active-since = first joiner's timestamp stored in Redis.
 	roomActiveSince := v.svc.GetActiveSince(ctx, channelID)
 
-	// No one in LiveKit → clean Redis and return empty
+	// If LiveKit says nobody's connected yet (user may have just called
+	// JoinChannel and is still negotiating WebRTC), fall back to Redis
+	// state. Don't clear Redis from a read path — that's handled by
+	// explicit LeaveChannel + participant_left / room_finished webhooks.
 	if len(liveParticipants) == 0 {
-		_ = v.svc.ClearChannel(ctx, channelID)
-		return nil, nil
+		redisStates, _ := v.svc.GetChannelState(ctx, channelID)
+		roomActiveSince := v.svc.GetActiveSince(ctx, channelID)
+		events := make([]*streamv1.VoiceStateEvent, len(redisStates))
+		for i, rs := range redisStates {
+			events[i] = &streamv1.VoiceStateEvent{
+				Event:           "VOICE_STATE_UPDATE",
+				Action:          "state_sync",
+				ChannelId:       channelID,
+				GuildId:         rs.GuildID,
+				UserId:          rs.UserID,
+				Name:            rs.DisplayName,
+				SelfMute:        rs.SelfMute,
+				SelfDeaf:        rs.SelfDeaf,
+				Video:           rs.Video,
+				Streaming:       rs.ScreenShare,
+				Metadata:        fmt.Sprintf(`{"userId":"%s","username":"%s","displayName":"%s","avatarUrl":"%s"}`, rs.UserID, rs.Username, rs.DisplayName, rs.AvatarURL),
+				RoomActiveSince: roomActiveSince,
+			}
+		}
+		return events, nil
 	}
 
 	// Step 2: Load Redis state for voice toggles (mute/deaf/video/screen)

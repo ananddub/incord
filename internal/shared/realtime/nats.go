@@ -52,6 +52,14 @@ func (h *Hub) Publish(subject string, data any) error {
 	return h.nc.Publish(subject, b)
 }
 
+// PublishProto marshals a proto message with JSON-compatible field naming
+// (snake_case keys matching the struct's json tags) so downstream Stream
+// handlers can json.Unmarshal directly into the proto-generated struct.
+// Using proto structs on the publish side gives compile-time typesafety.
+func (h *Hub) PublishProto(subject string, msg any) error {
+	return h.Publish(subject, msg)
+}
+
 func (h *Hub) Subscribe(subject string) (*Subscription, error) {
 	if h == nil || h.nc == nil {
 		return nil, fmt.Errorf("nats not connected")

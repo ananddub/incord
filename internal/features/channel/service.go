@@ -74,7 +74,6 @@ func (s *Service) CreateChannel(ctx context.Context, userID string, guildID, nam
 	}
 
 	_ = s.authz.SetChannelGuild(ctx, ch.ID.String(), guildID)
-
 	_ = s.nats.Publish(realtime.GuildEvents(guildID), map[string]any{
 		"event":      "CHANNEL_CREATE",
 		"guild_id":   guildID,
