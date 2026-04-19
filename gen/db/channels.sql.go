@@ -239,6 +239,39 @@ func (q *Queries) IsDMChannelMember(ctx context.Context, arg IsDMChannelMemberPa
 	return is_member, err
 }
 
+const listAllGuildChannels = `-- name: ListAllGuildChannels :many
+SELECT id, guild_id FROM channels
+WHERE guild_id IS NOT NULL AND deleted = FALSE
+`
+
+type ListAllGuildChannelsRow struct {
+	ID      pgtype.UUID `json:"id"`
+	GuildID pgtype.UUID `json:"guild_id"`
+}
+
+// Every guild-scoped channel system-wide. Consumed by the OpenFGA
+// backfill sync to (re-)register channel→guild bindings so the
+// channel viewer/sender/manager resolution works for old data.
+func (q *Queries) ListAllGuildChannels(ctx context.Context) ([]ListAllGuildChannelsRow, error) {
+	rows, err := q.db.Query(ctx, listAllGuildChannels)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAllGuildChannelsRow{}
+	for rows.Next() {
+		var i ListAllGuildChannelsRow
+		if err := rows.Scan(&i.ID, &i.GuildID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listDMChannels = `-- name: ListDMChannels :many
 SELECT c.id, c.guild_id, c.name, c.type, c.topic, c.position, c.parent_id, c.created_at, c.deleted, c.updated_at FROM channels c
 JOIN dm_channel_members dm ON dm.channel_id = c.id

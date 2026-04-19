@@ -19,29 +19,32 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	GuildService_CreateGuild_FullMethodName        = "/guild.v1.GuildService/CreateGuild"
-	GuildService_GetGuild_FullMethodName           = "/guild.v1.GuildService/GetGuild"
-	GuildService_UpdateGuild_FullMethodName        = "/guild.v1.GuildService/UpdateGuild"
-	GuildService_UploadGuildIcon_FullMethodName    = "/guild.v1.GuildService/UploadGuildIcon"
-	GuildService_DeleteGuild_FullMethodName        = "/guild.v1.GuildService/DeleteGuild"
-	GuildService_ListUserGuilds_FullMethodName     = "/guild.v1.GuildService/ListUserGuilds"
-	GuildService_PreviewInvite_FullMethodName      = "/guild.v1.GuildService/PreviewInvite"
-	GuildService_JoinGuild_FullMethodName          = "/guild.v1.GuildService/JoinGuild"
-	GuildService_LeaveGuild_FullMethodName         = "/guild.v1.GuildService/LeaveGuild"
-	GuildService_ListMembers_FullMethodName        = "/guild.v1.GuildService/ListMembers"
-	GuildService_KickMember_FullMethodName         = "/guild.v1.GuildService/KickMember"
-	GuildService_BanMember_FullMethodName          = "/guild.v1.GuildService/BanMember"
-	GuildService_UnbanMember_FullMethodName        = "/guild.v1.GuildService/UnbanMember"
-	GuildService_CreateInvite_FullMethodName       = "/guild.v1.GuildService/CreateInvite"
-	GuildService_CreateRole_FullMethodName         = "/guild.v1.GuildService/CreateRole"
-	GuildService_UpdateRole_FullMethodName         = "/guild.v1.GuildService/UpdateRole"
-	GuildService_DeleteRole_FullMethodName         = "/guild.v1.GuildService/DeleteRole"
-	GuildService_AssignRole_FullMethodName         = "/guild.v1.GuildService/AssignRole"
-	GuildService_RemoveRole_FullMethodName         = "/guild.v1.GuildService/RemoveRole"
-	GuildService_TransferOwnership_FullMethodName  = "/guild.v1.GuildService/TransferOwnership"
-	GuildService_GrantPermission_FullMethodName    = "/guild.v1.GuildService/GrantPermission"
-	GuildService_RevokePermission_FullMethodName   = "/guild.v1.GuildService/RevokePermission"
-	GuildService_GetUserPermissions_FullMethodName = "/guild.v1.GuildService/GetUserPermissions"
+	GuildService_CreateGuild_FullMethodName          = "/guild.v1.GuildService/CreateGuild"
+	GuildService_GetGuild_FullMethodName             = "/guild.v1.GuildService/GetGuild"
+	GuildService_UpdateGuild_FullMethodName          = "/guild.v1.GuildService/UpdateGuild"
+	GuildService_UploadGuildIcon_FullMethodName      = "/guild.v1.GuildService/UploadGuildIcon"
+	GuildService_UploadGuildBanner_FullMethodName    = "/guild.v1.GuildService/UploadGuildBanner"
+	GuildService_DeleteGuild_FullMethodName          = "/guild.v1.GuildService/DeleteGuild"
+	GuildService_ListUserGuilds_FullMethodName       = "/guild.v1.GuildService/ListUserGuilds"
+	GuildService_PreviewInvite_FullMethodName        = "/guild.v1.GuildService/PreviewInvite"
+	GuildService_JoinGuild_FullMethodName            = "/guild.v1.GuildService/JoinGuild"
+	GuildService_LeaveGuild_FullMethodName           = "/guild.v1.GuildService/LeaveGuild"
+	GuildService_ListMembers_FullMethodName          = "/guild.v1.GuildService/ListMembers"
+	GuildService_KickMember_FullMethodName           = "/guild.v1.GuildService/KickMember"
+	GuildService_BanMember_FullMethodName            = "/guild.v1.GuildService/BanMember"
+	GuildService_UnbanMember_FullMethodName          = "/guild.v1.GuildService/UnbanMember"
+	GuildService_CreateInvite_FullMethodName         = "/guild.v1.GuildService/CreateInvite"
+	GuildService_CreateRole_FullMethodName           = "/guild.v1.GuildService/CreateRole"
+	GuildService_UpdateRole_FullMethodName           = "/guild.v1.GuildService/UpdateRole"
+	GuildService_DeleteRole_FullMethodName           = "/guild.v1.GuildService/DeleteRole"
+	GuildService_AssignRole_FullMethodName           = "/guild.v1.GuildService/AssignRole"
+	GuildService_RemoveRole_FullMethodName           = "/guild.v1.GuildService/RemoveRole"
+	GuildService_TransferOwnership_FullMethodName    = "/guild.v1.GuildService/TransferOwnership"
+	GuildService_GrantPermission_FullMethodName      = "/guild.v1.GuildService/GrantPermission"
+	GuildService_RevokePermission_FullMethodName     = "/guild.v1.GuildService/RevokePermission"
+	GuildService_GetUserPermissions_FullMethodName   = "/guild.v1.GuildService/GetUserPermissions"
+	GuildService_GrantRolePermission_FullMethodName  = "/guild.v1.GuildService/GrantRolePermission"
+	GuildService_RevokeRolePermission_FullMethodName = "/guild.v1.GuildService/RevokeRolePermission"
 )
 
 // GuildServiceClient is the client API for GuildService service.
@@ -52,10 +55,9 @@ type GuildServiceClient interface {
 	GetGuild(ctx context.Context, in *GetGuildRequest, opts ...grpc.CallOption) (*GetGuildResponse, error)
 	UpdateGuild(ctx context.Context, in *UpdateGuildRequest, opts ...grpc.CallOption) (*UpdateGuildResponse, error)
 	UploadGuildIcon(ctx context.Context, in *UploadGuildIconRequest, opts ...grpc.CallOption) (*UploadGuildIconResponse, error)
+	UploadGuildBanner(ctx context.Context, in *UploadGuildBannerRequest, opts ...grpc.CallOption) (*UploadGuildBannerResponse, error)
 	DeleteGuild(ctx context.Context, in *DeleteGuildRequest, opts ...grpc.CallOption) (*DeleteGuildResponse, error)
 	ListUserGuilds(ctx context.Context, in *ListUserGuildsRequest, opts ...grpc.CallOption) (*ListUserGuildsResponse, error)
-	// PreviewInvite returns guild metadata for an invite code WITHOUT joining.
-	// Used for deep-link landing pages (e.g. https://ndiscord.app/invite/{code}).
 	PreviewInvite(ctx context.Context, in *PreviewInviteRequest, opts ...grpc.CallOption) (*PreviewInviteResponse, error)
 	JoinGuild(ctx context.Context, in *JoinGuildRequest, opts ...grpc.CallOption) (*JoinGuildResponse, error)
 	LeaveGuild(ctx context.Context, in *LeaveGuildRequest, opts ...grpc.CallOption) (*LeaveGuildResponse, error)
@@ -69,12 +71,14 @@ type GuildServiceClient interface {
 	DeleteRole(ctx context.Context, in *DeleteRoleRequest, opts ...grpc.CallOption) (*DeleteRoleResponse, error)
 	AssignRole(ctx context.Context, in *AssignRoleRequest, opts ...grpc.CallOption) (*AssignRoleResponse, error)
 	RemoveRole(ctx context.Context, in *RemoveRoleRequest, opts ...grpc.CallOption) (*RemoveRoleResponse, error)
-	// Ownership
 	TransferOwnership(ctx context.Context, in *TransferOwnershipRequest, opts ...grpc.CallOption) (*TransferOwnershipResponse, error)
-	// Permissions (managed via OpenFGA)
 	GrantPermission(ctx context.Context, in *GrantPermissionRequest, opts ...grpc.CallOption) (*GrantPermissionResponse, error)
 	RevokePermission(ctx context.Context, in *RevokePermissionRequest, opts ...grpc.CallOption) (*RevokePermissionResponse, error)
 	GetUserPermissions(ctx context.Context, in *GetUserPermissionsRequest, opts ...grpc.CallOption) (*GetUserPermissionsResponse, error)
+	// Role-scoped permission grants (Discord's primary model — a role
+	// carries a permission set, every assigned user inherits).
+	GrantRolePermission(ctx context.Context, in *GrantRolePermissionRequest, opts ...grpc.CallOption) (*GrantRolePermissionResponse, error)
+	RevokeRolePermission(ctx context.Context, in *RevokeRolePermissionRequest, opts ...grpc.CallOption) (*RevokeRolePermissionResponse, error)
 }
 
 type guildServiceClient struct {
@@ -119,6 +123,16 @@ func (c *guildServiceClient) UploadGuildIcon(ctx context.Context, in *UploadGuil
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UploadGuildIconResponse)
 	err := c.cc.Invoke(ctx, GuildService_UploadGuildIcon_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *guildServiceClient) UploadGuildBanner(ctx context.Context, in *UploadGuildBannerRequest, opts ...grpc.CallOption) (*UploadGuildBannerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UploadGuildBannerResponse)
+	err := c.cc.Invoke(ctx, GuildService_UploadGuildBanner_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -315,6 +329,26 @@ func (c *guildServiceClient) GetUserPermissions(ctx context.Context, in *GetUser
 	return out, nil
 }
 
+func (c *guildServiceClient) GrantRolePermission(ctx context.Context, in *GrantRolePermissionRequest, opts ...grpc.CallOption) (*GrantRolePermissionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GrantRolePermissionResponse)
+	err := c.cc.Invoke(ctx, GuildService_GrantRolePermission_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *guildServiceClient) RevokeRolePermission(ctx context.Context, in *RevokeRolePermissionRequest, opts ...grpc.CallOption) (*RevokeRolePermissionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeRolePermissionResponse)
+	err := c.cc.Invoke(ctx, GuildService_RevokeRolePermission_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GuildServiceServer is the server API for GuildService service.
 // All implementations must embed UnimplementedGuildServiceServer
 // for forward compatibility.
@@ -323,10 +357,9 @@ type GuildServiceServer interface {
 	GetGuild(context.Context, *GetGuildRequest) (*GetGuildResponse, error)
 	UpdateGuild(context.Context, *UpdateGuildRequest) (*UpdateGuildResponse, error)
 	UploadGuildIcon(context.Context, *UploadGuildIconRequest) (*UploadGuildIconResponse, error)
+	UploadGuildBanner(context.Context, *UploadGuildBannerRequest) (*UploadGuildBannerResponse, error)
 	DeleteGuild(context.Context, *DeleteGuildRequest) (*DeleteGuildResponse, error)
 	ListUserGuilds(context.Context, *ListUserGuildsRequest) (*ListUserGuildsResponse, error)
-	// PreviewInvite returns guild metadata for an invite code WITHOUT joining.
-	// Used for deep-link landing pages (e.g. https://ndiscord.app/invite/{code}).
 	PreviewInvite(context.Context, *PreviewInviteRequest) (*PreviewInviteResponse, error)
 	JoinGuild(context.Context, *JoinGuildRequest) (*JoinGuildResponse, error)
 	LeaveGuild(context.Context, *LeaveGuildRequest) (*LeaveGuildResponse, error)
@@ -340,12 +373,14 @@ type GuildServiceServer interface {
 	DeleteRole(context.Context, *DeleteRoleRequest) (*DeleteRoleResponse, error)
 	AssignRole(context.Context, *AssignRoleRequest) (*AssignRoleResponse, error)
 	RemoveRole(context.Context, *RemoveRoleRequest) (*RemoveRoleResponse, error)
-	// Ownership
 	TransferOwnership(context.Context, *TransferOwnershipRequest) (*TransferOwnershipResponse, error)
-	// Permissions (managed via OpenFGA)
 	GrantPermission(context.Context, *GrantPermissionRequest) (*GrantPermissionResponse, error)
 	RevokePermission(context.Context, *RevokePermissionRequest) (*RevokePermissionResponse, error)
 	GetUserPermissions(context.Context, *GetUserPermissionsRequest) (*GetUserPermissionsResponse, error)
+	// Role-scoped permission grants (Discord's primary model — a role
+	// carries a permission set, every assigned user inherits).
+	GrantRolePermission(context.Context, *GrantRolePermissionRequest) (*GrantRolePermissionResponse, error)
+	RevokeRolePermission(context.Context, *RevokeRolePermissionRequest) (*RevokeRolePermissionResponse, error)
 	mustEmbedUnimplementedGuildServiceServer()
 }
 
@@ -367,6 +402,9 @@ func (UnimplementedGuildServiceServer) UpdateGuild(context.Context, *UpdateGuild
 }
 func (UnimplementedGuildServiceServer) UploadGuildIcon(context.Context, *UploadGuildIconRequest) (*UploadGuildIconResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UploadGuildIcon not implemented")
+}
+func (UnimplementedGuildServiceServer) UploadGuildBanner(context.Context, *UploadGuildBannerRequest) (*UploadGuildBannerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UploadGuildBanner not implemented")
 }
 func (UnimplementedGuildServiceServer) DeleteGuild(context.Context, *DeleteGuildRequest) (*DeleteGuildResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteGuild not implemented")
@@ -424,6 +462,12 @@ func (UnimplementedGuildServiceServer) RevokePermission(context.Context, *Revoke
 }
 func (UnimplementedGuildServiceServer) GetUserPermissions(context.Context, *GetUserPermissionsRequest) (*GetUserPermissionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUserPermissions not implemented")
+}
+func (UnimplementedGuildServiceServer) GrantRolePermission(context.Context, *GrantRolePermissionRequest) (*GrantRolePermissionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GrantRolePermission not implemented")
+}
+func (UnimplementedGuildServiceServer) RevokeRolePermission(context.Context, *RevokeRolePermissionRequest) (*RevokeRolePermissionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeRolePermission not implemented")
 }
 func (UnimplementedGuildServiceServer) mustEmbedUnimplementedGuildServiceServer() {}
 func (UnimplementedGuildServiceServer) testEmbeddedByValue()                      {}
@@ -514,6 +558,24 @@ func _GuildService_UploadGuildIcon_Handler(srv interface{}, ctx context.Context,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(GuildServiceServer).UploadGuildIcon(ctx, req.(*UploadGuildIconRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GuildService_UploadGuildBanner_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UploadGuildBannerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuildServiceServer).UploadGuildBanner(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GuildService_UploadGuildBanner_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuildServiceServer).UploadGuildBanner(ctx, req.(*UploadGuildBannerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -860,6 +922,42 @@ func _GuildService_GetUserPermissions_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GuildService_GrantRolePermission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GrantRolePermissionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuildServiceServer).GrantRolePermission(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GuildService_GrantRolePermission_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuildServiceServer).GrantRolePermission(ctx, req.(*GrantRolePermissionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GuildService_RevokeRolePermission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeRolePermissionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuildServiceServer).RevokeRolePermission(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GuildService_RevokeRolePermission_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuildServiceServer).RevokeRolePermission(ctx, req.(*RevokeRolePermissionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GuildService_ServiceDesc is the grpc.ServiceDesc for GuildService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -882,6 +980,10 @@ var GuildService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UploadGuildIcon",
 			Handler:    _GuildService_UploadGuildIcon_Handler,
+		},
+		{
+			MethodName: "UploadGuildBanner",
+			Handler:    _GuildService_UploadGuildBanner_Handler,
 		},
 		{
 			MethodName: "DeleteGuild",
@@ -958,6 +1060,14 @@ var GuildService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserPermissions",
 			Handler:    _GuildService_GetUserPermissions_Handler,
+		},
+		{
+			MethodName: "GrantRolePermission",
+			Handler:    _GuildService_GrantRolePermission_Handler,
+		},
+		{
+			MethodName: "RevokeRolePermission",
+			Handler:    _GuildService_RevokeRolePermission_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

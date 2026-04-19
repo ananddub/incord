@@ -83,7 +83,6 @@ func (x *RegisterRequest) GetPassword() string {
 	return ""
 }
 
-// Register now returns user_id + message. NO tokens until OTP verified.
 type RegisterResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`

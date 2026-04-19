@@ -7,17 +7,17 @@ import (
 )
 
 type Config struct {
-	Server     ServerConfig
-	Database   DatabaseConfig
-	Redis      RedisConfig
-	ScyllaDB   ScyllaDBConfig
-	MinIO      MinIOConfig
-	OpenFGA    OpenFGAConfig
-	JWT        JWTConfig
-	Voice      VoiceConfig
-	LiveKit    LiveKitConfig
-	SMTP       SMTPConfig
-	NATS       NATSConfig
+	Server   ServerConfig
+	Database DatabaseConfig
+	Redis    RedisConfig
+	ScyllaDB ScyllaDBConfig
+	MinIO    MinIOConfig
+	OpenFGA  OpenFGAConfig
+	JWT      JWTConfig
+	Voice    VoiceConfig
+	LiveKit  LiveKitConfig
+	SMTP     SMTPConfig
+	NATS     NATSConfig
 	// InviteBaseURL is the public base URL under which invite codes are
 	// reachable, e.g. "https://ndiscord.app/invite". Final URL = base + "/" + code.
 	InviteBaseURL string
@@ -48,12 +48,8 @@ type ScyllaDBConfig struct {
 	Keyspace string
 }
 
-// LiveKitConfig holds the connection settings for the LiveKit SFU.
 type LiveKitConfig struct {
-	// URL is the WebSocket URL clients use to connect (e.g. "ws://192.168.1.2:7880").
-	URL string
-	// HTTPURL is the HTTP URL the Go backend uses for the RoomServiceClient
-	// (server-to-server calls; reached via the docker network, e.g. "http://livekit:7880").
+	URL       string
 	HTTPURL   string
 	APIKey    string
 	APISecret string
@@ -74,9 +70,9 @@ type OpenFGAConfig struct {
 }
 
 type JWTConfig struct {
-	Secret           string
-	AccessTokenTTL   time.Duration
-	RefreshTokenTTL  time.Duration
+	Secret          string
+	AccessTokenTTL  time.Duration
+	RefreshTokenTTL time.Duration
 }
 
 type VoiceConfig struct {

@@ -45,9 +45,6 @@ const (
 type UserServiceClient interface {
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
 	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
-	// UpdateUsername sets the caller's username handle. Only allowed once —
-	// succeeds only if the current username is empty; otherwise returns
-	// FailedPrecondition. Server appends a random "#1234" discriminator.
 	UpdateUsername(ctx context.Context, in *UpdateUsernameRequest, opts ...grpc.CallOption) (*UpdateUsernameResponse, error)
 	UpdateStatus(ctx context.Context, in *UpdateStatusRequest, opts ...grpc.CallOption) (*UpdateStatusResponse, error)
 	UploadUserAvatar(ctx context.Context, in *UploadUserAvatarRequest, opts ...grpc.CallOption) (*UploadUserAvatarResponse, error)
@@ -58,8 +55,6 @@ type UserServiceClient interface {
 	SendFriendRequest(ctx context.Context, in *SendFriendRequestRequest, opts ...grpc.CallOption) (*SendFriendRequestResponse, error)
 	AcceptFriendRequest(ctx context.Context, in *AcceptFriendRequestRequest, opts ...grpc.CallOption) (*AcceptFriendRequestResponse, error)
 	DeclineFriendRequest(ctx context.Context, in *DeclineFriendRequestRequest, opts ...grpc.CallOption) (*DeclineFriendRequestResponse, error)
-	// CancelFriendRequest is called by the sender to withdraw their own
-	// outgoing pending request before the recipient has acted on it.
 	CancelFriendRequest(ctx context.Context, in *CancelFriendRequestRequest, opts ...grpc.CallOption) (*CancelFriendRequestResponse, error)
 	RemoveFriend(ctx context.Context, in *RemoveFriendRequest, opts ...grpc.CallOption) (*RemoveFriendResponse, error)
 	BlockUser(ctx context.Context, in *BlockUserRequest, opts ...grpc.CallOption) (*BlockUserResponse, error)
@@ -263,9 +258,6 @@ func (c *userServiceClient) ListBlocked(ctx context.Context, in *ListBlockedRequ
 type UserServiceServer interface {
 	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
 	UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error)
-	// UpdateUsername sets the caller's username handle. Only allowed once —
-	// succeeds only if the current username is empty; otherwise returns
-	// FailedPrecondition. Server appends a random "#1234" discriminator.
 	UpdateUsername(context.Context, *UpdateUsernameRequest) (*UpdateUsernameResponse, error)
 	UpdateStatus(context.Context, *UpdateStatusRequest) (*UpdateStatusResponse, error)
 	UploadUserAvatar(context.Context, *UploadUserAvatarRequest) (*UploadUserAvatarResponse, error)
@@ -276,8 +268,6 @@ type UserServiceServer interface {
 	SendFriendRequest(context.Context, *SendFriendRequestRequest) (*SendFriendRequestResponse, error)
 	AcceptFriendRequest(context.Context, *AcceptFriendRequestRequest) (*AcceptFriendRequestResponse, error)
 	DeclineFriendRequest(context.Context, *DeclineFriendRequestRequest) (*DeclineFriendRequestResponse, error)
-	// CancelFriendRequest is called by the sender to withdraw their own
-	// outgoing pending request before the recipient has acted on it.
 	CancelFriendRequest(context.Context, *CancelFriendRequestRequest) (*CancelFriendRequestResponse, error)
 	RemoveFriend(context.Context, *RemoveFriendRequest) (*RemoveFriendResponse, error)
 	BlockUser(context.Context, *BlockUserRequest) (*BlockUserResponse, error)

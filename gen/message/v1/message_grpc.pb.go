@@ -53,17 +53,11 @@ type MessageServiceClient interface {
 	RemoveReaction(ctx context.Context, in *RemoveReactionRequest, opts ...grpc.CallOption) (*RemoveReactionResponse, error)
 	AckMessage(ctx context.Context, in *AckMessageRequest, opts ...grpc.CallOption) (*AckMessageResponse, error)
 	StartTyping(ctx context.Context, in *StartTypingRequest, opts ...grpc.CallOption) (*StartTypingResponse, error)
-	// DM: send message directly to a user (auto-creates DM channel)
 	SendDirectMessage(ctx context.Context, in *SendDirectMessageRequest, opts ...grpc.CallOption) (*SendDirectMessageResponse, error)
-	// Unread
 	GetUnreadCounts(ctx context.Context, in *GetUnreadCountsRequest, opts ...grpc.CallOption) (*GetUnreadCountsResponse, error)
-	// Search
 	SearchMessages(ctx context.Context, in *SearchMessagesRequest, opts ...grpc.CallOption) (*SearchMessagesResponse, error)
-	// Threads
 	GetThreadMessages(ctx context.Context, in *GetThreadMessagesRequest, opts ...grpc.CallOption) (*GetThreadMessagesResponse, error)
-	// Bulk operations
 	BulkDeleteMessages(ctx context.Context, in *BulkDeleteMessagesRequest, opts ...grpc.CallOption) (*BulkDeleteMessagesResponse, error)
-	// Edit history
 	GetEditHistory(ctx context.Context, in *GetEditHistoryRequest, opts ...grpc.CallOption) (*GetEditHistoryResponse, error)
 }
 
@@ -260,17 +254,11 @@ type MessageServiceServer interface {
 	RemoveReaction(context.Context, *RemoveReactionRequest) (*RemoveReactionResponse, error)
 	AckMessage(context.Context, *AckMessageRequest) (*AckMessageResponse, error)
 	StartTyping(context.Context, *StartTypingRequest) (*StartTypingResponse, error)
-	// DM: send message directly to a user (auto-creates DM channel)
 	SendDirectMessage(context.Context, *SendDirectMessageRequest) (*SendDirectMessageResponse, error)
-	// Unread
 	GetUnreadCounts(context.Context, *GetUnreadCountsRequest) (*GetUnreadCountsResponse, error)
-	// Search
 	SearchMessages(context.Context, *SearchMessagesRequest) (*SearchMessagesResponse, error)
-	// Threads
 	GetThreadMessages(context.Context, *GetThreadMessagesRequest) (*GetThreadMessagesResponse, error)
-	// Bulk operations
 	BulkDeleteMessages(context.Context, *BulkDeleteMessagesRequest) (*BulkDeleteMessagesResponse, error)
-	// Edit history
 	GetEditHistory(context.Context, *GetEditHistoryRequest) (*GetEditHistoryResponse, error)
 	mustEmbedUnimplementedMessageServiceServer()
 }

@@ -173,7 +173,7 @@ func (q *Queries) SyncGuildMembers(ctx context.Context, arg SyncGuildMembersPara
 }
 
 const syncGuilds = `-- name: SyncGuilds :many
-SELECT g.id, g.name, g.description, g.icon_url, g.owner_id, g.created_at, g.deleted, g.updated_at FROM guilds g
+SELECT g.id, g.name, g.description, g.icon_url, g.owner_id, g.created_at, g.deleted, g.updated_at, g.banner_url FROM guilds g
 JOIN guild_members gm ON gm.guild_id = g.id
 WHERE gm.user_id = $1 AND gm.deleted = FALSE
 AND g.updated_at > $2
@@ -202,6 +202,7 @@ func (q *Queries) SyncGuilds(ctx context.Context, arg SyncGuildsParams) ([]Guild
 			&i.CreatedAt,
 			&i.Deleted,
 			&i.UpdatedAt,
+			&i.BannerUrl,
 		); err != nil {
 			return nil, err
 		}

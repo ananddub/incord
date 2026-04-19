@@ -18,4 +18,5 @@ var (
 	ErrCannotKickOwner  = errors.New("cannot kick the guild owner")
 	ErrCannotBanOwner          = errors.New("cannot ban the guild owner")
 	ErrInsufficientPermissions = errors.New("insufficient permissions")
+	ErrInvalidPermission       = errors.New("unknown permission name")
 )

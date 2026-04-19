@@ -32,11 +32,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AuthServiceClient interface {
-	// Register sends OTP to email. Account is NOT active until VerifyOTP.
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
-	// VerifyOTP activates account and returns tokens.
 	VerifyOTP(ctx context.Context, in *VerifyOTPRequest, opts ...grpc.CallOption) (*VerifyOTPResponse, error)
-	// ResendOTP sends a new OTP to the registered email.
 	ResendOTP(ctx context.Context, in *ResendOTPRequest, opts ...grpc.CallOption) (*ResendOTPResponse, error)
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*RefreshTokenResponse, error)
@@ -126,11 +123,8 @@ func (c *authServiceClient) ValidateToken(ctx context.Context, in *ValidateToken
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
 type AuthServiceServer interface {
-	// Register sends OTP to email. Account is NOT active until VerifyOTP.
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
-	// VerifyOTP activates account and returns tokens.
 	VerifyOTP(context.Context, *VerifyOTPRequest) (*VerifyOTPResponse, error)
-	// ResendOTP sends a new OTP to the registered email.
 	ResendOTP(context.Context, *ResendOTPRequest) (*ResendOTPResponse, error)
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error)

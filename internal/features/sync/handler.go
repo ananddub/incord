@@ -17,15 +17,29 @@ import (
 	"github.com/ananddub/ndiscord_backend/internal/shared/middleware"
 )
 
+// PresenceReader returns the user's *live* presence (Redis-stored broadcast
+// state — offline when their StreamFriendActivity session is closed, else
+// the last status they chose). Used so SyncUsers responses reflect actual
+// connectivity instead of the DB-persisted intent, which would say "online"
+// for a friend who hasn't actually opened their app.
+type PresenceReader interface {
+	GetLiveStatus(ctx context.Context, userID string) (status, customStatus string)
+}
+
 type Handler struct {
 	syncv1.UnimplementedSyncServiceServer
-	q       *db.Queries
-	msgRepo *message.Repository
+	q        *db.Queries
+	msgRepo  *message.Repository
+	presence PresenceReader
 }
 
 func NewHandler(q *db.Queries, msgRepo *message.Repository) *Handler {
 	return &Handler{q: q, msgRepo: msgRepo}
 }
+
+// SetPresenceReader wires a live-presence reader so SyncUsers stamps
+// Redis-derived status (actual online/offline) instead of the DB intent.
+func (h *Handler) SetPresenceReader(p PresenceReader) { h.presence = p }
 
 func (h *Handler) Sync(ctx context.Context, req *syncv1.SyncRequest) (*syncv1.SyncResponse, error) {
 	userID := middleware.UserIDFromContext(ctx)
@@ -49,14 +63,24 @@ func (h *Handler) Sync(ctx context.Context, req *syncv1.SyncRequest) (*syncv1.Sy
 		ServerTime: timestamppb.Now(),
 	}
 
-	// Users
+	// Users. Status comes from Redis (live presence) when a PresenceReader
+	// is wired — this way an offline friend shows up as "offline" in the
+	// sync response even though their DB intent column still says "online".
+	// The DB intent is the user's *preference* and is restored to Redis
+	// only when they open StreamFriendActivity.
 	users, err := h.q.SyncUsers(ctx, db.SyncUsersParams{UpdatedAt: pgLastSync, ID: pgUID})
 	if err == nil {
 		for _, u := range users {
+			statusStr := u.Status
+			if h.presence != nil {
+				if live, _ := h.presence.GetLiveStatus(ctx, ustr(u.ID)); live != "" {
+					statusStr = live
+				}
+			}
 			resp.Users = append(resp.Users, &syncv1.SyncUser{
 				Id: ustr(u.ID), IsDeleted: u.Deleted, UpdatedAt: ts(u.UpdatedAt),
 				Username: u.Username, Email: u.Email, AvatarUrl: u.AvatarUrl,
-				Bio: u.Bio, Status: u.Status, Verified: u.Verified,
+				Bio: u.Bio, Status: statusStr, Verified: u.Verified,
 				BackgroundColor: u.BackgroundColor,
 			})
 		}

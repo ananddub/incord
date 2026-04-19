@@ -42,33 +42,14 @@ const (
 // VoiceServiceClient is the client API for VoiceService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-//
-// VoiceService issues LiveKit access tokens so clients can connect directly
-// to the LiveKit SFU over WebRTC. The backend itself never handles media —
-// it only handles auth, room metadata, and participant bookkeeping.
 type VoiceServiceClient interface {
-	// JoinChannel returns a LiveKit URL + short-lived JWT. The client is
-	// expected to feed these into a LiveKit client SDK (web/iOS/Android/Flutter)
-	// and let it negotiate DTLS-SRTP/WebRTC directly with the SFU.
 	JoinChannel(ctx context.Context, in *JoinChannelRequest, opts ...grpc.CallOption) (*JoinChannelResponse, error)
 	LeaveChannel(ctx context.Context, in *LeaveChannelRequest, opts ...grpc.CallOption) (*LeaveChannelResponse, error)
 	GetChannelParticipants(ctx context.Context, in *GetChannelParticipantsRequest, opts ...grpc.CallOption) (*GetChannelParticipantsResponse, error)
-	// === DM calls ===
-	// StartDMCall initiates a voice/video call inside an existing DM channel.
-	// The caller immediately gets a LiveKit token; all other members receive
-	// a "call_incoming" push on their StreamDmCalls stream.
 	StartDMCall(ctx context.Context, in *StartDMCallRequest, opts ...grpc.CallOption) (*StartDMCallResponse, error)
-	// JoinDMCall is called by a ringing recipient to accept the call and
-	// obtain their own LiveKit token. Other members get a "call_accepted" push.
 	JoinDMCall(ctx context.Context, in *JoinDMCallRequest, opts ...grpc.CallOption) (*JoinDMCallResponse, error)
-	// RejectDMCall is called by a recipient to decline — the caller gets a
-	// "call_rejected" push. No LiveKit token is minted.
 	RejectDMCall(ctx context.Context, in *RejectDMCallRequest, opts ...grpc.CallOption) (*RejectDMCallResponse, error)
-	// LeaveDMCall is called when a participant hangs up. When the last
-	// participant leaves, a "call_ended" push is fanned out to all members.
 	LeaveDMCall(ctx context.Context, in *LeaveDMCallRequest, opts ...grpc.CallOption) (*LeaveDMCallResponse, error)
-	// Self voice controls — each toggle is a separate RPC. Server updates
-	// Redis and broadcasts the full participant list to StreamVoiceState.
 	Mute(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
 	Unmute(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
 	Deafen(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
@@ -77,7 +58,6 @@ type VoiceServiceClient interface {
 	DisableVideo(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
 	StartScreenShare(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
 	StopScreenShare(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
-	// Admin controls — guild owner/moderator can force state on other participants.
 	ServerMuteUser(ctx context.Context, in *ServerMuteUserRequest, opts ...grpc.CallOption) (*ServerMuteUserResponse, error)
 	ServerDeafenUser(ctx context.Context, in *ServerDeafenUserRequest, opts ...grpc.CallOption) (*ServerDeafenUserResponse, error)
 	DisconnectUser(ctx context.Context, in *DisconnectUserRequest, opts ...grpc.CallOption) (*DisconnectUserResponse, error)
@@ -274,33 +254,14 @@ func (c *voiceServiceClient) DisconnectUser(ctx context.Context, in *DisconnectU
 // VoiceServiceServer is the server API for VoiceService service.
 // All implementations must embed UnimplementedVoiceServiceServer
 // for forward compatibility.
-//
-// VoiceService issues LiveKit access tokens so clients can connect directly
-// to the LiveKit SFU over WebRTC. The backend itself never handles media —
-// it only handles auth, room metadata, and participant bookkeeping.
 type VoiceServiceServer interface {
-	// JoinChannel returns a LiveKit URL + short-lived JWT. The client is
-	// expected to feed these into a LiveKit client SDK (web/iOS/Android/Flutter)
-	// and let it negotiate DTLS-SRTP/WebRTC directly with the SFU.
 	JoinChannel(context.Context, *JoinChannelRequest) (*JoinChannelResponse, error)
 	LeaveChannel(context.Context, *LeaveChannelRequest) (*LeaveChannelResponse, error)
 	GetChannelParticipants(context.Context, *GetChannelParticipantsRequest) (*GetChannelParticipantsResponse, error)
-	// === DM calls ===
-	// StartDMCall initiates a voice/video call inside an existing DM channel.
-	// The caller immediately gets a LiveKit token; all other members receive
-	// a "call_incoming" push on their StreamDmCalls stream.
 	StartDMCall(context.Context, *StartDMCallRequest) (*StartDMCallResponse, error)
-	// JoinDMCall is called by a ringing recipient to accept the call and
-	// obtain their own LiveKit token. Other members get a "call_accepted" push.
 	JoinDMCall(context.Context, *JoinDMCallRequest) (*JoinDMCallResponse, error)
-	// RejectDMCall is called by a recipient to decline — the caller gets a
-	// "call_rejected" push. No LiveKit token is minted.
 	RejectDMCall(context.Context, *RejectDMCallRequest) (*RejectDMCallResponse, error)
-	// LeaveDMCall is called when a participant hangs up. When the last
-	// participant leaves, a "call_ended" push is fanned out to all members.
 	LeaveDMCall(context.Context, *LeaveDMCallRequest) (*LeaveDMCallResponse, error)
-	// Self voice controls — each toggle is a separate RPC. Server updates
-	// Redis and broadcasts the full participant list to StreamVoiceState.
 	Mute(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
 	Unmute(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
 	Deafen(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
@@ -309,7 +270,6 @@ type VoiceServiceServer interface {
 	DisableVideo(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
 	StartScreenShare(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
 	StopScreenShare(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
-	// Admin controls — guild owner/moderator can force state on other participants.
 	ServerMuteUser(context.Context, *ServerMuteUserRequest) (*ServerMuteUserResponse, error)
 	ServerDeafenUser(context.Context, *ServerDeafenUserRequest) (*ServerDeafenUserResponse, error)
 	DisconnectUser(context.Context, *DisconnectUserRequest) (*DisconnectUserResponse, error)

@@ -9,6 +9,7 @@ import "buf/validate/validate.proto";
 
 enum Permission {
   PERMISSION_UNSPECIFIED = 0;
+
   PERMISSION_VIEW_CHANNELS = 1;
   PERMISSION_SEND_MESSAGES = 2;
   PERMISSION_MANAGE_MESSAGES = 3;
@@ -25,9 +26,46 @@ enum Permission {
   PERMISSION_MUTE_MEMBERS = 14;
   PERMISSION_DEAFEN_MEMBERS = 15;
   PERMISSION_MENTION_EVERYONE = 16;
-  PERMISSION_MANAGE_EMOJIS = 17;
+  PERMISSION_MANAGE_EMOJIS = 17; 
   PERMISSION_MANAGE_WEBHOOKS = 18;
   PERMISSION_ADMINISTRATOR = 19;
+
+  // Guild-wide additions
+  PERMISSION_VIEW_AUDIT_LOG = 20;
+  PERMISSION_VIEW_GUILD_INSIGHTS = 21;
+  PERMISSION_MANAGE_NICKNAMES = 22;
+  PERMISSION_CHANGE_NICKNAME = 23;
+  PERMISSION_CREATE_GUILD_EXPRESSIONS = 24;
+  PERMISSION_MODERATE_MEMBERS = 25; // timeout
+  PERMISSION_VIEW_CREATOR_MONETIZATION_ANALYTICS = 26;
+
+  // Channel / voice / text additions
+  PERMISSION_SEND_TTS_MESSAGES = 27;
+  PERMISSION_EMBED_LINKS = 28;
+  PERMISSION_ATTACH_FILES = 29;
+  PERMISSION_READ_MESSAGE_HISTORY = 30;
+  PERMISSION_USE_EXTERNAL_EMOJIS = 31;
+  PERMISSION_USE_EXTERNAL_STICKERS = 32;
+  PERMISSION_USE_EXTERNAL_SOUNDS = 33;
+  PERMISSION_USE_EXTERNAL_APPS = 34;
+  PERMISSION_PRIORITY_SPEAKER = 35;
+  PERMISSION_MOVE_MEMBERS = 36;
+  PERMISSION_USE_VAD = 37;
+  PERMISSION_REQUEST_TO_SPEAK = 38;
+  PERMISSION_USE_SOUNDBOARD = 39;
+  PERMISSION_USE_EMBEDDED_ACTIVITIES = 40;
+  PERMISSION_SEND_VOICE_MESSAGES = 41;
+  PERMISSION_SEND_POLLS = 42;
+  PERMISSION_PIN_MESSAGES = 43;
+  PERMISSION_BYPASS_SLOWMODE = 44;
+
+  // Threads + events
+  PERMISSION_CREATE_PUBLIC_THREADS = 45;
+  PERMISSION_CREATE_PRIVATE_THREADS = 46;
+  PERMISSION_SEND_MESSAGES_IN_THREADS = 47;
+  PERMISSION_MANAGE_THREADS = 48;
+  PERMISSION_CREATE_EVENTS = 49;
+  PERMISSION_MANAGE_EVENTS = 50;
 }
 
 service GuildService {
@@ -35,10 +73,9 @@ service GuildService {
   rpc GetGuild(GetGuildRequest) returns (GetGuildResponse);
   rpc UpdateGuild(UpdateGuildRequest) returns (UpdateGuildResponse);
   rpc UploadGuildIcon(UploadGuildIconRequest) returns (UploadGuildIconResponse);
+  rpc UploadGuildBanner(UploadGuildBannerRequest) returns (UploadGuildBannerResponse);
   rpc DeleteGuild(DeleteGuildRequest) returns (DeleteGuildResponse);
   rpc ListUserGuilds(ListUserGuildsRequest) returns (ListUserGuildsResponse);
-  // PreviewInvite returns guild metadata for an invite code WITHOUT joining.
-  // Used for deep-link landing pages (e.g. https://ndiscord.app/invite/{code}).
   rpc PreviewInvite(PreviewInviteRequest) returns (PreviewInviteResponse);
   rpc JoinGuild(JoinGuildRequest) returns (JoinGuildResponse);
   rpc LeaveGuild(LeaveGuildRequest) returns (LeaveGuildResponse);
@@ -53,13 +90,14 @@ service GuildService {
   rpc AssignRole(AssignRoleRequest) returns (AssignRoleResponse);
   rpc RemoveRole(RemoveRoleRequest) returns (RemoveRoleResponse);
 
-  // Ownership
   rpc TransferOwnership(TransferOwnershipRequest) returns (TransferOwnershipResponse);
 
-  // Permissions (managed via OpenFGA)
   rpc GrantPermission(GrantPermissionRequest) returns (GrantPermissionResponse);
   rpc RevokePermission(RevokePermissionRequest) returns (RevokePermissionResponse);
   rpc GetUserPermissions(GetUserPermissionsRequest) returns (GetUserPermissionsResponse);
+
+  rpc GrantRolePermission(GrantRolePermissionRequest) returns (GrantRolePermissionResponse);
+  rpc RevokeRolePermission(RevokeRolePermissionRequest) returns (RevokeRolePermissionResponse);
 
 }
 
@@ -71,6 +109,7 @@ message Guild {
   string owner_id = 5;
   int32 member_count = 6;
   google.protobuf.Timestamp created_at = 7;
+  string banner_url = 8;
 }
 
 message GuildMember {
@@ -99,7 +138,6 @@ message Invite {
   int32 uses = 6;
   google.protobuf.Timestamp expires_at = 7;
   google.protobuf.Timestamp created_at = 8;
-  // Full shareable URL (e.g. https://ndiscord.app/invite/{code}).
   string url = 9;
 }
 
@@ -126,6 +164,7 @@ message UpdateGuildRequest {
   optional string name = 2 [(buf.validate.field).string = {min_len: 2, max_len: 100}];
   optional string description = 3 [(buf.validate.field).string = {max_len: 1000}];
   optional string icon_url = 4 [(buf.validate.field).string = {max_len: 2048}];
+  optional string banner_url = 5 [(buf.validate.field).string = {max_len: 2048}];
 }
 
 message UpdateGuildResponse {
@@ -141,6 +180,18 @@ message UploadGuildIconRequest {
 
 message UploadGuildIconResponse {
   string icon_url = 1;
+  Guild guild = 2;
+}
+
+message UploadGuildBannerRequest {
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string filename = 2 [(buf.validate.field).string = {min_len: 1, max_len: 255}];
+  string content_type = 3 [(buf.validate.field).string = {in: ["image/jpeg", "image/png", "image/gif", "image/webp"]}];
+  bytes data = 4 [(buf.validate.field).bytes = {min_len: 1, max_len: 10485760}];
+}
+
+message UploadGuildBannerResponse {
+  string banner_url = 1;
   Guild guild = 2;
 }
 
@@ -162,8 +213,6 @@ message JoinGuildRequest {
   string invite_code = 1 [(buf.validate.field).string = {min_len: 4, max_len: 32}];
 }
 
-// InviteChannelInfo is a simplified channel payload embedded in invite-related
-// responses so clients get everything they need in a single call after joining.
 message InviteChannelInfo {
   string id = 1;
   string name = 2;
@@ -179,7 +228,6 @@ message JoinGuildResponse {
   int32 member_count = 3;
 }
 
-// PreviewInvite — public metadata shown before a user accepts an invite.
 message PreviewInviteRequest {
   string invite_code = 1 [(buf.validate.field).string = {min_len: 4, max_len: 32}];
 }
@@ -197,7 +245,6 @@ message InvitePreview {
   int32 uses = 10;
   google.protobuf.Timestamp expires_at = 11;
   bool already_member = 12;
-  // Full shareable URL.
   string url = 13;
 }
 
@@ -299,7 +346,6 @@ message RemoveRoleRequest {
 
 message RemoveRoleResponse {}
 
-// Grant a permission to a user in a guild (writes OpenFGA tuple)
 message GrantPermissionRequest {
   string guild_id = 1 [(buf.validate.field).string.uuid = true];
   string user_id = 2 [(buf.validate.field).string.uuid = true];
@@ -308,7 +354,6 @@ message GrantPermissionRequest {
 
 message GrantPermissionResponse {}
 
-// Revoke a permission from a user in a guild
 message RevokePermissionRequest {
   string guild_id = 1 [(buf.validate.field).string.uuid = true];
   string user_id = 2 [(buf.validate.field).string.uuid = true];
@@ -317,7 +362,6 @@ message RevokePermissionRequest {
 
 message RevokePermissionResponse {}
 
-// Get all permissions a user has in a guild
 message GetUserPermissionsRequest {
   string guild_id = 1 [(buf.validate.field).string.uuid = true];
   string user_id = 2 [(buf.validate.field).string.uuid = true];
@@ -326,6 +370,22 @@ message GetUserPermissionsRequest {
 message GetUserPermissionsResponse {
   repeated Permission permissions = 1;
 }
+
+message GrantRolePermissionRequest {
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string role_id = 2 [(buf.validate.field).string.uuid = true];
+  Permission permission = 3 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+}
+
+message GrantRolePermissionResponse {}
+
+message RevokeRolePermissionRequest {
+  string guild_id = 1 [(buf.validate.field).string.uuid = true];
+  string role_id = 2 [(buf.validate.field).string.uuid = true];
+  Permission permission = 3 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+}
+
+message RevokeRolePermissionResponse {}
 
 message TransferOwnershipRequest {
   string guild_id = 1 [(buf.validate.field).string.uuid = true];

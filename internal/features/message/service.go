@@ -103,6 +103,48 @@ func (s *Service) GetAttachments(ctx context.Context, channelID, messageID strin
 	return s.repo.GetMessageAttachments(ctx, chUUID, msgUUID)
 }
 
+// containsEveryoneMention reports whether the message content uses
+// @everyone or @here — i.e. the MENTION_EVERYONE permission should be
+// enforced. Word boundaries keep "@everyone" a mention but "hi@everyone"
+// inside an email-looking string not. Case-sensitive matches Discord.
+func containsEveryoneMention(content string) bool {
+	for _, tag := range []string{"@everyone", "@here"} {
+		idx := 0
+		for {
+			i := indexOf(content, tag, idx)
+			if i < 0 {
+				break
+			}
+			end := i + len(tag)
+			// Trailing char must not be alnum — otherwise it's a substring.
+			if end == len(content) || !isAlnum(content[end]) {
+				// Leading char must not be alnum either.
+				if i == 0 || !isAlnum(content[i-1]) {
+					return true
+				}
+			}
+			idx = end
+		}
+	}
+	return false
+}
+
+func indexOf(s, sub string, from int) int {
+	if from >= len(s) {
+		return -1
+	}
+	for i := from; i+len(sub) <= len(s); i++ {
+		if s[i:i+len(sub)] == sub {
+			return i
+		}
+	}
+	return -1
+}
+
+func isAlnum(b byte) bool {
+	return (b >= '0' && b <= '9') || (b >= 'A' && b <= 'Z') || (b >= 'a' && b <= 'z') || b == '_'
+}
+
 // loadAttachments hydrates the persisted attachment rows for a message.
 // Returns nil on any lookup error so a caller can still emit an event
 // without attachments rather than failing entirely.
@@ -226,9 +268,18 @@ func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, c
 		return nil, nil, ErrContentRequired
 	}
 
-	// For guild channels, check send permission via authz
-	if guildID != "" && !s.authz.CanSendInChannel(ctx, userID, channelID) {
-		return nil, nil, ErrInsufficientPermissions
+	// Guild permission cascade — check the most specific gate first so
+	// the client sees a deterministic error ordering.
+	if guildID != "" {
+		if !s.authz.CanSendInChannel(ctx, userID, channelID) {
+			return nil, nil, ErrInsufficientPermissions
+		}
+		if len(attachmentIDs) > 0 && !s.authz.CanAttachFiles(ctx, userID, guildID) {
+			return nil, nil, ErrInsufficientPermissions
+		}
+		if containsEveryoneMention(content) && !s.authz.CanMentionEveryone(ctx, userID, guildID) {
+			return nil, nil, ErrInsufficientPermissions
+		}
 	}
 
 	chUUID, err := gocqlParseUUID(channelID)
@@ -472,7 +523,36 @@ func (s *Service) DeleteMessage(ctx context.Context, userID, channelID, guildID,
 	return nil
 }
 
+// canReadChannel unifies the "is this user allowed to read history?"
+// decision across guild and DM channels. Guild channels go through
+// authz.CanViewChannel (which resolves via the channel→guild binding
+// and then VIEW_CHANNELS perm). DM channels don't live in OpenFGA —
+// a raw Check would always deny — so we fall back to DM-member lookup.
+// With neither wired (tests / degraded mode) we allow so the path
+// doesn't lock users out entirely.
+func (s *Service) canReadChannel(ctx context.Context, userID, channelID string) bool {
+	if s.authz != nil && s.authz.CanViewChannel(ctx, userID, channelID) {
+		return true
+	}
+	if s.dmChannelList != nil {
+		members, _ := s.dmChannelList.GetDMChannelMemberIDs(ctx, channelID)
+		for _, m := range members {
+			if m == userID {
+				return true
+			}
+		}
+	}
+	return s.authz == nil && s.dmChannelList == nil
+}
+
 func (s *Service) ListMessages(ctx context.Context, userID, channelID, before, after string, limit int32) ([]*Message, error) {
+	// Access is gated by VIEW_CHANNELS for guild channels, or by DM
+	// membership for DM / group-DM channels — DMs never get registered
+	// in OpenFGA, so a raw CanViewChannel returns false for them.
+	if !s.canReadChannel(ctx, userID, channelID) {
+		return nil, ErrInsufficientPermissions
+	}
+
 	chUUID, err := gocqlParseUUID(channelID)
 	if err != nil {
 		return nil, ErrInvalidUUID
@@ -511,7 +591,9 @@ func (s *Service) UnpinMessage(ctx context.Context, userID, channelID, guildID, 
 }
 
 func (s *Service) setPinned(ctx context.Context, userID, channelID, guildID, messageID string, pinned bool) error {
-	if guildID != "" && !s.authz.CanManageChannel(ctx, userID, channelID) {
+	// PIN_MESSAGES is a dedicated permission — different from MANAGE_CHANNEL
+	// in Discord: a role that can pin need not be able to edit the channel.
+	if guildID != "" && !s.authz.CanPinMessages(ctx, userID, guildID) {
 		return ErrInsufficientPermissions
 	}
 
@@ -558,8 +640,10 @@ func (s *Service) toggleReaction(ctx context.Context, userID, channelID, guildID
 	if emoji == "" {
 		return ErrEmojiRequired
 	}
-	// For guild channels, check view permission as proxy for reaction permission
-	if add && guildID != "" && !s.authz.CanViewChannel(ctx, userID, channelID) {
+	// ADD_REACTIONS is the correct gate here; Discord lets anyone *remove*
+	// their own reaction regardless of perm, so only the "add" branch
+	// is checked.
+	if add && guildID != "" && !s.authz.CanAddReactions(ctx, userID, guildID) {
 		return ErrInsufficientPermissions
 	}
 	chUUID, err := gocqlParseUUID(channelID)
@@ -647,23 +731,20 @@ func (s *Service) AckMessage(ctx context.Context, userID, channelID, guildID, me
 	return nil
 }
 
-func (s *Service) StartTyping(ctx context.Context, userID, channelID, guildID string) error {
+func (s *Service) StartTyping(ctx context.Context, name, userID, channelID, guildID string) error {
 	if channelID == "" {
 		return ErrChannelRequired
 	}
 
-	// Store typing indicator in Redis with 8s TTL
 	key := fmt.Sprintf("typing:%s", channelID)
 	if err := s.redis.Set(ctx, key, userID, 8*time.Second).Err(); err != nil {
 		return fmt.Errorf("failed to set typing indicator: %w", err)
 	}
-
-	// Publish typing event as a typed proto so stream subscribers decode
-	// directly into TypingEvent without field-name drift risk.
 	typingEvt := &streamv1.TypingEvent{
 		ChannelId: channelID,
 		GuildId:   guildID,
 		UserId:    userID,
+		Username:  name,
 		Timestamp: timestamppb.Now(),
 	}
 	if guildID != "" {

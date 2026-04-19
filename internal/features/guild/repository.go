@@ -95,6 +95,12 @@ func (r *Repository) ListGuildChannels(ctx context.Context, guildID pgtype.UUID)
 	return r.queries.ListGuildChannels(ctx, guildID)
 }
 
+// ListAllGuildChannels returns every guild-scoped (id, guild_id) pair.
+// Used by the OpenFGA backfill sync.
+func (r *Repository) ListAllGuildChannels(ctx context.Context) ([]db.ListAllGuildChannelsRow, error) {
+	return r.queries.ListAllGuildChannels(ctx)
+}
+
 // GetUserByID fetches a user record (used to resolve invite inviter).
 func (r *Repository) GetUserByID(ctx context.Context, id pgtype.UUID) (db.User, error) {
 	return r.queries.GetUserByID(ctx, id)
@@ -156,6 +162,18 @@ func (r *Repository) AssignRole(ctx context.Context, params db.AssignRoleParams)
 
 func (r *Repository) RemoveRole(ctx context.Context, params db.RemoveRoleParams) error {
 	return r.queries.RemoveRole(ctx, params)
+}
+
+// GetEveryoneRole returns the implicit @everyone role for the guild,
+// or a pgx no-rows error if it doesn't exist yet.
+func (r *Repository) GetEveryoneRole(ctx context.Context, guildID pgtype.UUID) (db.Role, error) {
+	return r.queries.GetEveryoneRole(ctx, guildID)
+}
+
+// ListEveryoneAssignments returns every (guild, @everyone role, member)
+// tuple in the system. Used by the startup OpenFGA sync.
+func (r *Repository) ListEveryoneAssignments(ctx context.Context) ([]db.ListEveryoneAssignmentsRow, error) {
+	return r.queries.ListEveryoneAssignments(ctx)
 }
 
 func (r *Repository) ListUserRoles(ctx context.Context, params db.ListUserRolesParams) ([]db.Role, error) {

@@ -15,10 +15,7 @@ service ChannelService {
   rpc ListGuildChannels(ListGuildChannelsRequest) returns (ListGuildChannelsResponse);
   rpc CreateDMChannel(CreateDMChannelRequest) returns (CreateDMChannelResponse);
   rpc ListDMChannels(ListDMChannelsRequest) returns (ListDMChannelsResponse);
-  // ListDMChannelMembers returns the user_ids of all members in a DM channel.
   rpc ListDMChannelMembers(ListDMChannelMembersRequest) returns (ListDMChannelMembersResponse);
-  // ListDMChannelsWithMembers returns each DM channel the caller is in
-  // alongside the list of its member user_ids — saves N+1 round trips.
   rpc ListDMChannelsWithMembers(ListDMChannelsWithMembersRequest) returns (ListDMChannelsWithMembersResponse);
   rpc AddDMGroupMember(AddDMGroupMemberRequest) returns (AddDMGroupMemberResponse);
   rpc RemoveDMGroupMember(RemoveDMGroupMemberRequest) returns (RemoveDMGroupMemberResponse);

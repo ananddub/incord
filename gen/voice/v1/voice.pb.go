@@ -356,15 +356,11 @@ func (x *JoinChannelRequest) GetChannelId() string {
 }
 
 type JoinChannelResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// WebSocket URL of the LiveKit SFU (e.g. "ws://192.168.1.2:7880").
-	Url string `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
-	// Short-lived JWT access token — pass into LiveKit client SDK.
-	Token string `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
-	// Room name (one LiveKit room per voice channel).
-	Room string `protobuf:"bytes,3,opt,name=room,proto3" json:"room,omitempty"`
-	// Seconds until the token expires.
-	ExpiresIn     int32 `protobuf:"varint,4,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Url           string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
+	Token         string                 `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
+	Room          string                 `protobuf:"bytes,3,opt,name=room,proto3" json:"room,omitempty"`
+	ExpiresIn     int32                  `protobuf:"varint,4,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -728,10 +724,9 @@ func (x *GetChannelParticipantsResponse) GetParticipants() []*VoiceParticipant {
 }
 
 type StartDMCallRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	ChannelId string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	// If true, the caller intends to publish video; audio is always on.
-	Video         bool `protobuf:"varint,2,opt,name=video,proto3" json:"video,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	Video         bool                   `protobuf:"varint,2,opt,name=video,proto3" json:"video,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1128,7 +1123,6 @@ func (*LeaveDMCallResponse) Descriptor() ([]byte, []int) {
 	return file_voice_v1_voice_proto_rawDescGZIP(), []int{20}
 }
 
-// Shared request for all self voice controls — just needs channel_id.
 type VoiceChannelRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
@@ -1173,7 +1167,6 @@ func (x *VoiceChannelRequest) GetChannelId() string {
 	return ""
 }
 
-// Returns the full channel participant list after the state change.
 type VoiceParticipantsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Participants  []*VoiceParticipant    `protobuf:"bytes,1,rep,name=participants,proto3" json:"participants,omitempty"`

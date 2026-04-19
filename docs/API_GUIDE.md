@@ -62,8 +62,9 @@ All other endpoints require: `Authorization: Bearer <token>`
 |-----|-------------|---------|----------|
 | **CreateGuild** | Create server | `name`, `description`, `icon_url` | `Guild` |
 | **GetGuild** | Fetch guild | `guild_id` | `Guild` |
-| **UpdateGuild** | Update guild | `guild_id`, `name?`, `description?`, `icon_url?` | `Guild` |
-| **UploadGuildIcon** | Upload icon | `guild_id`, `filename`, `content_type`, `data` | `icon_url`, `Guild` |
+| **UpdateGuild** | Update guild | `guild_id`, `name?`, `description?`, `icon_url?`, `banner_url?` | `Guild` |
+| **UploadGuildIcon** | Upload icon (profile image, ≤5MB) | `guild_id`, `filename`, `content_type`, `data` | `icon_url`, `Guild` |
+| **UploadGuildBanner** | Upload banner (hero / background image, ≤10MB) | `guild_id`, `filename`, `content_type`, `data` | `banner_url`, `Guild` |
 | **DeleteGuild** | Delete (owner only) | `guild_id` | (empty) |
 | **ListUserGuilds** | Get user's guilds | `user_id` | `guilds[]` |
 | **PreviewInvite** | View invite (NO AUTH) | `invite_code` | `InvitePreview` |

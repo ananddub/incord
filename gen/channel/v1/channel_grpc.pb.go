@@ -43,10 +43,7 @@ type ChannelServiceClient interface {
 	ListGuildChannels(ctx context.Context, in *ListGuildChannelsRequest, opts ...grpc.CallOption) (*ListGuildChannelsResponse, error)
 	CreateDMChannel(ctx context.Context, in *CreateDMChannelRequest, opts ...grpc.CallOption) (*CreateDMChannelResponse, error)
 	ListDMChannels(ctx context.Context, in *ListDMChannelsRequest, opts ...grpc.CallOption) (*ListDMChannelsResponse, error)
-	// ListDMChannelMembers returns the user_ids of all members in a DM channel.
 	ListDMChannelMembers(ctx context.Context, in *ListDMChannelMembersRequest, opts ...grpc.CallOption) (*ListDMChannelMembersResponse, error)
-	// ListDMChannelsWithMembers returns each DM channel the caller is in
-	// alongside the list of its member user_ids — saves N+1 round trips.
 	ListDMChannelsWithMembers(ctx context.Context, in *ListDMChannelsWithMembersRequest, opts ...grpc.CallOption) (*ListDMChannelsWithMembersResponse, error)
 	AddDMGroupMember(ctx context.Context, in *AddDMGroupMemberRequest, opts ...grpc.CallOption) (*AddDMGroupMemberResponse, error)
 	RemoveDMGroupMember(ctx context.Context, in *RemoveDMGroupMemberRequest, opts ...grpc.CallOption) (*RemoveDMGroupMemberResponse, error)
@@ -181,10 +178,7 @@ type ChannelServiceServer interface {
 	ListGuildChannels(context.Context, *ListGuildChannelsRequest) (*ListGuildChannelsResponse, error)
 	CreateDMChannel(context.Context, *CreateDMChannelRequest) (*CreateDMChannelResponse, error)
 	ListDMChannels(context.Context, *ListDMChannelsRequest) (*ListDMChannelsResponse, error)
-	// ListDMChannelMembers returns the user_ids of all members in a DM channel.
 	ListDMChannelMembers(context.Context, *ListDMChannelMembersRequest) (*ListDMChannelMembersResponse, error)
-	// ListDMChannelsWithMembers returns each DM channel the caller is in
-	// alongside the list of its member user_ids — saves N+1 round trips.
 	ListDMChannelsWithMembers(context.Context, *ListDMChannelsWithMembersRequest) (*ListDMChannelsWithMembersResponse, error)
 	AddDMGroupMember(context.Context, *AddDMGroupMemberRequest) (*AddDMGroupMemberResponse, error)
 	RemoveDMGroupMember(context.Context, *RemoveDMGroupMemberRequest) (*RemoveDMGroupMemberResponse, error)

@@ -24,13 +24,24 @@ type DMOpener interface {
 	GetOrCreateDMChannel(ctx context.Context, userID string, recipientIDs []string) (string, error)
 }
 
+// PresenceReader returns the user's *live* presence (the Redis-stored
+// broadcast state — offline when their StreamFriendActivity session is
+// closed, else the last status they chose). Used to stamp enrichment
+// payloads (friend_request, friend_accepted, ...) with the actual
+// current state rather than the DB-persisted intent, which would say
+// "online" even while the user is disconnected.
+type PresenceReader interface {
+	GetLiveStatus(ctx context.Context, userID string) (status, customStatus string)
+}
+
 type Service struct {
-	repo   *Repository
-	nats   *realtime.Hub
-	dm     DMOpener
-	minio  *minio.Client
-	signer *minio.Client
-	bucket string
+	repo     *Repository
+	nats     *realtime.Hub
+	dm       DMOpener
+	presence PresenceReader
+	minio    *minio.Client
+	signer   *minio.Client
+	bucket   string
 }
 
 func NewService(repo *Repository, nats *realtime.Hub) *Service {
@@ -40,6 +51,13 @@ func NewService(repo *Repository, nats *realtime.Hub) *Service {
 // SetDMOpener wires the DM channel opener used on friend accept.
 func (s *Service) SetDMOpener(d DMOpener) {
 	s.dm = d
+}
+
+// SetPresenceReader wires a live-presence reader so friend/profile
+// enrichment events carry the recipient's actual online/offline state
+// instead of the stale DB intent.
+func (s *Service) SetPresenceReader(p PresenceReader) {
+	s.presence = p
 }
 
 // pgIDToStr converts a pgtype.UUID to its canonical hex-dashed string form.
@@ -97,20 +115,51 @@ func (s *Service) LookupBasicProfile(ctx context.Context, userID string) (string
 	return u.Username, s.ResolveAvatarURL(ctx, u.AvatarUrl)
 }
 
+// GetStatusIntent returns the user's persisted status (Postgres
+// users.status column) — their last-known *intent*, which should be
+// re-broadcast whenever the user comes back online. Falls back to
+// "online" if the column is blank so a fresh account still shows up
+// to friends instead of silently staying offline.
+func (s *Service) GetStatusIntent(ctx context.Context, userID string) (status, customStatus string) {
+	pgID, err := parseUUID(userID)
+	if err != nil {
+		return "online", ""
+	}
+	u, err := s.repo.GetUserByID(ctx, pgID)
+	if err != nil {
+		return "online", ""
+	}
+	if u.Status == "" {
+		return "online", ""
+	}
+	return u.Status, u.Status
+}
+
 // friendPayload loads the given user and returns a typed FriendActivityEvent
 // with the actor's profile fields populated. Used to enrich outgoing
 // friend/presence events so the recipient doesn't just see a bare UUID.
+// Status reflects *live* presence (Redis) when a PresenceReader is wired,
+// falling back to the DB intent otherwise — the DB intent is what the user
+// *chose*, not whether they are currently connected.
 func (s *Service) friendPayload(ctx context.Context, actorID pgtype.UUID) *streamv1.FriendActivityEvent {
 	u, err := s.repo.GetUserByID(ctx, actorID)
 	if err != nil {
 		return &streamv1.FriendActivityEvent{UserId: pgIDToStr(actorID)}
 	}
+	statusStr := u.Status
+	customStr := u.Status
+	if s.presence != nil {
+		if live, custom := s.presence.GetLiveStatus(ctx, pgIDToStr(u.ID)); live != "" {
+			statusStr = live
+			customStr = custom
+		}
+	}
 	return &streamv1.FriendActivityEvent{
 		UserId:       pgIDToStr(u.ID),
 		Username:     u.Username,
 		DisplayName:  u.DisplayName,
-		Status:       presenceStatusFromString(u.Status),
-		CustomStatus: u.Status,
+		Status:       presenceStatusFromString(statusStr),
+		CustomStatus: customStr,
 		AvatarUrl:    s.ResolveAvatarURL(ctx, u.AvatarUrl),
 	}
 }

@@ -20,22 +20,16 @@ service MessageService {
   rpc AckMessage(AckMessageRequest) returns (AckMessageResponse);
   rpc StartTyping(StartTypingRequest) returns (StartTypingResponse);
 
-  // DM: send message directly to a user (auto-creates DM channel)
   rpc SendDirectMessage(SendDirectMessageRequest) returns (SendDirectMessageResponse);
 
-  // Unread
   rpc GetUnreadCounts(GetUnreadCountsRequest) returns (GetUnreadCountsResponse);
 
-  // Search
   rpc SearchMessages(SearchMessagesRequest) returns (SearchMessagesResponse);
 
-  // Threads
   rpc GetThreadMessages(GetThreadMessagesRequest) returns (GetThreadMessagesResponse);
 
-  // Bulk operations
   rpc BulkDeleteMessages(BulkDeleteMessagesRequest) returns (BulkDeleteMessagesResponse);
 
-  // Edit history
   rpc GetEditHistory(GetEditHistoryRequest) returns (GetEditHistoryResponse);
 
 }
@@ -73,16 +67,12 @@ message Message {
   bool pinned = 9;
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp edited_at = 11;
-  // Populated when this message is a forward of another message. The
-  // original is referenced by channel_id + message_id; the original
-  // author is preserved for "Forwarded from <user>" rendering.
+ 
   ForwardedReference forwarded_from = 12;
-  // User IDs explicitly @-mentioned by the author. Populated from the
-  // request — no server-side parsing.
+  
   repeated string mention_user_ids = 13;
 }
 
-// ForwardedReference points back at the source of a forwarded message.
 message ForwardedReference {
   string channel_id = 1;
   string message_id = 2;
@@ -95,13 +85,9 @@ message SendMessageRequest {
   MessageType type = 3 [(buf.validate.field).enum.defined_only = true];
   string reply_to_id = 4 [(buf.validate.field).string = {max_len: 64}];
   repeated string attachment_ids = 5 [(buf.validate.field).repeated = {max_items: 10, items: {string: {max_len: 64}}}];
-  // If set, treats this message as a forward: the server validates the
-  // source still exists and copies its content + attachments + author
-  // reference into the new message.
+ 
   ForwardedReference forwarded_from = 6;
-  // User IDs the client explicitly @-mentioned while composing. The server
-  // persists these alongside the message and increments each mentioned
-  // user's per-channel mention badge — no server-side regex parsing.
+
   repeated string mention_user_ids = 7 [(buf.validate.field).repeated = {max_items: 50, items: {string: {uuid: true}}}];
 }
 
@@ -185,11 +171,11 @@ message AckMessageResponse {}
 
 message StartTypingRequest {
   string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string user_name = 2 [(buf.validate.field).string = {min_len: 1, max_len: 100}];
 }
 
 message StartTypingResponse {}
 
-// DM: send directly to a user without manually creating DM channel
 message SendDirectMessageRequest {
   string recipient_id = 1 [(buf.validate.field).string.uuid = true];
   string content = 2 [(buf.validate.field).string = {min_len: 1, max_len: 4000}];
@@ -198,9 +184,9 @@ message SendDirectMessageRequest {
 message SendDirectMessageResponse {
   string channel_id = 1;
   Message message = 2;
+  string user_name = 3;
 }
 
-// Unread messages
 message GetUnreadCountsRequest {}
 
 message UnreadDM {
@@ -211,9 +197,6 @@ message UnreadDM {
   string last_read_message_id = 5;
   repeated Message messages = 6;
   google.protobuf.Timestamp last_message_at = 7;
-  // Number of @-mentions of the current user in this DM since their last
-  // ack. Used by clients to render a red @-badge independent of total
-  // unread count.
   int32 mention_count = 8;
 }
 
@@ -225,7 +208,6 @@ message UnreadChannelMessage {
   string last_read_message_id = 5;
   repeated Message messages = 6;
   google.protobuf.Timestamp last_message_at = 7;
-  // @-mention count in this channel since the current user's last ack.
   int32 mention_count = 8;
 }
 
@@ -235,7 +217,6 @@ message GetUnreadCountsResponse {
   int32 total_unread = 3;
 }
 
-// Search messages by content
 message SearchMessagesRequest {
   string channel_id = 1 [(buf.validate.field).string.uuid = true];
   string query = 2 [(buf.validate.field).string = {min_len: 1, max_len: 256}];
@@ -247,7 +228,6 @@ message SearchMessagesResponse {
   int32 total = 2;
 }
 
-// Get thread (replies to a message)
 message GetThreadMessagesRequest {
   string channel_id = 1 [(buf.validate.field).string.uuid = true];
   string parent_message_id = 2 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
@@ -258,7 +238,6 @@ message GetThreadMessagesResponse {
   repeated Message messages = 1;
 }
 
-// Bulk delete messages
 message BulkDeleteMessagesRequest {
   string channel_id = 1 [(buf.validate.field).string.uuid = true];
   repeated string message_ids = 2 [(buf.validate.field).repeated = {min_items: 1, max_items: 100, items: {string: {min_len: 1, max_len: 64}}}];
@@ -268,7 +247,6 @@ message BulkDeleteMessagesResponse {
   int32 deleted_count = 1;
 }
 
-// Edit history for a message
 message MessageEdit {
   string content = 1;
   google.protobuf.Timestamp edited_at = 2;

@@ -72,6 +72,7 @@ type Guild struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	Deleted     bool               `json:"deleted"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	BannerUrl   string             `json:"banner_url"`
 }
 
 type GuildMember struct {

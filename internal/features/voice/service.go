@@ -71,8 +71,13 @@ func (s *Service) JoinChannel(ctx context.Context, userID, guildID, channelID st
 	if s.roomClient == nil {
 		return nil, ErrLiveKitUnavailable
 	}
-	if guildID != "" && s.authz != nil && !s.authz.CanViewChannel(ctx, userID, channelID) {
-		return nil, ErrInsufficientPermissions
+	// Voice joins gate on CONNECT (Discord's dedicated voice-join perm)
+	// rather than the channel-level "viewer" relation, so a role can
+	// see a voice channel without being allowed to join it.
+	if guildID != "" && s.authz != nil {
+		if !s.authz.CanViewChannel(ctx, userID, channelID) || !s.authz.CanConnect(ctx, userID, guildID) {
+			return nil, ErrInsufficientPermissions
+		}
 	}
 
 	roomName := channelID

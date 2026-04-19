@@ -22,8 +22,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Chat events — used for DmChatEvent.type, TextChannelEvent.type and
-// VoiceChatEvent.type.
 type ChatEventType int32
 
 const (
@@ -91,7 +89,6 @@ func (ChatEventType) EnumDescriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{0}
 }
 
-// DM channel lifecycle — used for DmChannelEvent.type.
 type ChannelLifecycleType int32
 
 const (
@@ -144,7 +141,6 @@ func (ChannelLifecycleType) EnumDescriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{1}
 }
 
-// DM call signalling — used for DmCallEvent.type.
 type DmCallType int32
 
 const (
@@ -203,8 +199,6 @@ func (DmCallType) EnumDescriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{2}
 }
 
-// Voice event — used for VoiceStateEvent.event (currently single-valued
-// but defined as an enum so hardcoded strings never leak back in).
 type VoiceEvent int32
 
 const (
@@ -251,7 +245,6 @@ func (VoiceEvent) EnumDescriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{3}
 }
 
-// Voice action — used for VoiceStateEvent.action.
 type VoiceAction int32
 
 const (
@@ -322,7 +315,6 @@ func (VoiceAction) EnumDescriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{4}
 }
 
-// Voice track kind — used for VoiceStateEvent.track_type.
 type VoiceTrackType int32
 
 const (
@@ -375,7 +367,6 @@ func (VoiceTrackType) EnumDescriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{5}
 }
 
-// Friend/presence activity — used for FriendActivityEvent.event.
 type FriendEventType int32
 
 const (
@@ -440,8 +431,6 @@ func (FriendEventType) EnumDescriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{6}
 }
 
-// User presence — used for FriendActivityEvent.status and wherever a
-// human-readable presence string is emitted.
 type PresenceStatus int32
 
 const (
@@ -497,8 +486,6 @@ func (PresenceStatus) EnumDescriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{7}
 }
 
-// Guild-level event — used for GuildEvent.event (+ GuildEvent.action,
-// which currently mirrors event).
 type GuildEventType int32
 
 const (
@@ -584,9 +571,6 @@ func (GuildEventType) EnumDescriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{8}
 }
 
-// ChatAttachment mirrors message.v1.Attachment for stream payloads so the
-// stream feature doesn't pull in the whole message proto. Reused by every
-// chat-like event (DM + guild text + guild voice chat).
 type ChatAttachment struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -663,18 +647,11 @@ func (x *ChatAttachment) GetSize() int64 {
 	return 0
 }
 
-// ChatReactionCount is a per-emoji snapshot of a message's reactions.
-// Reused across all chat events so clients never have to recompute totals
-// from raw reaction_add / reaction_remove deltas.
 type ChatReactionCount struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	Emoji string                 `protobuf:"bytes,1,opt,name=emoji,proto3" json:"emoji,omitempty"`
-	Count int32                  `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
-	// True if the current stream subscriber has reacted with this emoji.
-	// On a fan-out subject we don't know the receiver, so this is populated
-	// best-effort by the server for the event's `sender_id` perspective —
-	// clients should still maintain their own self-reaction set.
-	Me            bool `protobuf:"varint,3,opt,name=me,proto3" json:"me,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Emoji         string                 `protobuf:"bytes,1,opt,name=emoji,proto3" json:"emoji,omitempty"`
+	Count         int32                  `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
+	Me            bool                   `protobuf:"varint,3,opt,name=me,proto3" json:"me,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -730,8 +707,6 @@ func (x *ChatReactionCount) GetMe() bool {
 	return false
 }
 
-// ChatForwardedReference points at the message a forward was created from.
-// Mirrors message.v1.ForwardedReference; kept flat for stream payloads.
 type ChatForwardedReference struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
@@ -829,39 +804,27 @@ func (*StreamDmChatRequest) Descriptor() ([]byte, []int) {
 }
 
 type DmChatEvent struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	Type      ChatEventType          `protobuf:"varint,1,opt,name=type,proto3,enum=stream.v1.ChatEventType" json:"type,omitempty"`
-	ChannelId string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	MessageId string                 `protobuf:"bytes,3,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
-	// The user who initiated the event (sender/editor/reactor/etc.).
-	SenderId string `protobuf:"bytes,4,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
-	// Message author — present on create/update/delete/pin/unpin.
-	AuthorId string `protobuf:"bytes,10,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty"`
-	// On "update" this is the new content; on "create" it's the initial
-	// content; on "delete" it is empty.
-	Content     string                 `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"`
-	Timestamp   *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	ReplyToId   string                 `protobuf:"bytes,7,opt,name=reply_to_id,json=replyToId,proto3" json:"reply_to_id,omitempty"`
-	Attachments []*ChatAttachment      `protobuf:"bytes,8,rep,name=attachments,proto3" json:"attachments,omitempty"`
-	// Underlying MessageType int (1=default, 3=reply, ...).
-	MsgType int32 `protobuf:"varint,9,opt,name=msg_type,json=msgType,proto3" json:"msg_type,omitempty"`
-	Pinned  bool  `protobuf:"varint,11,opt,name=pinned,proto3" json:"pinned,omitempty"`
-	Deleted bool  `protobuf:"varint,12,opt,name=deleted,proto3" json:"deleted,omitempty"`
-	// Populated on reaction_add / reaction_remove events.
-	Emoji     string `protobuf:"bytes,13,opt,name=emoji,proto3" json:"emoji,omitempty"`
-	EditedAt  string `protobuf:"bytes,14,opt,name=edited_at,json=editedAt,proto3" json:"edited_at,omitempty"`
-	CreatedAt string `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	// User IDs explicitly @-mentioned by the author. Empty on non-create
-	// events where mentions don't change.
-	MentionUserIds []string `protobuf:"bytes,16,rep,name=mention_user_ids,json=mentionUserIds,proto3" json:"mention_user_ids,omitempty"`
-	// Full per-emoji reaction snapshot — sent on create/update/delete/pin
-	// AND on reaction_add / reaction_remove so clients can render counts
-	// without recomputing from deltas.
-	Reactions []*ChatReactionCount `protobuf:"bytes,17,rep,name=reactions,proto3" json:"reactions,omitempty"`
-	// Populated when this message is a forward of another.
-	ForwardedFrom *ChatForwardedReference `protobuf:"bytes,18,opt,name=forwarded_from,json=forwardedFrom,proto3" json:"forwarded_from,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState  `protogen:"open.v1"`
+	Type           ChatEventType           `protobuf:"varint,1,opt,name=type,proto3,enum=stream.v1.ChatEventType" json:"type,omitempty"`
+	ChannelId      string                  `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	MessageId      string                  `protobuf:"bytes,3,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	SenderId       string                  `protobuf:"bytes,4,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
+	AuthorId       string                  `protobuf:"bytes,10,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty"`
+	Content        string                  `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"`
+	Timestamp      *timestamppb.Timestamp  `protobuf:"bytes,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	ReplyToId      string                  `protobuf:"bytes,7,opt,name=reply_to_id,json=replyToId,proto3" json:"reply_to_id,omitempty"`
+	Attachments    []*ChatAttachment       `protobuf:"bytes,8,rep,name=attachments,proto3" json:"attachments,omitempty"`
+	MsgType        int32                   `protobuf:"varint,9,opt,name=msg_type,json=msgType,proto3" json:"msg_type,omitempty"`
+	Pinned         bool                    `protobuf:"varint,11,opt,name=pinned,proto3" json:"pinned,omitempty"`
+	Deleted        bool                    `protobuf:"varint,12,opt,name=deleted,proto3" json:"deleted,omitempty"`
+	Emoji          string                  `protobuf:"bytes,13,opt,name=emoji,proto3" json:"emoji,omitempty"`
+	EditedAt       string                  `protobuf:"bytes,14,opt,name=edited_at,json=editedAt,proto3" json:"edited_at,omitempty"`
+	CreatedAt      string                  `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	MentionUserIds []string                `protobuf:"bytes,16,rep,name=mention_user_ids,json=mentionUserIds,proto3" json:"mention_user_ids,omitempty"`
+	Reactions      []*ChatReactionCount    `protobuf:"bytes,17,rep,name=reactions,proto3" json:"reactions,omitempty"`
+	ForwardedFrom  *ChatForwardedReference `protobuf:"bytes,18,opt,name=forwarded_from,json=forwardedFrom,proto3" json:"forwarded_from,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *DmChatEvent) Reset() {
@@ -1059,7 +1022,7 @@ func (*StreamDmChannelsRequest) Descriptor() ([]byte, []int) {
 type DmChannelMember struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"` // full "name#1234"
+	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
 	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	AvatarUrl     string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
 	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
@@ -1135,9 +1098,9 @@ func (x *DmChannelMember) GetStatus() string {
 type DmChannelEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Type          ChannelLifecycleType   `protobuf:"varint,1,opt,name=type,proto3,enum=stream.v1.ChannelLifecycleType" json:"type,omitempty"`
-	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"` // channel id
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	ChannelType   int32                  `protobuf:"varint,4,opt,name=channel_type,json=channelType,proto3" json:"channel_type,omitempty"` // 5=DM, 6=GROUP_DM
+	ChannelType   int32                  `protobuf:"varint,4,opt,name=channel_type,json=channelType,proto3" json:"channel_type,omitempty"`
 	Members       []*DmChannelMember     `protobuf:"bytes,5,rep,name=members,proto3" json:"members,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1245,15 +1208,11 @@ func (*StreamDmCallsRequest) Descriptor() ([]byte, []int) {
 }
 
 type DmCallEvent struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	Type      DmCallType             `protobuf:"varint,1,opt,name=type,proto3,enum=stream.v1.DmCallType" json:"type,omitempty"`
-	ChannelId string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	// The user who initiated the call (present on every event so late
-	// subscribers can identify the ongoing call).
-	CallerId string `protobuf:"bytes,3,opt,name=caller_id,json=callerId,proto3" json:"caller_id,omitempty"`
-	// The specific participant this event is about (accepted/rejected/left).
-	ParticipantId string `protobuf:"bytes,4,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"`
-	// True if the caller intends to publish video (camera).
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Type          DmCallType             `protobuf:"varint,1,opt,name=type,proto3,enum=stream.v1.DmCallType" json:"type,omitempty"`
+	ChannelId     string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	CallerId      string                 `protobuf:"bytes,3,opt,name=caller_id,json=callerId,proto3" json:"caller_id,omitempty"`
+	ParticipantId string                 `protobuf:"bytes,4,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"`
 	Video         bool                   `protobuf:"varint,5,opt,name=video,proto3" json:"video,omitempty"`
 	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1368,30 +1327,21 @@ func (*StreamTextChannelsRequest) Descriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{10}
 }
 
-// TextChannelEvent carries the same rich payload as DmChatEvent so guild
-// channel subscribers can render replies, attachments, reactions and
-// mentions without additional round trips.
 type TextChannelEvent struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	Type      ChatEventType          `protobuf:"varint,1,opt,name=type,proto3,enum=stream.v1.ChatEventType" json:"type,omitempty"`
-	GuildId   string                 `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
-	ChannelId string                 `protobuf:"bytes,3,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	MessageId string                 `protobuf:"bytes,4,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
-	// Message author — present on create/update/delete/pin/unpin.
-	AuthorId string `protobuf:"bytes,5,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty"`
-	// On "update" this is the new content; on "create" it's the initial
-	// content; on "delete" it is empty.
-	Content   string                 `protobuf:"bytes,6,opt,name=content,proto3" json:"content,omitempty"`
-	Timestamp *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	// The user who initiated this event. Differs from author_id on
-	// moderation-style edits/deletes.
-	SenderId    string            `protobuf:"bytes,8,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
-	ReplyToId   string            `protobuf:"bytes,9,opt,name=reply_to_id,json=replyToId,proto3" json:"reply_to_id,omitempty"`
-	Attachments []*ChatAttachment `protobuf:"bytes,10,rep,name=attachments,proto3" json:"attachments,omitempty"`
-	MsgType     int32             `protobuf:"varint,11,opt,name=msg_type,json=msgType,proto3" json:"msg_type,omitempty"`
-	Pinned      bool              `protobuf:"varint,12,opt,name=pinned,proto3" json:"pinned,omitempty"`
-	Deleted     bool              `protobuf:"varint,13,opt,name=deleted,proto3" json:"deleted,omitempty"`
-	// Populated on reaction_add / reaction_remove events.
+	state          protoimpl.MessageState  `protogen:"open.v1"`
+	Type           ChatEventType           `protobuf:"varint,1,opt,name=type,proto3,enum=stream.v1.ChatEventType" json:"type,omitempty"`
+	GuildId        string                  `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
+	ChannelId      string                  `protobuf:"bytes,3,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	MessageId      string                  `protobuf:"bytes,4,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	AuthorId       string                  `protobuf:"bytes,5,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty"`
+	Content        string                  `protobuf:"bytes,6,opt,name=content,proto3" json:"content,omitempty"`
+	Timestamp      *timestamppb.Timestamp  `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	SenderId       string                  `protobuf:"bytes,8,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
+	ReplyToId      string                  `protobuf:"bytes,9,opt,name=reply_to_id,json=replyToId,proto3" json:"reply_to_id,omitempty"`
+	Attachments    []*ChatAttachment       `protobuf:"bytes,10,rep,name=attachments,proto3" json:"attachments,omitempty"`
+	MsgType        int32                   `protobuf:"varint,11,opt,name=msg_type,json=msgType,proto3" json:"msg_type,omitempty"`
+	Pinned         bool                    `protobuf:"varint,12,opt,name=pinned,proto3" json:"pinned,omitempty"`
+	Deleted        bool                    `protobuf:"varint,13,opt,name=deleted,proto3" json:"deleted,omitempty"`
 	Emoji          string                  `protobuf:"bytes,14,opt,name=emoji,proto3" json:"emoji,omitempty"`
 	EditedAt       string                  `protobuf:"bytes,15,opt,name=edited_at,json=editedAt,proto3" json:"edited_at,omitempty"`
 	CreatedAt      string                  `protobuf:"bytes,16,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
@@ -1601,8 +1551,6 @@ func (*StreamVoiceChatRequest) Descriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{12}
 }
 
-// VoiceChatEvent is identical in shape to TextChannelEvent — text chat
-// that happens inside a voice channel.
 type VoiceChatEvent struct {
 	state          protoimpl.MessageState  `protogen:"open.v1"`
 	Type           ChatEventType           `protobuf:"varint,1,opt,name=type,proto3,enum=stream.v1.ChatEventType" json:"type,omitempty"`
@@ -1836,17 +1784,14 @@ type GuildEvent struct {
 	Name      string                 `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"`
 	Type      int64                  `protobuf:"varint,6,opt,name=type,proto3" json:"type,omitempty"`
 	Timestamp *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	// Channel-specific fields (CHANNEL_CREATE/UPDATE).
-	Topic    string `protobuf:"bytes,8,opt,name=topic,proto3" json:"topic,omitempty"`
-	Position int32  `protobuf:"varint,9,opt,name=position,proto3" json:"position,omitempty"`
-	ParentId string `protobuf:"bytes,10,opt,name=parent_id,json=parentId,proto3" json:"parent_id,omitempty"`
-	// Guild icon URL on "update" icon change.
-	IconUrl string `protobuf:"bytes,11,opt,name=icon_url,json=iconUrl,proto3" json:"icon_url,omitempty"`
-	// Role id on role_* events.
-	RoleId string `protobuf:"bytes,12,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
-	// Reason on member_ban.
-	Reason string `protobuf:"bytes,13,opt,name=reason,proto3" json:"reason,omitempty"`
-	// Set by publishGuildEvent; mirrors `event`.
+	Topic     string                 `protobuf:"bytes,8,opt,name=topic,proto3" json:"topic,omitempty"`
+	Position  int32                  `protobuf:"varint,9,opt,name=position,proto3" json:"position,omitempty"`
+	ParentId  string                 `protobuf:"bytes,10,opt,name=parent_id,json=parentId,proto3" json:"parent_id,omitempty"`
+	IconUrl   string                 `protobuf:"bytes,11,opt,name=icon_url,json=iconUrl,proto3" json:"icon_url,omitempty"`
+	RoleId    string                 `protobuf:"bytes,12,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
+	// Guild banner URL on "update" banner change.
+	BannerUrl     string         `protobuf:"bytes,15,opt,name=banner_url,json=bannerUrl,proto3" json:"banner_url,omitempty"`
+	Reason        string         `protobuf:"bytes,13,opt,name=reason,proto3" json:"reason,omitempty"`
 	Action        GuildEventType `protobuf:"varint,14,opt,name=action,proto3,enum=stream.v1.GuildEventType" json:"action,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1966,6 +1911,13 @@ func (x *GuildEvent) GetRoleId() string {
 	return ""
 }
 
+func (x *GuildEvent) GetBannerUrl() string {
+	if x != nil {
+		return x.BannerUrl
+	}
+	return ""
+}
+
 func (x *GuildEvent) GetReason() string {
 	if x != nil {
 		return x.Reason
@@ -2017,29 +1969,23 @@ func (*StreamVoiceStateRequest) Descriptor() ([]byte, []int) {
 }
 
 type VoiceStateEvent struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	Event     VoiceEvent             `protobuf:"varint,1,opt,name=event,proto3,enum=stream.v1.VoiceEvent" json:"event,omitempty"`
-	GuildId   string                 `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
-	ChannelId string                 `protobuf:"bytes,3,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	UserId    string                 `protobuf:"bytes,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	SelfMute  bool                   `protobuf:"varint,5,opt,name=self_mute,json=selfMute,proto3" json:"self_mute,omitempty"`
-	SelfDeaf  bool                   `protobuf:"varint,6,opt,name=self_deaf,json=selfDeaf,proto3" json:"self_deaf,omitempty"`
-	Video     bool                   `protobuf:"varint,7,opt,name=video,proto3" json:"video,omitempty"`
-	Streaming bool                   `protobuf:"varint,8,opt,name=streaming,proto3" json:"streaming,omitempty"`
-	Timestamp *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	Action    VoiceAction            `protobuf:"varint,10,opt,name=action,proto3,enum=stream.v1.VoiceAction" json:"action,omitempty"`
-	// LiveKit participant SID.
-	Sid string `protobuf:"bytes,11,opt,name=sid,proto3" json:"sid,omitempty"`
-	// Display name from LiveKit participant.
-	Name string `protobuf:"bytes,12,opt,name=name,proto3" json:"name,omitempty"`
-	// Participant metadata JSON: {"userId","username","avatarUrl"}.
-	Metadata  string         `protobuf:"bytes,13,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	TrackType VoiceTrackType `protobuf:"varint,14,opt,name=track_type,json=trackType,proto3,enum=stream.v1.VoiceTrackType" json:"track_type,omitempty"`
-	// On track_update: true = published, false = unpublished.
-	Published bool `protobuf:"varint,15,opt,name=published,proto3" json:"published,omitempty"`
-	// Unix timestamp (seconds) when the LiveKit room for this channel
-	// became active. Same value for every participant in the same channel.
-	RoomActiveSince int64 `protobuf:"varint,16,opt,name=room_active_since,json=roomActiveSince,proto3" json:"room_active_since,omitempty"`
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Event           VoiceEvent             `protobuf:"varint,1,opt,name=event,proto3,enum=stream.v1.VoiceEvent" json:"event,omitempty"`
+	GuildId         string                 `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
+	ChannelId       string                 `protobuf:"bytes,3,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	UserId          string                 `protobuf:"bytes,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	SelfMute        bool                   `protobuf:"varint,5,opt,name=self_mute,json=selfMute,proto3" json:"self_mute,omitempty"`
+	SelfDeaf        bool                   `protobuf:"varint,6,opt,name=self_deaf,json=selfDeaf,proto3" json:"self_deaf,omitempty"`
+	Video           bool                   `protobuf:"varint,7,opt,name=video,proto3" json:"video,omitempty"`
+	Streaming       bool                   `protobuf:"varint,8,opt,name=streaming,proto3" json:"streaming,omitempty"`
+	Timestamp       *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Action          VoiceAction            `protobuf:"varint,10,opt,name=action,proto3,enum=stream.v1.VoiceAction" json:"action,omitempty"`
+	Sid             string                 `protobuf:"bytes,11,opt,name=sid,proto3" json:"sid,omitempty"`
+	Name            string                 `protobuf:"bytes,12,opt,name=name,proto3" json:"name,omitempty"`
+	Metadata        string                 `protobuf:"bytes,13,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	TrackType       VoiceTrackType         `protobuf:"varint,14,opt,name=track_type,json=trackType,proto3,enum=stream.v1.VoiceTrackType" json:"track_type,omitempty"`
+	Published       bool                   `protobuf:"varint,15,opt,name=published,proto3" json:"published,omitempty"`
+	RoomActiveSince int64                  `protobuf:"varint,16,opt,name=room_active_since,json=roomActiveSince,proto3" json:"room_active_since,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -2227,7 +2173,8 @@ type TypingEvent struct {
 	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
 	GuildId       string                 `protobuf:"bytes,2,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
 	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Username      string                 `protobuf:"bytes,4,opt,name=username,proto3" json:"username,omitempty"`
+	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2283,6 +2230,13 @@ func (x *TypingEvent) GetUserId() string {
 	return ""
 }
 
+func (x *TypingEvent) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
 func (x *TypingEvent) GetTimestamp() *timestamppb.Timestamp {
 	if x != nil {
 		return x.Timestamp
@@ -2327,20 +2281,16 @@ func (*StreamFriendActivityRequest) Descriptor() ([]byte, []int) {
 }
 
 type FriendActivityEvent struct {
-	state  protoimpl.MessageState `protogen:"open.v1"`
-	Event  FriendEventType        `protobuf:"varint,1,opt,name=event,proto3,enum=stream.v1.FriendEventType" json:"event,omitempty"`
-	UserId string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// Full unique handle in "name#1234" format.
-	Username     string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
-	Status       PresenceStatus         `protobuf:"varint,4,opt,name=status,proto3,enum=stream.v1.PresenceStatus" json:"status,omitempty"`
-	CustomStatus string                 `protobuf:"bytes,5,opt,name=custom_status,json=customStatus,proto3" json:"custom_status,omitempty"`
-	AvatarUrl    string                 `protobuf:"bytes,6,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	Timestamp    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	// For friend_accepted: the auto-opened DM channel id so both ends can
-	// jump straight into conversation.
-	ChannelId string `protobuf:"bytes,8,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	// Freely changeable display name shown in UI.
-	DisplayName   string `protobuf:"bytes,9,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Event         FriendEventType        `protobuf:"varint,1,opt,name=event,proto3,enum=stream.v1.FriendEventType" json:"event,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	Status        PresenceStatus         `protobuf:"varint,4,opt,name=status,proto3,enum=stream.v1.PresenceStatus" json:"status,omitempty"`
+	CustomStatus  string                 `protobuf:"bytes,5,opt,name=custom_status,json=customStatus,proto3" json:"custom_status,omitempty"`
+	AvatarUrl     string                 `protobuf:"bytes,6,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	ChannelId     string                 `protobuf:"bytes,8,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,9,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2556,7 +2506,7 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\x10mention_user_ids\x18\x11 \x03(\tR\x0ementionUserIds\x12:\n" +
 	"\treactions\x18\x12 \x03(\v2\x1c.stream.v1.ChatReactionCountR\treactions\x12H\n" +
 	"\x0eforwarded_from\x18\x13 \x01(\v2!.stream.v1.ChatForwardedReferenceR\rforwardedFrom\"\x1a\n" +
-	"\x18StreamGuildEventsRequest\"\xc0\x03\n" +
+	"\x18StreamGuildEventsRequest\"\xdf\x03\n" +
 	"\n" +
 	"GuildEvent\x12/\n" +
 	"\x05event\x18\x01 \x01(\x0e2\x19.stream.v1.GuildEventTypeR\x05event\x12\x19\n" +
@@ -2572,7 +2522,9 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\tparent_id\x18\n" +
 	" \x01(\tR\bparentId\x12\x19\n" +
 	"\bicon_url\x18\v \x01(\tR\aiconUrl\x12\x17\n" +
-	"\arole_id\x18\f \x01(\tR\x06roleId\x12\x16\n" +
+	"\arole_id\x18\f \x01(\tR\x06roleId\x12\x1d\n" +
+	"\n" +
+	"banner_url\x18\x0f \x01(\tR\tbannerUrl\x12\x16\n" +
 	"\x06reason\x18\r \x01(\tR\x06reason\x121\n" +
 	"\x06action\x18\x0e \x01(\x0e2\x19.stream.v1.GuildEventTypeR\x06action\"\x19\n" +
 	"\x17StreamVoiceStateRequest\"\xaf\x04\n" +
@@ -2596,13 +2548,14 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"track_type\x18\x0e \x01(\x0e2\x19.stream.v1.VoiceTrackTypeR\ttrackType\x12\x1c\n" +
 	"\tpublished\x18\x0f \x01(\bR\tpublished\x12*\n" +
 	"\x11room_active_since\x18\x10 \x01(\x03R\x0froomActiveSince\"\x15\n" +
-	"\x13StreamTypingRequest\"\x9a\x01\n" +
+	"\x13StreamTypingRequest\"\xb6\x01\n" +
 	"\vTypingEvent\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12\x19\n" +
 	"\bguild_id\x18\x02 \x01(\tR\aguildId\x12\x17\n" +
-	"\auser_id\x18\x03 \x01(\tR\x06userId\x128\n" +
-	"\ttimestamp\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\x1d\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x1a\n" +
+	"\busername\x18\x04 \x01(\tR\busername\x128\n" +
+	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\x1d\n" +
 	"\x1bStreamFriendActivityRequest\"\xef\x02\n" +
 	"\x13FriendActivityEvent\x120\n" +
 	"\x05event\x18\x01 \x01(\x0e2\x1a.stream.v1.FriendEventTypeR\x05event\x12\x17\n" +

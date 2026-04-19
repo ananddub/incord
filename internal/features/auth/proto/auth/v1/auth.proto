@@ -8,11 +8,8 @@ import "google/protobuf/timestamp.proto";
 import "buf/validate/validate.proto";
 
 service AuthService {
-  // Register sends OTP to email. Account is NOT active until VerifyOTP.
   rpc Register(RegisterRequest) returns (RegisterResponse);
-  // VerifyOTP activates account and returns tokens.
   rpc VerifyOTP(VerifyOTPRequest) returns (VerifyOTPResponse);
-  // ResendOTP sends a new OTP to the registered email.
   rpc ResendOTP(ResendOTPRequest) returns (ResendOTPResponse);
   rpc Login(LoginRequest) returns (LoginResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
@@ -26,7 +23,6 @@ message RegisterRequest {
   string password = 3 [(buf.validate.field).string = {min_len: 6, max_len: 128}];
 }
 
-// Register now returns user_id + message. NO tokens until OTP verified.
 message RegisterResponse {
   string user_id = 1;
   string message = 2;

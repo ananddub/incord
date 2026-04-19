@@ -212,25 +212,20 @@ func (x *Reaction) GetMe() bool {
 }
 
 type Message struct {
-	state       protoimpl.MessageState `protogen:"open.v1"`
-	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ChannelId   string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	AuthorId    string                 `protobuf:"bytes,3,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty"`
-	Content     string                 `protobuf:"bytes,4,opt,name=content,proto3" json:"content,omitempty"`
-	Type        MessageType            `protobuf:"varint,5,opt,name=type,proto3,enum=message.v1.MessageType" json:"type,omitempty"`
-	Attachments []*Attachment          `protobuf:"bytes,6,rep,name=attachments,proto3" json:"attachments,omitempty"`
-	Reactions   []*Reaction            `protobuf:"bytes,7,rep,name=reactions,proto3" json:"reactions,omitempty"`
-	ReplyToId   string                 `protobuf:"bytes,8,opt,name=reply_to_id,json=replyToId,proto3" json:"reply_to_id,omitempty"`
-	Pinned      bool                   `protobuf:"varint,9,opt,name=pinned,proto3" json:"pinned,omitempty"`
-	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	EditedAt    *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=edited_at,json=editedAt,proto3" json:"edited_at,omitempty"`
-	// Populated when this message is a forward of another message. The
-	// original is referenced by channel_id + message_id; the original
-	// author is preserved for "Forwarded from <user>" rendering.
-	ForwardedFrom *ForwardedReference `protobuf:"bytes,12,opt,name=forwarded_from,json=forwardedFrom,proto3" json:"forwarded_from,omitempty"`
-	// User IDs explicitly @-mentioned by the author. Populated from the
-	// request — no server-side parsing.
-	MentionUserIds []string `protobuf:"bytes,13,rep,name=mention_user_ids,json=mentionUserIds,proto3" json:"mention_user_ids,omitempty"`
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ChannelId      string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	AuthorId       string                 `protobuf:"bytes,3,opt,name=author_id,json=authorId,proto3" json:"author_id,omitempty"`
+	Content        string                 `protobuf:"bytes,4,opt,name=content,proto3" json:"content,omitempty"`
+	Type           MessageType            `protobuf:"varint,5,opt,name=type,proto3,enum=message.v1.MessageType" json:"type,omitempty"`
+	Attachments    []*Attachment          `protobuf:"bytes,6,rep,name=attachments,proto3" json:"attachments,omitempty"`
+	Reactions      []*Reaction            `protobuf:"bytes,7,rep,name=reactions,proto3" json:"reactions,omitempty"`
+	ReplyToId      string                 `protobuf:"bytes,8,opt,name=reply_to_id,json=replyToId,proto3" json:"reply_to_id,omitempty"`
+	Pinned         bool                   `protobuf:"varint,9,opt,name=pinned,proto3" json:"pinned,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	EditedAt       *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=edited_at,json=editedAt,proto3" json:"edited_at,omitempty"`
+	ForwardedFrom  *ForwardedReference    `protobuf:"bytes,12,opt,name=forwarded_from,json=forwardedFrom,proto3" json:"forwarded_from,omitempty"`
+	MentionUserIds []string               `protobuf:"bytes,13,rep,name=mention_user_ids,json=mentionUserIds,proto3" json:"mention_user_ids,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -356,7 +351,6 @@ func (x *Message) GetMentionUserIds() []string {
 	return nil
 }
 
-// ForwardedReference points back at the source of a forwarded message.
 type ForwardedReference struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
@@ -418,20 +412,14 @@ func (x *ForwardedReference) GetAuthorId() string {
 }
 
 type SendMessageRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
-	Type          MessageType            `protobuf:"varint,3,opt,name=type,proto3,enum=message.v1.MessageType" json:"type,omitempty"`
-	ReplyToId     string                 `protobuf:"bytes,4,opt,name=reply_to_id,json=replyToId,proto3" json:"reply_to_id,omitempty"`
-	AttachmentIds []string               `protobuf:"bytes,5,rep,name=attachment_ids,json=attachmentIds,proto3" json:"attachment_ids,omitempty"`
-	// If set, treats this message as a forward: the server validates the
-	// source still exists and copies its content + attachments + author
-	// reference into the new message.
-	ForwardedFrom *ForwardedReference `protobuf:"bytes,6,opt,name=forwarded_from,json=forwardedFrom,proto3" json:"forwarded_from,omitempty"`
-	// User IDs the client explicitly @-mentioned while composing. The server
-	// persists these alongside the message and increments each mentioned
-	// user's per-channel mention badge — no server-side regex parsing.
-	MentionUserIds []string `protobuf:"bytes,7,rep,name=mention_user_ids,json=mentionUserIds,proto3" json:"mention_user_ids,omitempty"`
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ChannelId      string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	Content        string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
+	Type           MessageType            `protobuf:"varint,3,opt,name=type,proto3,enum=message.v1.MessageType" json:"type,omitempty"`
+	ReplyToId      string                 `protobuf:"bytes,4,opt,name=reply_to_id,json=replyToId,proto3" json:"reply_to_id,omitempty"`
+	AttachmentIds  []string               `protobuf:"bytes,5,rep,name=attachment_ids,json=attachmentIds,proto3" json:"attachment_ids,omitempty"`
+	ForwardedFrom  *ForwardedReference    `protobuf:"bytes,6,opt,name=forwarded_from,json=forwardedFrom,proto3" json:"forwarded_from,omitempty"`
+	MentionUserIds []string               `protobuf:"bytes,7,rep,name=mention_user_ids,json=mentionUserIds,proto3" json:"mention_user_ids,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1418,6 +1406,7 @@ func (*AckMessageResponse) Descriptor() ([]byte, []int) {
 type StartTypingRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	UserName      string                 `protobuf:"bytes,2,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1459,6 +1448,13 @@ func (x *StartTypingRequest) GetChannelId() string {
 	return ""
 }
 
+func (x *StartTypingRequest) GetUserName() string {
+	if x != nil {
+		return x.UserName
+	}
+	return ""
+}
+
 type StartTypingResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -1495,7 +1491,6 @@ func (*StartTypingResponse) Descriptor() ([]byte, []int) {
 	return file_message_v1_message_proto_rawDescGZIP(), []int{25}
 }
 
-// DM: send directly to a user without manually creating DM channel
 type SendDirectMessageRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RecipientId   string                 `protobuf:"bytes,1,opt,name=recipient_id,json=recipientId,proto3" json:"recipient_id,omitempty"`
@@ -1552,6 +1547,7 @@ type SendDirectMessageResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
 	Message       *Message               `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	UserName      string                 `protobuf:"bytes,3,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1600,7 +1596,13 @@ func (x *SendDirectMessageResponse) GetMessage() *Message {
 	return nil
 }
 
-// Unread messages
+func (x *SendDirectMessageResponse) GetUserName() string {
+	if x != nil {
+		return x.UserName
+	}
+	return ""
+}
+
 type GetUnreadCountsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -1646,12 +1648,9 @@ type UnreadDM struct {
 	LastReadMessageId string                 `protobuf:"bytes,5,opt,name=last_read_message_id,json=lastReadMessageId,proto3" json:"last_read_message_id,omitempty"`
 	Messages          []*Message             `protobuf:"bytes,6,rep,name=messages,proto3" json:"messages,omitempty"`
 	LastMessageAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=last_message_at,json=lastMessageAt,proto3" json:"last_message_at,omitempty"`
-	// Number of @-mentions of the current user in this DM since their last
-	// ack. Used by clients to render a red @-badge independent of total
-	// unread count.
-	MentionCount  int32 `protobuf:"varint,8,opt,name=mention_count,json=mentionCount,proto3" json:"mention_count,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	MentionCount      int32                  `protobuf:"varint,8,opt,name=mention_count,json=mentionCount,proto3" json:"mention_count,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *UnreadDM) Reset() {
@@ -1749,10 +1748,9 @@ type UnreadChannelMessage struct {
 	LastReadMessageId string                 `protobuf:"bytes,5,opt,name=last_read_message_id,json=lastReadMessageId,proto3" json:"last_read_message_id,omitempty"`
 	Messages          []*Message             `protobuf:"bytes,6,rep,name=messages,proto3" json:"messages,omitempty"`
 	LastMessageAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=last_message_at,json=lastMessageAt,proto3" json:"last_message_at,omitempty"`
-	// @-mention count in this channel since the current user's last ack.
-	MentionCount  int32 `protobuf:"varint,8,opt,name=mention_count,json=mentionCount,proto3" json:"mention_count,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	MentionCount      int32                  `protobuf:"varint,8,opt,name=mention_count,json=mentionCount,proto3" json:"mention_count,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *UnreadChannelMessage) Reset() {
@@ -1901,7 +1899,6 @@ func (x *GetUnreadCountsResponse) GetTotalUnread() int32 {
 	return 0
 }
 
-// Search messages by content
 type SearchMessagesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
@@ -2014,7 +2011,6 @@ func (x *SearchMessagesResponse) GetTotal() int32 {
 	return 0
 }
 
-// Get thread (replies to a message)
 type GetThreadMessagesRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	ChannelId       string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
@@ -2119,7 +2115,6 @@ func (x *GetThreadMessagesResponse) GetMessages() []*Message {
 	return nil
 }
 
-// Bulk delete messages
 type BulkDeleteMessagesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
@@ -2216,7 +2211,6 @@ func (x *BulkDeleteMessagesResponse) GetDeletedCount() int32 {
 	return 0
 }
 
-// Edit history for a message
 type MessageEdit struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Content       string                 `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`
@@ -2479,19 +2473,21 @@ const file_message_v1_message_proto_rawDesc = "" +
 	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\x12(\n" +
 	"\n" +
 	"message_id\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\tmessageId\"\x14\n" +
-	"\x12AckMessageResponse\"=\n" +
+	"\x12AckMessageResponse\"e\n" +
 	"\x12StartTypingRequest\x12'\n" +
 	"\n" +
-	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\"\x15\n" +
+	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\x12&\n" +
+	"\tuser_name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\buserName\"\x15\n" +
 	"\x13StartTypingResponse\"m\n" +
 	"\x18SendDirectMessageRequest\x12+\n" +
 	"\frecipient_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vrecipientId\x12$\n" +
 	"\acontent\x18\x02 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xa0\x1fR\acontent\"i\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xa0\x1fR\acontent\"\x86\x01\n" +
 	"\x19SendDirectMessageResponse\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12-\n" +
-	"\amessage\x18\x02 \x01(\v2\x13.message.v1.MessageR\amessage\"\x18\n" +
+	"\amessage\x18\x02 \x01(\v2\x13.message.v1.MessageR\amessage\x12\x1b\n" +
+	"\tuser_name\x18\x03 \x01(\tR\buserName\"\x18\n" +
 	"\x16GetUnreadCountsRequest\"\xd5\x02\n" +
 	"\bUnreadDM\x12\x1d\n" +
 	"\n" +

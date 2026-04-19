@@ -67,24 +67,16 @@ func (x *SyncRequest) GetLastSyncTime() *timestamppb.Timestamp {
 }
 
 type SyncResponse struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	ServerTime *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=server_time,json=serverTime,proto3" json:"server_time,omitempty"`
-	// Changed/deleted users (friends, guild members, etc)
-	Users []*SyncUser `protobuf:"bytes,2,rep,name=users,proto3" json:"users,omitempty"`
-	// Changed/deleted guilds user is in
-	Guilds []*SyncGuild `protobuf:"bytes,3,rep,name=guilds,proto3" json:"guilds,omitempty"`
-	// Changed/deleted channels
-	Channels []*SyncChannel `protobuf:"bytes,4,rep,name=channels,proto3" json:"channels,omitempty"`
-	// Changed/deleted roles
-	Roles []*SyncRole `protobuf:"bytes,5,rep,name=roles,proto3" json:"roles,omitempty"`
-	// Changed/deleted guild memberships
-	GuildMembers []*SyncGuildMember `protobuf:"bytes,6,rep,name=guild_members,json=guildMembers,proto3" json:"guild_members,omitempty"`
-	// Changed/deleted friendships
-	Friendships []*SyncFriendship `protobuf:"bytes,7,rep,name=friendships,proto3" json:"friendships,omitempty"`
-	// Changed/deleted messages (ScyllaDB)
-	Messages []*SyncMessage `protobuf:"bytes,8,rep,name=messages,proto3" json:"messages,omitempty"`
-	// Changed DM channel memberships
-	DmMembers     []*SyncDmMember `protobuf:"bytes,9,rep,name=dm_members,json=dmMembers,proto3" json:"dm_members,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ServerTime    *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=server_time,json=serverTime,proto3" json:"server_time,omitempty"`
+	Users         []*SyncUser            `protobuf:"bytes,2,rep,name=users,proto3" json:"users,omitempty"`
+	Guilds        []*SyncGuild           `protobuf:"bytes,3,rep,name=guilds,proto3" json:"guilds,omitempty"`
+	Channels      []*SyncChannel         `protobuf:"bytes,4,rep,name=channels,proto3" json:"channels,omitempty"`
+	Roles         []*SyncRole            `protobuf:"bytes,5,rep,name=roles,proto3" json:"roles,omitempty"`
+	GuildMembers  []*SyncGuildMember     `protobuf:"bytes,6,rep,name=guild_members,json=guildMembers,proto3" json:"guild_members,omitempty"`
+	Friendships   []*SyncFriendship      `protobuf:"bytes,7,rep,name=friendships,proto3" json:"friendships,omitempty"`
+	Messages      []*SyncMessage         `protobuf:"bytes,8,rep,name=messages,proto3" json:"messages,omitempty"`
+	DmMembers     []*SyncDmMember        `protobuf:"bytes,9,rep,name=dm_members,json=dmMembers,proto3" json:"dm_members,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -672,7 +664,7 @@ type SyncFriendship struct {
 	FriendId      string                 `protobuf:"bytes,2,opt,name=friend_id,json=friendId,proto3" json:"friend_id,omitempty"`
 	IsDeleted     bool                   `protobuf:"varint,3,opt,name=is_deleted,json=isDeleted,proto3" json:"is_deleted,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"` // pending, accepted, blocked
+	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

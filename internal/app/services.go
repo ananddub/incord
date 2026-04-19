@@ -1,6 +1,8 @@
 package app
 
 import (
+	"context"
+
 	gendb "github.com/ananddub/ndiscord_backend/gen/db"
 	"github.com/ananddub/ndiscord_backend/internal/features/auth"
 	"github.com/ananddub/ndiscord_backend/internal/features/channel"
@@ -55,6 +57,12 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 	guildSvc.SetInviteBaseURL(cfg.InviteBaseURL)
 	guildHandler := guild.NewHandler(guildSvc)
 
+	// One-shot authz backfill. Runs once per syncVersion per Redis
+	// dataset — subsequent boots are a single Redis GET, no DB reads,
+	// no OpenFGA writes. Bump `syncVersion` in guild/service.go when
+	// the authz model changes and existing data needs re-projecting.
+	guildSvc.RunOneTimeBackfillIfNeeded(context.Background())
+
 	// Channel
 	channelRepo := channel.NewRepository(infra.Pool)
 	channelSvc := channel.NewService(channelRepo, infra.NATS, infra.Authz)
@@ -76,6 +84,11 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 	// Stream + Sync
 	streamResolver := stream.NewResolver(queries)
 	streamHandler := stream.NewHandler(infra.NATS, streamResolver)
+	// Per-channel fan-out filtering — drops events for channels the
+	// subscriber can't view (private-channel privacy).
+	if infra.Authz != nil {
+		streamHandler.SetChannelViewer(infra.Authz)
+	}
 	syncHandler := sync.NewHandler(queries, messageRepo)
 
 	// Presence
@@ -85,6 +98,21 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 
 	// Wire presence updater for logout → offline
 	authHandler.SetPresenceUpdater(presenceSvc)
+
+	// Wire the presence lifecycle to StreamFriendActivity so friends see
+	// accurate online/offline state based on whether a user has the
+	// activity stream open.
+	streamHandler.SetPresenceController(presenceSvc)
+
+	// Let user-service stamp live presence on friend/profile enrichment
+	// events so a recipient sees the actor's actual current state, not
+	// the stale DB intent.
+	userSvc.SetPresenceReader(presenceSvc)
+
+	// Same reason for sync: when a client app-opens and pulls SyncUsers,
+	// an offline friend should show as "offline" regardless of what
+	// status they had set before disconnecting.
+	syncHandler.SetPresenceReader(presenceSvc)
 
 	// Media
 	mediaRepo := media.NewRepository(queries)

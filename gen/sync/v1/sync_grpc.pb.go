@@ -25,10 +25,7 @@ const (
 // SyncServiceClient is the client API for SyncService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-//
-// SyncService - client sends last sync time, gets all changes since then.
 type SyncServiceClient interface {
-	// Get all changes across all tables since last_sync_time for this user
 	Sync(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*SyncResponse, error)
 }
 
@@ -53,10 +50,7 @@ func (c *syncServiceClient) Sync(ctx context.Context, in *SyncRequest, opts ...g
 // SyncServiceServer is the server API for SyncService service.
 // All implementations must embed UnimplementedSyncServiceServer
 // for forward compatibility.
-//
-// SyncService - client sends last sync time, gets all changes since then.
 type SyncServiceServer interface {
-	// Get all changes across all tables since last_sync_time for this user
 	Sync(context.Context, *SyncRequest) (*SyncResponse, error)
 	mustEmbedUnimplementedSyncServiceServer()
 }

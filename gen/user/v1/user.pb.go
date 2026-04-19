@@ -79,19 +79,17 @@ type User struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Unique identity handle in "name#1234" format. Changeable but must stay unique.
-	Username  string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
-	Email     string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
-	AvatarUrl string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	Bio       string                 `protobuf:"bytes,5,opt,name=bio,proto3" json:"bio,omitempty"`
-	Status    string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
-	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	// Hex color (e.g. "#5865F2") used as the profile/card background.
-	BackgroundColor string `protobuf:"bytes,9,opt,name=background_color,json=backgroundColor,proto3" json:"background_color,omitempty"`
-	// Freely changeable display name shown in UI. Not unique.
-	DisplayName   string `protobuf:"bytes,10,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Username        string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	Email           string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
+	AvatarUrl       string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	Bio             string                 `protobuf:"bytes,5,opt,name=bio,proto3" json:"bio,omitempty"`
+	Status          string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
+	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	BackgroundColor string                 `protobuf:"bytes,9,opt,name=background_color,json=backgroundColor,proto3" json:"background_color,omitempty"`
+	DisplayName     string                 `protobuf:"bytes,10,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *User) Reset() {
@@ -283,13 +281,12 @@ func (x *GetUserResponse) GetUser() *User {
 }
 
 type UpdateUserRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	AvatarUrl *string                `protobuf:"bytes,2,opt,name=avatar_url,json=avatarUrl,proto3,oneof" json:"avatar_url,omitempty"`
-	Bio       *string                `protobuf:"bytes,3,opt,name=bio,proto3,oneof" json:"bio,omitempty"`
-	Status    *string                `protobuf:"bytes,4,opt,name=status,proto3,oneof" json:"status,omitempty"`
-	// Hex color like "#5865F2". Must be 4 or 7 chars starting with '#'.
-	BackgroundColor *string `protobuf:"bytes,5,opt,name=background_color,json=backgroundColor,proto3,oneof" json:"background_color,omitempty"`
-	DisplayName     *string `protobuf:"bytes,6,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	AvatarUrl       *string                `protobuf:"bytes,2,opt,name=avatar_url,json=avatarUrl,proto3,oneof" json:"avatar_url,omitempty"`
+	Bio             *string                `protobuf:"bytes,3,opt,name=bio,proto3,oneof" json:"bio,omitempty"`
+	Status          *string                `protobuf:"bytes,4,opt,name=status,proto3,oneof" json:"status,omitempty"`
+	BackgroundColor *string                `protobuf:"bytes,5,opt,name=background_color,json=backgroundColor,proto3,oneof" json:"background_color,omitempty"`
+	DisplayName     *string                `protobuf:"bytes,6,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -404,9 +401,8 @@ func (x *UpdateUserResponse) GetUser() *User {
 }
 
 type UpdateUsernameRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Base name only. Server appends a random 4-digit discriminator.
-	Username      string `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -773,9 +769,8 @@ func (*DeleteUserResponse) Descriptor() ([]byte, []int) {
 }
 
 type GetUserByUsernameRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Full handle in "name#1234" format.
-	Username      string `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1299,9 +1294,8 @@ func (*DeclineFriendRequestResponse) Descriptor() ([]byte, []int) {
 }
 
 type CancelFriendRequestRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// The user the pending request was sent to.
-	TargetUserId  string `protobuf:"bytes,1,opt,name=target_user_id,json=targetUserId,proto3" json:"target_user_id,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TargetUserId  string                 `protobuf:"bytes,1,opt,name=target_user_id,json=targetUserId,proto3" json:"target_user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

@@ -6,9 +6,7 @@ option go_package = "github.com/ananddub/ndiscord_backend/gen/sync/v1;syncv1";
 
 import "google/protobuf/timestamp.proto";
 
-// SyncService - client sends last sync time, gets all changes since then.
 service SyncService {
-  // Get all changes across all tables since last_sync_time for this user
   rpc Sync(SyncRequest) returns (SyncResponse);
 }
 
@@ -19,32 +17,23 @@ message SyncRequest {
 message SyncResponse {
   google.protobuf.Timestamp server_time = 1;
 
-  // Changed/deleted users (friends, guild members, etc)
   repeated SyncUser users = 2;
 
-  // Changed/deleted guilds user is in
   repeated SyncGuild guilds = 3;
 
-  // Changed/deleted channels
   repeated SyncChannel channels = 4;
 
-  // Changed/deleted roles
   repeated SyncRole roles = 5;
 
-  // Changed/deleted guild memberships
   repeated SyncGuildMember guild_members = 6;
 
-  // Changed/deleted friendships
   repeated SyncFriendship friendships = 7;
 
-  // Changed/deleted messages (ScyllaDB)
   repeated SyncMessage messages = 8;
 
-  // Changed DM channel memberships
   repeated SyncDmMember dm_members = 9;
 }
 
-// Each sync entity has: id, deleted flag, updated_at, and the data
 
 message SyncUser {
   string id = 1;
@@ -104,7 +93,7 @@ message SyncFriendship {
   string friend_id = 2;
   bool is_deleted = 3;
   google.protobuf.Timestamp updated_at = 4;
-  string status = 5;  // pending, accepted, blocked
+  string status = 5;  
 }
 
 message SyncMessage {
