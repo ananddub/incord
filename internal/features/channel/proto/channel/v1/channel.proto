@@ -19,6 +19,33 @@ service ChannelService {
   rpc ListDMChannelsWithMembers(ListDMChannelsWithMembersRequest) returns (ListDMChannelsWithMembersResponse);
   rpc AddDMGroupMember(AddDMGroupMemberRequest) returns (AddDMGroupMemberResponse);
   rpc RemoveDMGroupMember(RemoveDMGroupMemberRequest) returns (RemoveDMGroupMemberResponse);
+
+  // Per-channel allow/deny permission overrides. Layered on top of the
+  // guild-level role permissions — Discord precedence rules apply
+  // (user beats role, deny beats allow within a layer for user, allow
+  // beats deny within a layer for role; owner and ADMINISTRATOR bypass).
+  rpc SetChannelOverride(SetChannelOverrideRequest) returns (SetChannelOverrideResponse);
+  rpc DeleteChannelOverride(DeleteChannelOverrideRequest) returns (DeleteChannelOverrideResponse);
+  rpc ListChannelOverrides(ListChannelOverridesRequest) returns (ListChannelOverridesResponse);
+}
+
+enum OverrideTargetType {
+  OVERRIDE_TARGET_UNSPECIFIED = 0;
+  OVERRIDE_TARGET_ROLE = 1;
+  OVERRIDE_TARGET_USER = 2;
+}
+
+enum OverrideEffect {
+  OVERRIDE_EFFECT_UNSPECIFIED = 0;
+  OVERRIDE_EFFECT_ALLOW = 1;
+  OVERRIDE_EFFECT_DENY = 2;
+}
+
+message ChannelOverride {
+  string target_type = 1;  // "role" or "user"
+  string target_id = 2;
+  string permission = 3;   // Discord name, e.g. "SEND_MESSAGES"
+  string effect = 4;       // "allow" or "deny"
 }
 
 enum ChannelType {
@@ -43,6 +70,30 @@ message Channel {
   int32 position = 6;
   string parent_id = 7;
   google.protobuf.Timestamp created_at = 8;
+}
+
+message SetChannelOverrideRequest {
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string target_type = 2 [(buf.validate.field).string = {in: ["role", "user"]}];
+  string target_id = 3 [(buf.validate.field).string.uuid = true];
+  string permission = 4 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
+  string effect = 5 [(buf.validate.field).string = {in: ["allow", "deny"]}];
+}
+message SetChannelOverrideResponse {}
+
+message DeleteChannelOverrideRequest {
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string target_type = 2 [(buf.validate.field).string = {in: ["role", "user"]}];
+  string target_id = 3 [(buf.validate.field).string.uuid = true];
+  string permission = 4 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
+}
+message DeleteChannelOverrideResponse {}
+
+message ListChannelOverridesRequest {
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+}
+message ListChannelOverridesResponse {
+  repeated ChannelOverride overrides = 1;
 }
 
 message CreateChannelRequest {

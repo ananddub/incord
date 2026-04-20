@@ -294,13 +294,50 @@ func (c *Client) checkChannel(ctx context.Context, userID, channelID, relation s
 	if isDM {
 		return c.isDMMember(ctx, userID, channelID)
 	}
-	// Two-layer resolution: the guild-level check gives us the baseline
-	// ("does this user have <perm> anywhere in the guild?"). Then we
-	// overlay any channel-scoped override for this (user, role, or
-	// @everyone) pair. Discord precedence: user-specific beats role,
-	// user deny wins over user allow, role allow wins over role deny.
+	// Owner + administrator bypass every channel override — Discord
+	// behaviour. Resolve once in one query and short-circuit the whole
+	// override stack so private-channel denies don't lock admins out
+	// of their own guilds.
+	if c.isOwnerOrAdmin(ctx, userID, guildID) {
+		return true
+	}
+	// Two-layer resolution for regular members: guild-level Check for
+	// the baseline grant, then overlay any channel-scoped override.
+	// Discord precedence: user-specific beats role, user deny beats
+	// user allow, role allow beats role deny.
 	guildAllowed := c.Check(ctx, UserKey(userID), relation, GuildKey(guildID))
 	return c.applyChannelOverride(ctx, userID, guildID, channelID, relation, guildAllowed)
+}
+
+// isOwnerOrAdmin returns true if the user is either the guild owner or
+// holds the ADMINISTRATOR permission through any assigned role. Used to
+// short-circuit channel override resolution so admins can't be locked
+// out of private channels they'd normally have access to.
+func (c *Client) isOwnerOrAdmin(ctx context.Context, userID, guildID string) bool {
+	uid, err := parseUUID(userID)
+	if err != nil {
+		return false
+	}
+	gid, err := parseUUID(guildID)
+	if err != nil {
+		return false
+	}
+	var ok bool
+	err = c.pool.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM guilds g
+		   WHERE g.id = $2 AND g.owner_id = $1 AND g.deleted = FALSE
+		  UNION ALL
+		  SELECT 1 FROM role_members rm
+		    JOIN roles r            ON r.id = rm.role_id AND r.guild_id = $2 AND r.deleted = FALSE
+		    JOIN role_permissions rp ON rp.role_id = r.id
+		    JOIN permissions p       ON p.id = rp.permission_id AND p.name = 'ADMINISTRATOR'
+		   WHERE rm.user_id = $1 AND rm.deleted = FALSE
+		)`, uid, gid).Scan(&ok)
+	if err != nil {
+		return false
+	}
+	return ok
 }
 
 // applyChannelOverride walks `channel_permission_overwrites` in Discord-
@@ -659,6 +696,140 @@ func (c *Client) ListChannelOverrides(ctx context.Context, channelID string) ([]
 	return out, rows.Err()
 }
 
+// CanActOn enforces Discord's role-hierarchy rule: a user can only
+// kick / ban / manage-role another member whose highest role sits
+// *strictly below* the actor's highest role. The guild owner bypasses
+// this entirely (owner is always above everyone). A target with no
+// roles has effective position 0, so any role-holder can act on them.
+//
+// This runs AFTER the normal Can* permission check — possessing
+// KICK_MEMBERS isn't enough to kick an admin above you.
+func (c *Client) CanActOn(ctx context.Context, actorID, targetID, guildID string) bool {
+	if c == nil {
+		return true
+	}
+	actorUUID, err := parseUUID(actorID)
+	if err != nil {
+		return false
+	}
+	targetUUID, err := parseUUID(targetID)
+	if err != nil {
+		return false
+	}
+	guildUUID, err := parseUUID(guildID)
+	if err != nil {
+		return false
+	}
+
+	// owner bypass + top-role-position comparison in one round trip
+	var canAct bool
+	err = c.pool.QueryRow(ctx, `
+		WITH
+		  owner AS (
+		    SELECT 1 FROM guilds
+		     WHERE id = $3 AND owner_id = $1 AND deleted = FALSE
+		  ),
+		  actor_top AS (
+		    SELECT COALESCE(MAX(r.position), -1) AS pos
+		      FROM role_members rm
+		      JOIN roles r ON r.id = rm.role_id AND r.guild_id = $3 AND r.deleted = FALSE
+		     WHERE rm.user_id = $1 AND rm.deleted = FALSE
+		  ),
+		  target_top AS (
+		    SELECT COALESCE(MAX(r.position), -1) AS pos
+		      FROM role_members rm
+		      JOIN roles r ON r.id = rm.role_id AND r.guild_id = $3 AND r.deleted = FALSE
+		     WHERE rm.user_id = $2 AND rm.deleted = FALSE
+		  ),
+		  target_is_owner AS (
+		    SELECT 1 FROM guilds
+		     WHERE id = $3 AND owner_id = $2 AND deleted = FALSE
+		  )
+		SELECT
+		  -- target owner can't be acted on by anyone but themselves
+		  (NOT EXISTS (SELECT 1 FROM target_is_owner))
+		  AND (
+		       EXISTS (SELECT 1 FROM owner)
+		    OR (SELECT pos FROM actor_top) > (SELECT pos FROM target_top)
+		  )`,
+		actorUUID, targetUUID, guildUUID).Scan(&canAct)
+	if err != nil {
+		logger.Log.Error().Err(err).Msg("authz: CanActOn query failed")
+		return false
+	}
+	return canAct
+}
+
+// ListGuildPermissions returns the effective Discord-permission set
+// a user has in a guild — owner gets every seeded permission, an
+// admin-role holder gets every permission too, and a regular member
+// gets the union across every role's role_permissions. Used by
+// role-editor / "What Can I Do Here" UI screens.
+func (c *Client) ListGuildPermissions(ctx context.Context, userID, guildID string) ([]string, error) {
+	if c == nil {
+		return nil, nil
+	}
+	uid, err := parseUUID(userID)
+	if err != nil {
+		return nil, err
+	}
+	gid, err := parseUUID(guildID)
+	if err != nil {
+		return nil, err
+	}
+	// Owner / administrator short-circuit: return the entire catalogue.
+	var full bool
+	if err := c.pool.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM guilds WHERE id = $2 AND owner_id = $1 AND deleted = FALSE
+		  UNION ALL
+		  SELECT 1 FROM role_members rm
+		    JOIN roles r ON r.id = rm.role_id AND r.guild_id = $2 AND r.deleted = FALSE
+		    JOIN role_permissions rp ON rp.role_id = r.id
+		    JOIN permissions p ON p.id = rp.permission_id AND p.name = 'ADMINISTRATOR'
+		   WHERE rm.user_id = $1 AND rm.deleted = FALSE)`, uid, gid).Scan(&full); err != nil {
+		return nil, err
+	}
+	if full {
+		rows, err := c.pool.Query(ctx, `SELECT name FROM permissions ORDER BY name`)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+		var names []string
+		for rows.Next() {
+			var n string
+			if err := rows.Scan(&n); err != nil {
+				return nil, err
+			}
+			names = append(names, n)
+		}
+		return names, rows.Err()
+	}
+	// Regular path: union of permissions across every role the user has.
+	rows, err := c.pool.Query(ctx, `
+		SELECT DISTINCT p.name
+		FROM role_members rm
+		JOIN roles r ON r.id = rm.role_id AND r.guild_id = $2 AND r.deleted = FALSE
+		JOIN role_permissions rp ON rp.role_id = r.id
+		JOIN permissions p ON p.id = rp.permission_id
+		WHERE rm.user_id = $1 AND rm.deleted = FALSE
+		ORDER BY p.name`, uid, gid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var names []string
+	for rows.Next() {
+		var n string
+		if err := rows.Scan(&n); err != nil {
+			return nil, err
+		}
+		names = append(names, n)
+	}
+	return names, rows.Err()
+}
+
 // ListRolePermissions returns the Discord-style permission names granted
 // to a role. Useful for role-editor UIs and tests.
 func (c *Client) ListRolePermissions(ctx context.Context, roleID string) ([]string, error) {
@@ -688,50 +859,6 @@ func (c *Client) ListRolePermissions(ctx context.Context, roleID string) ([]stri
 	}
 	return names, rows.Err()
 }
-
-// ── Deprecated no-op stubs ────────────────────────────────────────────
-//
-// These existed purely to sync OpenFGA tuples. The equivalent state
-// now lives in guilds.owner_id, role_members, channels.guild_id — all
-// written by the feature services directly. Stubs are kept so callers
-// don't need to change; they should be removed in a follow-up pass
-// once every call site is audited.
-
-// Deprecated: no-op; guild ownership is derived from guilds.owner_id.
-func (c *Client) AddGuildOwner(ctx context.Context, userID, guildID string) error { return nil }
-
-// Deprecated: no-op; guild membership is in guild_members.
-func (c *Client) AddGuildMember(ctx context.Context, userID, guildID string) error { return nil }
-
-// Deprecated: no-op; see AddGuildMember.
-func (c *Client) RemoveGuildMember(ctx context.Context, userID, guildID string) error { return nil }
-
-// Deprecated: no-op; assign an ADMINISTRATOR permission to a role instead.
-func (c *Client) AddGuildAdmin(ctx context.Context, userID, guildID string) error { return nil }
-
-// Deprecated: no-op; see AddGuildAdmin.
-func (c *Client) RemoveGuildAdmin(ctx context.Context, userID, guildID string) error { return nil }
-
-// Deprecated: no-op; channel→guild is resolved via channels.guild_id.
-func (c *Client) SetChannelGuild(ctx context.Context, channelID, guildID string) error { return nil }
-
-// Deprecated: no-op; role→guild is the FK roles.guild_id.
-func (c *Client) BindRoleToGuild(ctx context.Context, roleID, guildID string) error { return nil }
-
-// Deprecated: no-op; see BindRoleToGuild.
-func (c *Client) UnbindRoleFromGuild(ctx context.Context, roleID, guildID string) error { return nil }
-
-// Deprecated: no-op; kept so any stragglers still compile.
-func (c *Client) WriteTuple(ctx context.Context, user, relation, object string) error { return nil }
-
-// Tuple is retained for API compatibility; WriteTuples is a no-op.
-type Tuple struct{ User, Relation, Object string }
-
-// Deprecated: no-op. Grant via role_permissions directly.
-func (c *Client) WriteTuples(ctx context.Context, tuples []Tuple) error { return nil }
-
-// Deprecated: no-op.
-func (c *Client) DeleteTuple(ctx context.Context, user, relation, object string) error { return nil }
 
 // ── Private utilities ─────────────────────────────────────────────────
 

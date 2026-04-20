@@ -821,55 +821,19 @@ func (h *Handler) inviteToProto(inv db.Invite) *guildv1.Invite {
 	return pi
 }
 
-// Permission enum → OpenFGA relation mapping
-var permToRelation = map[guildv1.Permission]string{
-	guildv1.Permission_PERMISSION_MANAGE_GUILD:    "can_manage_guild",
-	guildv1.Permission_PERMISSION_KICK_MEMBERS:    "can_kick",
-	guildv1.Permission_PERMISSION_BAN_MEMBERS:     "can_ban",
-	guildv1.Permission_PERMISSION_MANAGE_ROLES:    "can_manage_roles",
-	guildv1.Permission_PERMISSION_MANAGE_CHANNELS: "can_manage_channels",
-	guildv1.Permission_PERMISSION_ADMINISTRATOR:   "admin",
+// GrantPermission (per-user guild grants) is deprecated in the
+// Postgres RBAC model: grants are role-scoped via role_permissions.
+// Use GrantRolePermission with a role that contains the target user.
+// For per-channel overrides, use SetChannelOverride in ChannelService.
+func (h *Handler) GrantPermission(ctx context.Context, _ *guildv1.GrantPermissionRequest) (*guildv1.GrantPermissionResponse, error) {
+	return nil, status.Error(codes.Unimplemented,
+		"user-scoped guild permissions are no longer supported; use GrantRolePermission, or SetChannelOverride for per-channel rules")
 }
 
-func (h *Handler) GrantPermission(ctx context.Context, req *guildv1.GrantPermissionRequest) (*guildv1.GrantPermissionResponse, error) {
-	callerID := middleware.UserIDFromContext(ctx)
-	if callerID == "" {
-		return nil, status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if !h.svc.authz.CanManageRoles(ctx, callerID, req.GuildId) {
-		return nil, status.Error(codes.PermissionDenied, "insufficient permissions")
-	}
-
-	relation, ok := permToRelation[req.Permission]
-	if !ok {
-		// For non-guild-level permissions (view, send, connect etc), grant as admin
-		relation = "admin"
-	}
-
-	if err := h.svc.authz.WriteTuple(ctx, "user:"+req.UserId, relation, "guild:"+req.GuildId); err != nil {
-		return nil, status.Error(codes.Internal, "failed to grant permission")
-	}
-	return &guildv1.GrantPermissionResponse{}, nil
-}
-
-func (h *Handler) RevokePermission(ctx context.Context, req *guildv1.RevokePermissionRequest) (*guildv1.RevokePermissionResponse, error) {
-	callerID := middleware.UserIDFromContext(ctx)
-	if callerID == "" {
-		return nil, status.Error(codes.Unauthenticated, "not authenticated")
-	}
-	if !h.svc.authz.CanManageRoles(ctx, callerID, req.GuildId) {
-		return nil, status.Error(codes.PermissionDenied, "insufficient permissions")
-	}
-
-	relation, ok := permToRelation[req.Permission]
-	if !ok {
-		relation = "admin"
-	}
-
-	if err := h.svc.authz.DeleteTuple(ctx, "user:"+req.UserId, relation, "guild:"+req.GuildId); err != nil {
-		return nil, status.Error(codes.Internal, "failed to revoke permission")
-	}
-	return &guildv1.RevokePermissionResponse{}, nil
+// RevokePermission is deprecated — see GrantPermission.
+func (h *Handler) RevokePermission(ctx context.Context, _ *guildv1.RevokePermissionRequest) (*guildv1.RevokePermissionResponse, error) {
+	return nil, status.Error(codes.Unimplemented,
+		"user-scoped guild permissions are no longer supported; use RevokeRolePermission, or DeleteChannelOverride for per-channel rules")
 }
 
 func (h *Handler) GrantRolePermission(ctx context.Context, req *guildv1.GrantRolePermissionRequest) (*guildv1.GrantRolePermissionResponse, error) {
@@ -936,18 +900,30 @@ func (h *Handler) RevokeRolePermission(ctx context.Context, req *guildv1.RevokeR
 	return &guildv1.RevokeRolePermissionResponse{}, nil
 }
 
+// GetUserPermissions returns the effective Discord-style permission
+// set for a user in a guild — owner + admin both get the full 50,
+// regular members get whatever their assigned roles union out to.
 func (h *Handler) GetUserPermissions(ctx context.Context, req *guildv1.GetUserPermissionsRequest) (*guildv1.GetUserPermissionsResponse, error) {
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
-
-	var perms []guildv1.Permission
-	for perm, relation := range permToRelation {
-		if h.svc.authz.Check(ctx, "user:"+req.UserId, relation, "guild:"+req.GuildId) {
-			perms = append(perms, perm)
+	names, err := h.svc.authz.ListGuildPermissions(ctx, req.GetUserId(), req.GetGuildId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	nameToEnum := make(map[string]guildv1.Permission, len(guildv1.Permission_name))
+	for num, name := range guildv1.Permission_name {
+		// enum values are "PERMISSION_FOO"; strip the prefix so we can
+		// match the names stored in the catalogue (e.g. "FOO").
+		stripped := strings.TrimPrefix(name, "PERMISSION_")
+		nameToEnum[stripped] = guildv1.Permission(num)
+	}
+	perms := make([]guildv1.Permission, 0, len(names))
+	for _, n := range names {
+		if p, ok := nameToEnum[n]; ok {
+			perms = append(perms, p)
 		}
 	}
-
 	return &guildv1.GetUserPermissionsResponse{Permissions: perms}, nil
 }

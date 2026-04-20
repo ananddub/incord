@@ -189,6 +189,24 @@ migration 000010) with Discord's baseline permissions: `VIEW_CHANNELS`,
 `SPEAK`, `USE_VAD`, `CHANGE_NICKNAME`, `ATTACH_FILES`, `EMBED_LINKS`,
 `USE_EXTERNAL_EMOJIS`, `USE_SOUNDBOARD`, `REQUEST_TO_SPEAK`.
 
+**channel_permission_overwrites** — per-channel allow/deny layer on
+top of the guild-level grants (migration 000012). One row per
+`(channel, target_type, target_id, permission)` pair with an
+explicit `effect`.
+
+| column | type | notes |
+|---|---|---|
+| channel_id | `UUID` FK→channels(id) `ON DELETE CASCADE` | |
+| target_type | `VARCHAR(10)` | `'role'` or `'user'` |
+| target_id | `UUID` | role.id or user.id |
+| permission_id | `BIGINT` FK→permissions(id) `ON DELETE RESTRICT` | |
+| effect | `VARCHAR(5)` | `'allow'` or `'deny'` |
+
+Used by `authz.Client.applyChannelOverride` with Discord precedence:
+**user deny > user allow > role deny > role allow > guild result**.
+Guild owner + `ADMINISTRATOR` role holders bypass the override stack
+entirely.
+
 ### Resolution
 
 Every `Can*` check in [internal/shared/authz/client.go](../internal/shared/authz/client.go)

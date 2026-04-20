@@ -30,6 +30,9 @@ const (
 	ChannelService_ListDMChannelsWithMembers_FullMethodName = "/channel.v1.ChannelService/ListDMChannelsWithMembers"
 	ChannelService_AddDMGroupMember_FullMethodName          = "/channel.v1.ChannelService/AddDMGroupMember"
 	ChannelService_RemoveDMGroupMember_FullMethodName       = "/channel.v1.ChannelService/RemoveDMGroupMember"
+	ChannelService_SetChannelOverride_FullMethodName        = "/channel.v1.ChannelService/SetChannelOverride"
+	ChannelService_DeleteChannelOverride_FullMethodName     = "/channel.v1.ChannelService/DeleteChannelOverride"
+	ChannelService_ListChannelOverrides_FullMethodName      = "/channel.v1.ChannelService/ListChannelOverrides"
 )
 
 // ChannelServiceClient is the client API for ChannelService service.
@@ -47,6 +50,13 @@ type ChannelServiceClient interface {
 	ListDMChannelsWithMembers(ctx context.Context, in *ListDMChannelsWithMembersRequest, opts ...grpc.CallOption) (*ListDMChannelsWithMembersResponse, error)
 	AddDMGroupMember(ctx context.Context, in *AddDMGroupMemberRequest, opts ...grpc.CallOption) (*AddDMGroupMemberResponse, error)
 	RemoveDMGroupMember(ctx context.Context, in *RemoveDMGroupMemberRequest, opts ...grpc.CallOption) (*RemoveDMGroupMemberResponse, error)
+	// Per-channel allow/deny permission overrides. Layered on top of the
+	// guild-level role permissions — Discord precedence rules apply
+	// (user beats role, deny beats allow within a layer for user, allow
+	// beats deny within a layer for role; owner and ADMINISTRATOR bypass).
+	SetChannelOverride(ctx context.Context, in *SetChannelOverrideRequest, opts ...grpc.CallOption) (*SetChannelOverrideResponse, error)
+	DeleteChannelOverride(ctx context.Context, in *DeleteChannelOverrideRequest, opts ...grpc.CallOption) (*DeleteChannelOverrideResponse, error)
+	ListChannelOverrides(ctx context.Context, in *ListChannelOverridesRequest, opts ...grpc.CallOption) (*ListChannelOverridesResponse, error)
 }
 
 type channelServiceClient struct {
@@ -167,6 +177,36 @@ func (c *channelServiceClient) RemoveDMGroupMember(ctx context.Context, in *Remo
 	return out, nil
 }
 
+func (c *channelServiceClient) SetChannelOverride(ctx context.Context, in *SetChannelOverrideRequest, opts ...grpc.CallOption) (*SetChannelOverrideResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetChannelOverrideResponse)
+	err := c.cc.Invoke(ctx, ChannelService_SetChannelOverride_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *channelServiceClient) DeleteChannelOverride(ctx context.Context, in *DeleteChannelOverrideRequest, opts ...grpc.CallOption) (*DeleteChannelOverrideResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteChannelOverrideResponse)
+	err := c.cc.Invoke(ctx, ChannelService_DeleteChannelOverride_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *channelServiceClient) ListChannelOverrides(ctx context.Context, in *ListChannelOverridesRequest, opts ...grpc.CallOption) (*ListChannelOverridesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListChannelOverridesResponse)
+	err := c.cc.Invoke(ctx, ChannelService_ListChannelOverrides_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChannelServiceServer is the server API for ChannelService service.
 // All implementations must embed UnimplementedChannelServiceServer
 // for forward compatibility.
@@ -182,6 +222,13 @@ type ChannelServiceServer interface {
 	ListDMChannelsWithMembers(context.Context, *ListDMChannelsWithMembersRequest) (*ListDMChannelsWithMembersResponse, error)
 	AddDMGroupMember(context.Context, *AddDMGroupMemberRequest) (*AddDMGroupMemberResponse, error)
 	RemoveDMGroupMember(context.Context, *RemoveDMGroupMemberRequest) (*RemoveDMGroupMemberResponse, error)
+	// Per-channel allow/deny permission overrides. Layered on top of the
+	// guild-level role permissions — Discord precedence rules apply
+	// (user beats role, deny beats allow within a layer for user, allow
+	// beats deny within a layer for role; owner and ADMINISTRATOR bypass).
+	SetChannelOverride(context.Context, *SetChannelOverrideRequest) (*SetChannelOverrideResponse, error)
+	DeleteChannelOverride(context.Context, *DeleteChannelOverrideRequest) (*DeleteChannelOverrideResponse, error)
+	ListChannelOverrides(context.Context, *ListChannelOverridesRequest) (*ListChannelOverridesResponse, error)
 	mustEmbedUnimplementedChannelServiceServer()
 }
 
@@ -224,6 +271,15 @@ func (UnimplementedChannelServiceServer) AddDMGroupMember(context.Context, *AddD
 }
 func (UnimplementedChannelServiceServer) RemoveDMGroupMember(context.Context, *RemoveDMGroupMemberRequest) (*RemoveDMGroupMemberResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RemoveDMGroupMember not implemented")
+}
+func (UnimplementedChannelServiceServer) SetChannelOverride(context.Context, *SetChannelOverrideRequest) (*SetChannelOverrideResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetChannelOverride not implemented")
+}
+func (UnimplementedChannelServiceServer) DeleteChannelOverride(context.Context, *DeleteChannelOverrideRequest) (*DeleteChannelOverrideResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteChannelOverride not implemented")
+}
+func (UnimplementedChannelServiceServer) ListChannelOverrides(context.Context, *ListChannelOverridesRequest) (*ListChannelOverridesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListChannelOverrides not implemented")
 }
 func (UnimplementedChannelServiceServer) mustEmbedUnimplementedChannelServiceServer() {}
 func (UnimplementedChannelServiceServer) testEmbeddedByValue()                        {}
@@ -444,6 +500,60 @@ func _ChannelService_RemoveDMGroupMember_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChannelService_SetChannelOverride_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetChannelOverrideRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChannelServiceServer).SetChannelOverride(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChannelService_SetChannelOverride_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChannelServiceServer).SetChannelOverride(ctx, req.(*SetChannelOverrideRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChannelService_DeleteChannelOverride_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteChannelOverrideRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChannelServiceServer).DeleteChannelOverride(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChannelService_DeleteChannelOverride_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChannelServiceServer).DeleteChannelOverride(ctx, req.(*DeleteChannelOverrideRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ChannelService_ListChannelOverrides_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListChannelOverridesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChannelServiceServer).ListChannelOverrides(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChannelService_ListChannelOverrides_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChannelServiceServer).ListChannelOverrides(ctx, req.(*ListChannelOverridesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ChannelService_ServiceDesc is the grpc.ServiceDesc for ChannelService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -494,6 +604,18 @@ var ChannelService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RemoveDMGroupMember",
 			Handler:    _ChannelService_RemoveDMGroupMember_Handler,
+		},
+		{
+			MethodName: "SetChannelOverride",
+			Handler:    _ChannelService_SetChannelOverride_Handler,
+		},
+		{
+			MethodName: "DeleteChannelOverride",
+			Handler:    _ChannelService_DeleteChannelOverride_Handler,
+		},
+		{
+			MethodName: "ListChannelOverrides",
+			Handler:    _ChannelService_ListChannelOverrides_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

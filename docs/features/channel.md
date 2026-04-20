@@ -114,13 +114,23 @@ sidebar.
 
 ## Permission overwrites
 
-`channel_permission_overwrites` stores Discord-style allow/deny
-bitmask pairs per `(channel_id, target)` where target is a role or a
-user. The authz package is the source of truth for *whether* a user
-can do something — for now, the overwrites table is reserved for a
-future channel-level override resolver on top of the guild-level
-RBAC; day-one channel visibility falls back to the guild's
-`VIEW_CHANNELS` / `SEND_MESSAGES` permissions.
+`channel_permission_overwrites` stores Discord-style allow/deny rules
+per `(channel, target, permission)` where target is a role or a user.
+The authz package applies these on top of the guild-level grants with
+Discord's precedence: **user deny > user allow > role deny > role
+allow > guild result**. Owner and `ADMINISTRATOR` holders bypass
+overrides entirely.
+
+**RPCs** (require `MANAGE_CHANNELS` on the parent guild):
+
+- `SetChannelOverride(channel_id, target_type, target_id, permission, effect)`
+- `DeleteChannelOverride(channel_id, target_type, target_id, permission)`
+- `ListChannelOverrides(channel_id)`
+
+Every mutation broadcasts `GUILD_EVENT_CHANNEL_UPDATE` on
+`guild.<G>.events` so subscribed members refetch the channel's
+effective permissions. For private channels, this is also where the
+stream-side fan-out filter picks up access changes in real time.
 
 ## Cross-feature wiring
 

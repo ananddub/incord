@@ -26,6 +26,95 @@ func NewService(repo *Repository, nats *realtime.Hub, authzClient ...*authz.Clie
 	return s
 }
 
+// SetChannelOverride upserts a per-channel allow/deny rule and
+// broadcasts a CHANNEL_UPDATE so connected members refresh their cached
+// channel permission set. MANAGE_CHANNELS on the parent guild is the
+// gate — channel-level perms are a guild-admin task in Discord.
+func (s *Service) SetChannelOverride(ctx context.Context, userID, channelID, targetType, targetID, permission, effect string) error {
+	chUUID, err := parseUUID(channelID)
+	if err != nil {
+		return ErrInvalidUUID
+	}
+	ch, err := s.repo.GetChannelByID(ctx, chUUID)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrChannelNotFound, err)
+	}
+	if !ch.GuildID.Valid {
+		return fmt.Errorf("channel overrides are only valid on guild channels")
+	}
+	guildID := uuidToString(ch.GuildID)
+	if !s.authz.CanManageChannels(ctx, userID, guildID) {
+		return ErrInsufficientPermissions
+	}
+	relation, ok := authz.PermissionRelation[permission]
+	if !ok {
+		return fmt.Errorf("unknown permission %q", permission)
+	}
+	if err := s.authz.SetChannelOverride(ctx, channelID, targetType, targetID, relation, effect); err != nil {
+		return err
+	}
+	s.broadcastChannelChange(guildID, channelID, ch.Name, ch.Type)
+	return nil
+}
+
+// DeleteChannelOverride removes a previously-set rule and broadcasts
+// the same CHANNEL_UPDATE.
+func (s *Service) DeleteChannelOverride(ctx context.Context, userID, channelID, targetType, targetID, permission string) error {
+	chUUID, err := parseUUID(channelID)
+	if err != nil {
+		return ErrInvalidUUID
+	}
+	ch, err := s.repo.GetChannelByID(ctx, chUUID)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrChannelNotFound, err)
+	}
+	if !ch.GuildID.Valid {
+		return fmt.Errorf("channel overrides are only valid on guild channels")
+	}
+	guildID := uuidToString(ch.GuildID)
+	if !s.authz.CanManageChannels(ctx, userID, guildID) {
+		return ErrInsufficientPermissions
+	}
+	relation, ok := authz.PermissionRelation[permission]
+	if !ok {
+		return fmt.Errorf("unknown permission %q", permission)
+	}
+	if err := s.authz.DeleteChannelOverride(ctx, channelID, targetType, targetID, relation); err != nil {
+		return err
+	}
+	s.broadcastChannelChange(guildID, channelID, ch.Name, ch.Type)
+	return nil
+}
+
+// ListChannelOverrides returns every override currently set on a channel.
+// Read permission — any guild member can inspect channel settings.
+func (s *Service) ListChannelOverrides(ctx context.Context, userID, channelID string) ([]authz.ChannelOverride, error) {
+	if !s.authz.CanViewChannel(ctx, userID, channelID) {
+		return nil, ErrInsufficientPermissions
+	}
+	return s.authz.ListChannelOverrides(ctx, channelID)
+}
+
+// broadcastChannelChange emits a GUILD_EVENT_CHANNEL_UPDATE so every
+// member subscribing to guild.<G>.events re-fetches the channel's
+// effective permission view. Reuses the existing channel-update event
+// type since override changes *are* channel changes from the client's
+// perspective.
+func (s *Service) broadcastChannelChange(guildID, channelID, name string, channelType int32) {
+	if s.nats == nil {
+		return
+	}
+	evt := streamv1.GuildEventType_GUILD_EVENT_CHANNEL_UPDATE
+	_ = s.nats.Publish(realtime.GuildEvents(guildID), streamv1.GuildEvent{
+		Event:     evt,
+		Action:    evt,
+		GuildId:   guildID,
+		ChannelId: channelID,
+		Name:      name,
+		Type:      int64(channelType),
+	})
+}
+
 func (s *Service) CreateChannel(ctx context.Context, userID string, guildID, name string, channelType int32, topic, parentID string) (db.Channel, error) {
 	if name == "" {
 		return db.Channel{}, ErrNameRequired
@@ -74,7 +163,6 @@ func (s *Service) CreateChannel(ctx context.Context, userID string, guildID, nam
 		return db.Channel{}, fmt.Errorf("failed to create channel: %w", err)
 	}
 
-	_ = s.authz.SetChannelGuild(ctx, ch.ID.String(), guildID)
 	_ = s.nats.Publish(realtime.GuildEvents(guildID),
 		streamv1.GuildEvent{
 			Event:     streamv1.GuildEventType_GUILD_EVENT_CHANNEL_CREATE,

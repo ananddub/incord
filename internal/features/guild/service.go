@@ -287,11 +287,7 @@ func (s *Service) CreateGuild(ctx context.Context, ownerID pgtype.UUID, name, de
 		return db.Guild{}, fmt.Errorf("failed to add owner as member: %w", err)
 	}
 
-	// Write authz tuples
 	ownerStr := pgToStr(ownerID)
-	guildStr := pgToStr(guild.ID)
-	_ = s.authz.AddGuildOwner(ctx, ownerStr, guildStr)
-	_ = s.authz.AddGuildMember(ctx, ownerStr, guildStr)
 
 	// Auto-create the @everyone role — Discord convention: every guild
 	// has an implicit role every member belongs to. Permission grants on
@@ -323,18 +319,11 @@ func (s *Service) ensureEveryoneRole(ctx context.Context, guildID, userID pgtype
 		if err != nil {
 			return fmt.Errorf("create @everyone role: %w", err)
 		}
-		// Three tuples together wire up the @everyone inheritance chain:
-		//   1. role → guild       — the role "belongs to" this guild
-		//   2. role#member → guild member — every role member is a guild member,
-		//      which cascades into every baseline can_* relation via the
-		//      union on "member" defined in the model.
-		// (3) the per-user member→role tuple is written below.
-		_ = s.authz.BindRoleToGuild(ctx, pgToStr(role.ID), pgToStr(guildID))
-		_ = s.authz.WriteTuple(ctx, authz.RoleMembersKey(pgToStr(role.ID)), "member", authz.GuildKey(pgToStr(guildID)))
 	}
-	// Assign the user to @everyone in both Postgres and OpenFGA.
+	// Assign the user to @everyone. role_members is the source of
+	// truth — authz.Check reads it directly on every permission
+	// decision, no separate tuple to keep in sync.
 	_ = s.repo.AssignRole(ctx, db.AssignRoleParams{RoleID: role.ID, UserID: userID})
-	_ = s.authz.AddUserToRole(ctx, pgToStr(userID), pgToStr(role.ID))
 	return nil
 }
 
@@ -561,10 +550,7 @@ func (s *Service) JoinGuild(ctx context.Context, userID pgtype.UUID, inviteCode 
 		InviterID:  invite.CreatorID,
 	})
 
-	// Write authz tuple
 	userStr := pgToStr(userID)
-	guildStr := pgToStr(invite.GuildID)
-	_ = s.authz.AddGuildMember(ctx, userStr, guildStr)
 	s.assignEveryoneRole(ctx, invite.GuildID, userID)
 
 	s.publishGuildEvent(ctx, invite.GuildID, streamv1.GuildEventType_GUILD_EVENT_MEMBER_ADD, map[string]string{
@@ -620,10 +606,9 @@ func (s *Service) LeaveGuild(ctx context.Context, userID, guildID pgtype.UUID) e
 		return err
 	}
 
-	// Remove authz tuple + drop from @everyone role
+	// Drop from @everyone role. Deleting the guild_members row is
+	// enough for the permission layer — authz.Check reads it directly.
 	userStr := pgToStr(userID)
-	guildStr := pgToStr(guildID)
-	_ = s.authz.RemoveGuildMember(ctx, userStr, guildStr)
 	s.removeEveryoneRole(ctx, guildID, userID)
 
 	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_MEMBER_REMOVE, map[string]string{
@@ -646,6 +631,12 @@ func (s *Service) ListMembers(ctx context.Context, guildID pgtype.UUID, limit, o
 
 func (s *Service) KickMember(ctx context.Context, callerID, guildID, targetID pgtype.UUID) error {
 	if !s.authz.CanKick(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return ErrInsufficientPermissions
+	}
+	// Discord role-hierarchy rule: actor's top role must strictly outrank
+	// the target's. Prevents a mod with KICK_MEMBERS from kicking an
+	// admin positioned above them.
+	if !s.authz.CanActOn(ctx, pgToStr(callerID), pgToStr(targetID), pgToStr(guildID)) {
 		return ErrInsufficientPermissions
 	}
 	guild, err := s.repo.GetGuildByID(ctx, guildID)
@@ -671,10 +662,9 @@ func (s *Service) KickMember(ctx context.Context, callerID, guildID, targetID pg
 		return err
 	}
 
-	// Remove authz tuple + drop from @everyone role
+	// Drop from @everyone role. removing the guild_members row is
+	// enough for the permission layer — authz.Check reads it directly.
 	targetStr := pgToStr(targetID)
-	guildStr := pgToStr(guildID)
-	_ = s.authz.RemoveGuildMember(ctx, targetStr, guildStr)
 	s.removeEveryoneRole(ctx, guildID, targetID)
 
 	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_MEMBER_REMOVE, map[string]string{
@@ -686,6 +676,9 @@ func (s *Service) KickMember(ctx context.Context, callerID, guildID, targetID pg
 
 func (s *Service) BanMember(ctx context.Context, callerID, guildID, targetID pgtype.UUID, reason string) error {
 	if !s.authz.CanBan(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return ErrInsufficientPermissions
+	}
+	if !s.authz.CanActOn(ctx, pgToStr(callerID), pgToStr(targetID), pgToStr(guildID)) {
 		return ErrInsufficientPermissions
 	}
 	guild, err := s.repo.GetGuildByID(ctx, guildID)
@@ -711,10 +704,9 @@ func (s *Service) BanMember(ctx context.Context, callerID, guildID, targetID pgt
 		return fmt.Errorf("failed to create ban: %w", err)
 	}
 
-	// Remove authz tuple + drop from @everyone role
+	// Drop from @everyone role. removing the guild_members row is
+	// enough for the permission layer — authz.Check reads it directly.
 	targetStr := pgToStr(targetID)
-	guildStr := pgToStr(guildID)
-	_ = s.authz.RemoveGuildMember(ctx, targetStr, guildStr)
 	s.removeEveryoneRole(ctx, guildID, targetID)
 
 	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_MEMBER_BAN, map[string]string{
@@ -988,16 +980,9 @@ func (s *Service) TransferOwnership(ctx context.Context, callerID, guildID, newO
 		return db.Guild{}, fmt.Errorf("failed to transfer ownership: %w", err)
 	}
 
-	callerStr := pgToStr(callerID)
-	newOwnerStr := pgToStr(newOwnerID)
-	guildStr := pgToStr(guildID)
-
-	// Update OpenFGA tuples: remove old owner, add new owner
-	_ = s.authz.DeleteTuple(ctx, authz.UserKey(callerStr), "owner", authz.GuildKey(guildStr))
-	_ = s.authz.AddGuildOwner(ctx, newOwnerStr, guildStr)
-
+	// Ownership is authoritative via guilds.owner_id — updated above.
 	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_UPDATE, map[string]string{
-		"transferred_to": newOwnerStr,
+		"transferred_to": pgToStr(newOwnerID),
 	})
 
 	return updated, nil
