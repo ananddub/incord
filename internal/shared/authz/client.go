@@ -294,7 +294,114 @@ func (c *Client) checkChannel(ctx context.Context, userID, channelID, relation s
 	if isDM {
 		return c.isDMMember(ctx, userID, channelID)
 	}
-	return c.Check(ctx, UserKey(userID), relation, GuildKey(guildID))
+	// Two-layer resolution: the guild-level check gives us the baseline
+	// ("does this user have <perm> anywhere in the guild?"). Then we
+	// overlay any channel-scoped override for this (user, role, or
+	// @everyone) pair. Discord precedence: user-specific beats role,
+	// user deny wins over user allow, role allow wins over role deny.
+	guildAllowed := c.Check(ctx, UserKey(userID), relation, GuildKey(guildID))
+	return c.applyChannelOverride(ctx, userID, guildID, channelID, relation, guildAllowed)
+}
+
+// applyChannelOverride walks `channel_permission_overwrites` in Discord-
+// precedence order and folds the result into the guild-level decision:
+//
+//  1. guild owner / ADMINISTRATOR — handled by Check, can't be overridden
+//     (Discord makes admin bypass overrides; we inherit that by letting
+//     guildAllowed=true pass through when it was granted via admin)
+//  2. user-specific deny → false
+//  3. user-specific allow → true
+//  4. role deny (any of the user's roles, incl. @everyone) → false
+//  5. role allow → true
+//  6. fall back to guildAllowed
+//
+// Implemented as a single query that returns rows classified by layer so
+// we don't need N round trips.
+func (c *Client) applyChannelOverride(
+	ctx context.Context,
+	userID, guildID, channelID, relation string,
+	guildAllowed bool,
+) bool {
+	permName, ok := relationToName[relation]
+	if !ok {
+		return guildAllowed
+	}
+	uid, err := parseUUID(userID)
+	if err != nil {
+		return guildAllowed
+	}
+	chUUID, err := parseUUID(channelID)
+	if err != nil {
+		return guildAllowed
+	}
+
+	// Classify every override that might apply to this user for this perm
+	// on this channel. `user_user`=2, `user_role`=1 — numeric layer lets us
+	// order deterministically. Rows are ordered by layer DESC so user-level
+	// appears first; then effect is applied deterministically per layer.
+	rows, err := c.pool.Query(ctx, `
+		SELECT
+		    CASE WHEN cpo.target_type = 'user' THEN 2 ELSE 1 END AS layer,
+		    cpo.effect
+		FROM channel_permission_overwrites cpo
+		JOIN permissions p ON p.id = cpo.permission_id AND p.name = $4
+		WHERE cpo.channel_id = $3
+		  AND (
+		       (cpo.target_type = 'user' AND cpo.target_id = $1)
+		    OR (cpo.target_type = 'role' AND cpo.target_id IN (
+		          SELECT rm.role_id
+		            FROM role_members rm
+		            JOIN roles r ON r.id = rm.role_id AND r.guild_id = $2 AND r.deleted = FALSE
+		           WHERE rm.user_id = $1 AND rm.deleted = FALSE
+		       ))
+		  )
+		ORDER BY layer DESC`, uid, mustParseUUID(guildID), chUUID, permName)
+	if err != nil {
+		logger.Log.Error().Err(err).Msg("authz: channel override query failed")
+		return guildAllowed
+	}
+	defer rows.Close()
+
+	var (
+		userEffect, roleEffect string
+	)
+	for rows.Next() {
+		var layer int
+		var effect string
+		if err := rows.Scan(&layer, &effect); err != nil {
+			return guildAllowed
+		}
+		switch layer {
+		case 2:
+			// User-layer: deny wins over allow; first deny seen sticks.
+			if userEffect != "deny" {
+				userEffect = effect
+			}
+		case 1:
+			// Role-layer: allow wins over deny (a single grant in any
+			// role — incl. @everyone — opens the channel for this perm).
+			if roleEffect != "allow" {
+				roleEffect = effect
+			}
+		}
+	}
+	switch {
+	case userEffect == "deny":
+		return false
+	case userEffect == "allow":
+		return true
+	case roleEffect == "deny":
+		return false
+	case roleEffect == "allow":
+		return true
+	default:
+		return guildAllowed
+	}
+}
+
+func mustParseUUID(s string) pgtype.UUID {
+	u, _ := parseUUID(s)
+	return u
 }
 
 // resolveChannelGuild returns the channel's parent guild_id (or isDM=true
@@ -448,6 +555,108 @@ func (c *Client) RevokeRolePermission(ctx context.Context, roleID, guildID, rela
 		 WHERE role_id = $1
 		   AND permission_id = (SELECT id FROM permissions WHERE name = $2)`, rid, name)
 	return err
+}
+
+// ── Channel permission overrides ──────────────────────────────────────
+
+// ChannelOverride is a single row in channel_permission_overwrites —
+// a Discord-style "allow / deny <permission> for this role/user on
+// this channel" override on top of the guild-level grant.
+type ChannelOverride struct {
+	TargetType string // "role" or "user"
+	TargetID   string
+	Permission string // Discord enum name, e.g. "SEND_MESSAGES"
+	Effect     string // "allow" or "deny"
+}
+
+// SetChannelOverride upserts an override. `effect` must be "allow" or
+// "deny". Unknown permission names return an error.
+func (c *Client) SetChannelOverride(ctx context.Context, channelID, targetType, targetID, relation, effect string) error {
+	if c == nil {
+		return nil
+	}
+	if targetType != "role" && targetType != "user" {
+		return fmt.Errorf("authz: invalid target_type %q", targetType)
+	}
+	if effect != "allow" && effect != "deny" {
+		return fmt.Errorf("authz: invalid effect %q", effect)
+	}
+	name, ok := relationToName[relation]
+	if !ok {
+		return fmt.Errorf("authz: unknown relation %q", relation)
+	}
+	chUUID, err := parseUUID(channelID)
+	if err != nil {
+		return err
+	}
+	tUUID, err := parseUUID(targetID)
+	if err != nil {
+		return err
+	}
+	_, err = c.pool.Exec(ctx, `
+		INSERT INTO channel_permission_overwrites (channel_id, target_type, target_id, permission_id, effect)
+		SELECT $1, $2, $3, p.id, $5 FROM permissions p WHERE p.name = $4
+		ON CONFLICT (channel_id, target_type, target_id, permission_id)
+		  DO UPDATE SET effect = EXCLUDED.effect, created_at = NOW()`,
+		chUUID, targetType, tUUID, name, effect)
+	return err
+}
+
+// DeleteChannelOverride removes a single override row. No-op if it
+// doesn't exist.
+func (c *Client) DeleteChannelOverride(ctx context.Context, channelID, targetType, targetID, relation string) error {
+	if c == nil {
+		return nil
+	}
+	name, ok := relationToName[relation]
+	if !ok {
+		return fmt.Errorf("authz: unknown relation %q", relation)
+	}
+	chUUID, err := parseUUID(channelID)
+	if err != nil {
+		return err
+	}
+	tUUID, err := parseUUID(targetID)
+	if err != nil {
+		return err
+	}
+	_, err = c.pool.Exec(ctx, `
+		DELETE FROM channel_permission_overwrites
+		 WHERE channel_id = $1 AND target_type = $2 AND target_id = $3
+		   AND permission_id = (SELECT id FROM permissions WHERE name = $4)`,
+		chUUID, targetType, tUUID, name)
+	return err
+}
+
+// ListChannelOverrides returns every override currently attached to a
+// channel. Used by channel-settings UIs and tests.
+func (c *Client) ListChannelOverrides(ctx context.Context, channelID string) ([]ChannelOverride, error) {
+	if c == nil {
+		return nil, nil
+	}
+	chUUID, err := parseUUID(channelID)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := c.pool.Query(ctx, `
+		SELECT cpo.target_type, cpo.target_id::text, p.name, cpo.effect
+		FROM channel_permission_overwrites cpo
+		JOIN permissions p ON p.id = cpo.permission_id
+		WHERE cpo.channel_id = $1
+		ORDER BY cpo.target_type, cpo.target_id, p.name`, chUUID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []ChannelOverride
+	for rows.Next() {
+		var o ChannelOverride
+		if err := rows.Scan(&o.TargetType, &o.TargetID, &o.Permission, &o.Effect); err != nil {
+			return nil, err
+		}
+		out = append(out, o)
+	}
+	return out, rows.Err()
 }
 
 // ListRolePermissions returns the Discord-style permission names granted
