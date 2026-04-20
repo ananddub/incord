@@ -11,7 +11,6 @@ import (
 	"github.com/ananddub/ndiscord_backend/internal/shared/authz"
 	"github.com/ananddub/ndiscord_backend/internal/shared/config"
 	"github.com/ananddub/ndiscord_backend/internal/shared/db"
-	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
 	"github.com/ananddub/ndiscord_backend/internal/shared/realtime"
 )
 
@@ -28,8 +27,6 @@ type Infra struct {
 
 // NewInfra connects to all databases and services.
 func NewInfra(ctx context.Context, cfg *config.Config) (*Infra, error) {
-	log := logger.Log
-
 	pool, err := db.NewPostgresPool(ctx, cfg.Database)
 	if err != nil {
 		return nil, err
@@ -72,11 +69,10 @@ func NewInfra(ctx context.Context, cfg *config.Config) (*Infra, error) {
 		return nil, err
 	}
 
-	authzClient, err := authz.NewClient(cfg.OpenFGA)
-	if err != nil {
-		log.Warn().Err(err).Msg("OpenFGA not available, running without authorization")
-		authzClient = nil
-	}
+	// Authz is a thin Postgres wrapper now — share the same pool that
+	// feature services already use, no separate dial / health gate
+	// / env block needed.
+	authzClient := authz.NewClient(pool)
 
 	return &Infra{
 		Pool:        pool,

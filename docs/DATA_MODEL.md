@@ -1,9 +1,9 @@
 # Data Model
 
-Storage is split across five backends by access pattern — Postgres for
-durable relational entities, Scylla for time-series message data,
-Redis for live/ephemeral state, MinIO for blobs, and OpenFGA for
-authorization tuples.
+Storage is split across four backends by access pattern — Postgres for
+durable relational entities (including the authz tables: `roles`,
+`permissions`, `role_permissions`), Scylla for time-series message
+data, Redis for live/ephemeral state, and MinIO for blobs.
 
 ## Postgres / TimescaleDB
 
@@ -157,27 +157,65 @@ differs from the internal one — `MINIO_ENDPOINT` is used for writes,
 `MINIO_PUBLIC_ENDPOINT` for signing GETs so clients hit the edge
 directly.
 
-## OpenFGA (authz)
+## Authorization (Postgres RBAC)
 
-Tuples are stored in the OpenFGA store named `ndiscord` (auto-created
-on startup if `OPENFGA_STORE_ID` is unset). The model defines:
+Permission decisions live in three Postgres tables plus the existing
+`guilds.owner_id` column — no external authz service.
 
-| object type | key relations |
-|---|---|
-| `user` | — |
-| `guild` | `owner`, `admin`, `member` |
-| `channel` | `guild` (linking channel → guild), `viewer`, `sender`, `manager` |
+**permissions** — canonical catalogue seeded by migration 000011 with
+every Discord-style permission (50 rows: `VIEW_CHANNELS`,
+`SEND_MESSAGES`, `KICK_MEMBERS`, `BAN_MEMBERS`, `ADMINISTRATOR`, …).
 
-Common checks (defined in [internal/shared/authz](../internal/shared/authz)):
+| column | type | notes |
+|---|---|---|
+| id | `BIGSERIAL` PK | |
+| name | `VARCHAR(64)` UNIQUE | matches `guild.v1.Permission` proto enum |
+| description | `TEXT` | free-form, for role-editor UIs |
 
-- `CanManageGuild(userID, guildID)` — owner or admin
-- `CanManageChannels(userID, guildID)` — admin
-- `CanViewChannel(userID, channelID)` — member of channel's guild, or DM member
-- `CanSendInChannel(userID, channelID)` — view + not muted
-- `CanManageChannel(userID, channelID)` — admin
+**role_permissions** — which permissions a role grants.
 
-Writes happen on guild create/join/role-assign; reads happen on every
-mutating RPC.
+| column | type | notes |
+|---|---|---|
+| role_id | `UUID` FK→roles(id) `ON DELETE CASCADE` | |
+| permission_id | `BIGINT` FK→permissions(id) `ON DELETE RESTRICT` | |
+| created_at | `TIMESTAMPTZ` | |
+
+PK `(role_id, permission_id)`; index on `permission_id` for reverse
+lookup ("which roles have this perm?").
+
+Migration 000011 seeds the `@everyone` role (created per guild by
+migration 000010) with Discord's baseline permissions: `VIEW_CHANNELS`,
+`SEND_MESSAGES`, `READ_MESSAGE_HISTORY`, `ADD_REACTIONS`, `CONNECT`,
+`SPEAK`, `USE_VAD`, `CHANGE_NICKNAME`, `ATTACH_FILES`, `EMBED_LINKS`,
+`USE_EXTERNAL_EMOJIS`, `USE_SOUNDBOARD`, `REQUEST_TO_SPEAK`.
+
+### Resolution
+
+Every `Can*` check in [internal/shared/authz/client.go](../internal/shared/authz/client.go)
+runs one query:
+
+```
+EXISTS (
+  user is guild owner
+  OR
+  user has a role whose row in role_permissions names this perm or ADMINISTRATOR
+)
+```
+
+Channel-scoped checks (`CanViewChannel`, `CanSendInChannel`,
+`CanManageChannel`) first look up `channels.guild_id` (with a small
+in-process LRU) then delegate to the guild check with the matching
+perm. DM channels (`guild_id IS NULL`) resolve via `dm_channel_members`.
+
+### Common wrappers
+
+- `CanManageGuild(userID, guildID)` — `MANAGE_GUILD` or admin
+- `CanKick` / `CanBan` — `KICK_MEMBERS` / `BAN_MEMBERS` or admin
+- `CanViewChannel(userID, channelID)` — `VIEW_CHANNELS` or DM membership
+- `CanSendInChannel(userID, channelID)` — `SEND_MESSAGES` or DM membership
+- `CanConnect` / `CanSpeak` / `CanStream` — voice-channel perms
+- `GrantRolePermission(roleID, guildID, relation)` — add a row
+- `RevokeRolePermission(...)` — delete a row
 
 ## Soft-delete convention
 

@@ -116,9 +116,11 @@ sidebar.
 
 `channel_permission_overwrites` stores Discord-style allow/deny
 bitmask pairs per `(channel_id, target)` where target is a role or a
-user. The authz service is the source of truth for *whether* a user
-can do something; these rows feed the *rules* (the OpenFGA model
-consults them when computing effective permissions).
+user. The authz package is the source of truth for *whether* a user
+can do something — for now, the overwrites table is reserved for a
+future channel-level override resolver on top of the guild-level
+RBAC; day-one channel visibility falls back to the guild's
+`VIEW_CHANNELS` / `SEND_MESSAGES` permissions.
 
 ## Cross-feature wiring
 

@@ -12,7 +12,7 @@ manifest in the repo — keep the deployment surface simple.
    docker compose up -d
    ```
    Starts Postgres (Timescale), ScyllaDB, Redis, NATS, MinIO, LiveKit,
-   OpenFGA, Prometheus and Grafana.
+   Prometheus and Grafana.
 3. **Generate code** (only needed after a proto or SQL change):
    ```bash
    make generate          # buf generate + sqlc generate
@@ -46,7 +46,6 @@ gRPC is on `:50051`, metrics + health + LiveKit webhook on `:9100`.
 | `nats` | nats:2 | 4222 | pub/sub |
 | `minio` | minio/minio | 9000 / 9001 | object storage + console |
 | `livekit` | livekit/livekit-server | 7880 | WebRTC SFU |
-| `openfga` | openfga/openfga | 8080 | authz |
 | `prometheus` | prom/prometheus | 9090 | metrics |
 | `grafana` | grafana/grafana | 3000 | dashboards |
 
@@ -80,8 +79,6 @@ DB_SSLMODE=disable              # prod: require
 DB_PORT=5432
 REDIS_PASSWORD=                 # empty for local dev
 REDIS_DB=0
-OPENFGA_API_URL=http://localhost:8080
-OPENFGA_STORE_ID=               # auto-provisions "ndiscord" if empty
 JWT_ACCESS_TTL=168h             # 7 days
 JWT_REFRESH_TTL=168h            # 7 days
 INVITE_BASE_URL=https://example.com/invite
@@ -96,8 +93,8 @@ MINIO_USE_SSL=false
   `000NNN_description.{up,down}.sql`.
 - **Scylla**: `.cql` files in [db/scylla/migrations/](../db/scylla/migrations).
   Applied via `make scylla-migrate`.
-- **OpenFGA**: the authz model is pushed by the app on startup if the
-  store is empty (see [internal/shared/authz](../internal/shared/authz)).
+- **Authz**: part of the regular Postgres migrations (000011 seeds the
+  `permissions` catalogue and @everyone baseline grants).
 
 **Adding a migration:**
 
@@ -148,8 +145,6 @@ webhook:
   `MINIO_PUBLIC_ENDPOINT` points at the CDN.
 - NATS can run as a single node for small deployments; cluster it
   once you have multiple backend replicas (subjects are unchanged).
-- OpenFGA supports Postgres as its backing store; point it at the
-  same Postgres cluster (different database) in prod.
 - There's no Redis Sentinel / cluster code — the client is a single
   address. Use a managed Redis (AWS ElastiCache, Upstash) in prod.
 

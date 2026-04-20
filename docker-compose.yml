@@ -1,5 +1,5 @@
 services:
-  # Auto-init: PG migrations + ScyllaDB tables + OpenFGA setup (Go binary)
+  # Auto-init: PG migrations + ScyllaDB tables (Go binary)
   init:
     build:
       context: .
@@ -14,14 +14,11 @@ services:
       DB_SSLMODE: disable
       SCYLLA_HOST: scylladb:9042
       SCYLLA_KEYSPACE: ndiscord
-      OPENFGA_API_URL: http://openfga:8080
     depends_on:
       timescaledb:
         condition: service_healthy
       scylladb:
         condition: service_healthy
-      openfga:
-        condition: service_started
     restart: "no"
 
   server:
@@ -55,7 +52,6 @@ services:
       MINIO_SECRET_KEY: ndiscord123
       MINIO_BUCKET: ndiscord
       MINIO_USE_SSL: "false"
-      OPENFGA_API_URL: http://openfga:8080
       JWT_SECRET: dev-secret-change-in-production
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
@@ -151,39 +147,6 @@ services:
       timeout: 5s
       retries: 5
 
-
-  openfga-migrate:
-    image: openfga/openfga:latest
-    container_name: ndiscord-openfga-migrate
-    command: migrate
-    environment:
-      OPENFGA_DATASTORE_ENGINE: postgres
-      OPENFGA_DATASTORE_URI: postgres://ndiscord:ndiscord@timescaledb:5432/ndiscord?sslmode=disable
-    depends_on:
-      timescaledb:
-        condition: service_healthy
-    restart: "no"
-
-  openfga:
-    image: openfga/openfga:latest
-    container_name: ndiscord-openfga
-    ports:
-   
-      - "8080:8080"
-      - "8090:8080"
-      - "8091:8081"
-      - "3000:3000"
-    command: run
-    environment:
-      OPENFGA_DATASTORE_ENGINE: postgres
-      OPENFGA_DATASTORE_URI: postgres://ndiscord:ndiscord@timescaledb:5432/ndiscord?sslmode=disable
-      OPENFGA_PLAYGROUND_ENABLED: "true"
-      OPENFGA_PLAYGROUND_ADDR: "0.0.0.0:3000"
-    depends_on:
-      timescaledb:
-        condition: service_healthy
-      openfga-migrate:
-        condition: service_completed_successfully
 
   grafana:
     image: grafana/grafana:latest

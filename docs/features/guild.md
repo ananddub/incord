@@ -26,9 +26,9 @@ codes. Every mutation emits a `streamv1.GuildEvent` on
 
 ## Data it owns
 
-- `guilds`, `guild_members`, `roles`, `role_members`, `bans`, `invites`, `invite_uses` (Postgres)
-- MinIO `guilds/<id>/icon_…`
-- OpenFGA tuples under `guild:<id>` and `channel:<id>`
+- `guilds`, `guild_members`, `roles`, `role_members`, `role_permissions`,
+  `bans`, `invites`, `invite_uses` (Postgres)
+- MinIO `guilds/<id>/icon_…` and `guilds/<id>/banner_…`
 
 ## Central helper — `publishGuildEvent`
 
@@ -96,16 +96,26 @@ newuser.JoinByInvite(code)                     (auth required)
 
 ## Roles and permissions
 
-Roles are plain Postgres rows. The **authz** side of things is handled
-by OpenFGA:
+Everything lives in Postgres — no external authz service:
 
-- `CreateRole` writes a row but does NOT add any authz tuple by itself
-  — role membership maps to permissions via the OpenFGA model
-  separately.
-- `AssignRole` writes a `role_members` row and an authz tuple if the
-  role implies a high-level capability (e.g. "admin").
+- `roles(id, guild_id, name, color, position)` — per-guild role rows.
+  Every guild gets an `@everyone` row automatically (migration 000010).
+- `role_members(role_id, user_id)` — who's in which role.
+- `permissions(id, name, description)` — catalogue of Discord-style
+  permission names, seeded by migration 000011.
+- `role_permissions(role_id, permission_id)` — the grants. New roles
+  start empty; `@everyone` is seeded with Discord's default public-
+  channel baseline.
 
-Authz checks happen in other services via `authz.Can…` calls.
+`CreateRole` writes a `roles` row. `AssignRole` writes a `role_members`
+row. `GrantRolePermission(roleID, guildID, permission)` adds a
+`role_permissions` row — every member of the role immediately gets the
+permission on the guild.
+
+Authz checks (`authz.Can…`) resolve with one indexed query over
+`guilds.owner_id`, `role_members`, `role_permissions`, `permissions`.
+Guild owner always passes; an `ADMINISTRATOR` grant on any role the
+user holds short-circuits every specific check.
 
 ## Icon upload
 
@@ -123,36 +133,22 @@ don't see the bucket key.
 
 ## Authz wiring
 
-On `CreateGuild`:
+Guild ownership and membership are plain Postgres rows — `guilds.owner_id`
+and `guild_members`. There are no separate authz tuples to keep in sync,
+so `CreateGuild` / `AddMember` / `JoinByInvite` / `KickMember` all just
+touch these two tables. `AssignRole` writes a `role_members` row; the
+permission grant flows through `role_permissions` when admins call
+`GrantRolePermission`.
 
-```go
-authz.AddGuildOwner(ctx, ownerID, guildID)
-authz.AddGuildMember(ctx, ownerID, guildID)
-```
-
-On `AddMember` / `JoinByInvite`:
-
-```go
-authz.AddGuildMember(ctx, userID, guildID)
-```
-
-On `KickMember`:
-
-```go
-authz.RemoveGuildMember(ctx, userID, guildID)
-```
-
-Every permission check (`CanManageGuild`, `CanManageChannels`, …) is a
-call into OpenFGA — the service never reads `guild_members` to decide.
+Every permission check (`CanManageGuild`, `CanManageChannels`, …)
+resolves against these tables — services never read `guild_members`
+directly for policy, they call the authz layer so the decision logic
+stays in one place.
 
 ## Failure modes
 
 - **Invite race** — two users claiming the last seat. Handled by
   `SELECT … FOR UPDATE` on the invite row inside a transaction.
-- **Authz write fails after guild row commits** — logged; the guild
-  exists with no owner tuple. Next startup's consistency check
-  (TODO) should repair. Operationally rare — OpenFGA sharing the
-  same availability as Postgres.
 - **Delete-while-join** — `DeleteGuild` sets `deleted=true`; an
   in-flight `JoinByInvite` may succeed but the guild is tombstoned.
   Clients that opened the stream before delete get `GUILD_DELETE`

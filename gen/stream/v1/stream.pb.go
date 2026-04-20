@@ -1790,11 +1790,20 @@ type GuildEvent struct {
 	IconUrl   string                 `protobuf:"bytes,11,opt,name=icon_url,json=iconUrl,proto3" json:"icon_url,omitempty"`
 	RoleId    string                 `protobuf:"bytes,12,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
 	// Guild banner URL on "update" banner change.
-	BannerUrl     string         `protobuf:"bytes,15,opt,name=banner_url,json=bannerUrl,proto3" json:"banner_url,omitempty"`
-	Reason        string         `protobuf:"bytes,13,opt,name=reason,proto3" json:"reason,omitempty"`
-	Action        GuildEventType `protobuf:"varint,14,opt,name=action,proto3,enum=stream.v1.GuildEventType" json:"action,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	BannerUrl string         `protobuf:"bytes,15,opt,name=banner_url,json=bannerUrl,proto3" json:"banner_url,omitempty"`
+	Reason    string         `protobuf:"bytes,13,opt,name=reason,proto3" json:"reason,omitempty"`
+	Action    GuildEventType `protobuf:"varint,14,opt,name=action,proto3,enum=stream.v1.GuildEventType" json:"action,omitempty"`
+	// Role snapshot — populated on ROLE_CREATE, ROLE_UPDATE, ROLE_DELETE,
+	// and on the ROLE_UPDATE events emitted by GrantRolePermission /
+	// RevokeRolePermission. Carrying the full role state in the event
+	// lets clients refresh their cache atomically without a follow-up
+	// ListRolePermissions round trip.
+	RoleName        string   `protobuf:"bytes,16,opt,name=role_name,json=roleName,proto3" json:"role_name,omitempty"`
+	RoleColor       string   `protobuf:"bytes,17,opt,name=role_color,json=roleColor,proto3" json:"role_color,omitempty"`
+	RolePosition    int32    `protobuf:"varint,18,opt,name=role_position,json=rolePosition,proto3" json:"role_position,omitempty"`
+	RolePermissions []string `protobuf:"bytes,19,rep,name=role_permissions,json=rolePermissions,proto3" json:"role_permissions,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *GuildEvent) Reset() {
@@ -1930,6 +1939,34 @@ func (x *GuildEvent) GetAction() GuildEventType {
 		return x.Action
 	}
 	return GuildEventType_GUILD_EVENT_UNSPECIFIED
+}
+
+func (x *GuildEvent) GetRoleName() string {
+	if x != nil {
+		return x.RoleName
+	}
+	return ""
+}
+
+func (x *GuildEvent) GetRoleColor() string {
+	if x != nil {
+		return x.RoleColor
+	}
+	return ""
+}
+
+func (x *GuildEvent) GetRolePosition() int32 {
+	if x != nil {
+		return x.RolePosition
+	}
+	return 0
+}
+
+func (x *GuildEvent) GetRolePermissions() []string {
+	if x != nil {
+		return x.RolePermissions
+	}
+	return nil
 }
 
 type StreamVoiceStateRequest struct {
@@ -2506,7 +2543,7 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\x10mention_user_ids\x18\x11 \x03(\tR\x0ementionUserIds\x12:\n" +
 	"\treactions\x18\x12 \x03(\v2\x1c.stream.v1.ChatReactionCountR\treactions\x12H\n" +
 	"\x0eforwarded_from\x18\x13 \x01(\v2!.stream.v1.ChatForwardedReferenceR\rforwardedFrom\"\x1a\n" +
-	"\x18StreamGuildEventsRequest\"\xdf\x03\n" +
+	"\x18StreamGuildEventsRequest\"\xeb\x04\n" +
 	"\n" +
 	"GuildEvent\x12/\n" +
 	"\x05event\x18\x01 \x01(\x0e2\x19.stream.v1.GuildEventTypeR\x05event\x12\x19\n" +
@@ -2526,7 +2563,12 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\n" +
 	"banner_url\x18\x0f \x01(\tR\tbannerUrl\x12\x16\n" +
 	"\x06reason\x18\r \x01(\tR\x06reason\x121\n" +
-	"\x06action\x18\x0e \x01(\x0e2\x19.stream.v1.GuildEventTypeR\x06action\"\x19\n" +
+	"\x06action\x18\x0e \x01(\x0e2\x19.stream.v1.GuildEventTypeR\x06action\x12\x1b\n" +
+	"\trole_name\x18\x10 \x01(\tR\broleName\x12\x1d\n" +
+	"\n" +
+	"role_color\x18\x11 \x01(\tR\troleColor\x12#\n" +
+	"\rrole_position\x18\x12 \x01(\x05R\frolePosition\x12)\n" +
+	"\x10role_permissions\x18\x13 \x03(\tR\x0frolePermissions\"\x19\n" +
 	"\x17StreamVoiceStateRequest\"\xaf\x04\n" +
 	"\x0fVoiceStateEvent\x12+\n" +
 	"\x05event\x18\x01 \x01(\x0e2\x15.stream.v1.VoiceEventR\x05event\x12\x19\n" +

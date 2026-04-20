@@ -29,10 +29,10 @@ voice and guild platform exposed as a gRPC API.
                                        │
                  ┌─────────────────────┤
                  ▼                     ▼
-           ┌──────────┐          ┌──────────┐
-           │ LiveKit  │          │ OpenFGA  │
-           │  (voice) │          │ (authz)  │
-           └──────────┘          └──────────┘
+                              ┌──────────┐
+                              │ LiveKit  │
+                              │  (voice) │
+                              └──────────┘
 
 HTTP :9100
   ├─ /metrics         (Prometheus)
@@ -46,9 +46,9 @@ HTTP :9100
 
 1. `config.Load()` reads env vars into a typed [`Config`](../internal/shared/config/config.go).
 2. `app.NewInfra()` ([internal/app/infra.go](../internal/app/infra.go))
-   dials every backing service (Postgres, Scylla, Redis, NATS, MinIO,
-   OpenFGA) and exposes them on a struct. Failures in optional stores
-   (OpenFGA) log a warning; required stores abort startup.
+   dials every backing service (Postgres, Scylla, Redis, NATS, MinIO)
+   and exposes them on a struct. Required stores abort startup if they
+   can't be reached.
 3. `app.NewServices()` ([internal/app/services.go](../internal/app/services.go))
    wires the feature services together (cross-feature interfaces like
    `DMOpener`, `PresenceController`, `MediaResolver`, …).
@@ -68,7 +68,6 @@ HTTP :9100
 | **Redis** | sessions, presence, typing, voice state, rate-limit counters, OTPs | `REDIS_*` |
 | **NATS** | realtime pub/sub for events streamed out through `StreamService` | `NATS_URL` |
 | **MinIO** | S3-compatible object storage for avatars, guild icons, attachments | `MINIO_*` |
-| **OpenFGA** (SpiceDB-style) | fine-grained authz for guild/channel permissions | `OPENFGA_*` |
 | **LiveKit** | WebRTC SFU for voice/video/screen share | `LIVEKIT_*` |
 | **SMTP** | email OTP for signup verification | `SMTP_*` |
 
@@ -137,11 +136,15 @@ typo or missed rename fails at compile time.
   inside [features/auth](../internal/features/auth): bcrypt passwords,
   JWT access + refresh tokens, SMTP OTP for email verification, Redis
   refresh-token store.
-- **Authorization** (can you do this thing?) is delegated to OpenFGA
-  through [authz.Client](../internal/shared/authz). Every guild/
-  channel permission check (CanSendInChannel, CanManageGuild, …) is a
-  call into OpenFGA. Services never read the `guild_members` table to
-  decide policy — they ask the authz layer.
+- **Authorization** (can you do this thing?) is a thin Postgres-backed
+  RBAC in [authz.Client](../internal/shared/authz/client.go). Three
+  tables (`roles`, `permissions`, `role_permissions`) plus the
+  `guilds.owner_id` column decide every check. Guild owner always
+  passes; an `ADMINISTRATOR` row in `role_permissions` short-circuits
+  specific-permission lookups. Every `Can*` check is one indexed SQL
+  query. Services never read `guild_members` directly for policy —
+  they call the authz layer, which keeps the decision logic in one
+  place.
 
 ## Graceful shutdown
 

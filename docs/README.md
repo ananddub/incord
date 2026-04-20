@@ -9,7 +9,7 @@ you're working on.
 | Doc | What it covers |
 |---|---|
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System overview, backing services, request pipeline, graceful shutdown |
-| [DATA_MODEL.md](./DATA_MODEL.md) | Postgres tables, Scylla tables, Redis keys, MinIO paths, OpenFGA tuples |
+| [DATA_MODEL.md](./DATA_MODEL.md) | Postgres tables (entities + authz), Scylla tables, Redis keys, MinIO paths |
 | [NATS_SUBJECTS.md](./NATS_SUBJECTS.md) | Wire-level event catalog — subjects, publishers, payload protos |
 | [DEPLOYMENT.md](./DEPLOYMENT.md) | Local dev setup, env vars, migrations, production notes |
 | [API_GUIDE.md](./API_GUIDE.md) | Public gRPC API reference for client developers |
@@ -57,7 +57,7 @@ the publish call site.
 - **Redis = live state, Postgres = durable truth.** Presence,
   typing, voice participants live in Redis and cease to exist when
   the owning session ends.
-- **Authz via OpenFGA.** Services never read `guild_members` to
+- **Authz via Postgres RBAC** (roles + permissions + role_permissions). Services never read `guild_members` to
   decide policy — they call `authz.Can…`.
 
 ## What's intentionally *not* here

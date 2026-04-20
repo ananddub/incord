@@ -12,7 +12,6 @@ type Config struct {
 	Redis    RedisConfig
 	ScyllaDB ScyllaDBConfig
 	MinIO    MinIOConfig
-	OpenFGA  OpenFGAConfig
 	JWT      JWTConfig
 	Voice    VoiceConfig
 	LiveKit  LiveKitConfig
@@ -62,11 +61,6 @@ type MinIOConfig struct {
 	SecretKey      string
 	Bucket         string
 	UseSSL         bool
-}
-
-type OpenFGAConfig struct {
-	APIUrl  string
-	StoreID string
 }
 
 type JWTConfig struct {
@@ -120,10 +114,6 @@ func Load() *Config {
 			SecretKey:      env("MINIO_SECRET_KEY", "ndiscord123"),
 			Bucket:         env("MINIO_BUCKET", "ndiscord"),
 			UseSSL:         envBool("MINIO_USE_SSL", false),
-		},
-		OpenFGA: OpenFGAConfig{
-			APIUrl:  env("OPENFGA_API_URL", "http://localhost:8090"),
-			StoreID: env("OPENFGA_STORE_ID", ""),
 		},
 		JWT: JWTConfig{
 			Secret:          env("JWT_SECRET", "change-me-in-production"),

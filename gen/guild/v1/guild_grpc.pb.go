@@ -75,8 +75,6 @@ type GuildServiceClient interface {
 	GrantPermission(ctx context.Context, in *GrantPermissionRequest, opts ...grpc.CallOption) (*GrantPermissionResponse, error)
 	RevokePermission(ctx context.Context, in *RevokePermissionRequest, opts ...grpc.CallOption) (*RevokePermissionResponse, error)
 	GetUserPermissions(ctx context.Context, in *GetUserPermissionsRequest, opts ...grpc.CallOption) (*GetUserPermissionsResponse, error)
-	// Role-scoped permission grants (Discord's primary model — a role
-	// carries a permission set, every assigned user inherits).
 	GrantRolePermission(ctx context.Context, in *GrantRolePermissionRequest, opts ...grpc.CallOption) (*GrantRolePermissionResponse, error)
 	RevokeRolePermission(ctx context.Context, in *RevokeRolePermissionRequest, opts ...grpc.CallOption) (*RevokeRolePermissionResponse, error)
 }
@@ -377,8 +375,6 @@ type GuildServiceServer interface {
 	GrantPermission(context.Context, *GrantPermissionRequest) (*GrantPermissionResponse, error)
 	RevokePermission(context.Context, *RevokePermissionRequest) (*RevokePermissionResponse, error)
 	GetUserPermissions(context.Context, *GetUserPermissionsRequest) (*GetUserPermissionsResponse, error)
-	// Role-scoped permission grants (Discord's primary model — a role
-	// carries a permission set, every assigned user inherits).
 	GrantRolePermission(context.Context, *GrantRolePermissionRequest) (*GrantRolePermissionResponse, error)
 	RevokeRolePermission(context.Context, *RevokeRolePermissionRequest) (*RevokeRolePermissionResponse, error)
 	mustEmbedUnimplementedGuildServiceServer()

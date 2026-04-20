@@ -263,6 +263,16 @@ message GuildEvent {
   string banner_url = 15;
   string reason = 13;
   GuildEventType action = 14;
+
+  // Role snapshot — populated on ROLE_CREATE, ROLE_UPDATE, ROLE_DELETE,
+  // and on the ROLE_UPDATE events emitted by GrantRolePermission /
+  // RevokeRolePermission. Carrying the full role state in the event
+  // lets clients refresh their cache atomically without a follow-up
+  // ListRolePermissions round trip.
+  string role_name     = 16;
+  string role_color    = 17;
+  int32  role_position = 18;
+  repeated string role_permissions = 19;
 }
 
 

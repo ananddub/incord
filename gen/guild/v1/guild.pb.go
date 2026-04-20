@@ -23,18 +23,10 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Permission mirrors Discord's Bitwise Permission Flags (docs.discord.com
-// /developers/topics/permissions) so client UIs and bot SDKs can map 1:1.
-// Each value pairs with a `can_<lower_snake>` relation in the OpenFGA
-// authorization model — grant/revoke tuples are written against that.
-//
-// The first 19 values keep their original numbering from the earlier
-// cut of this enum so already-persisted tuples do not need rewriting.
 type Permission int32
 
 const (
-	Permission_PERMISSION_UNSPECIFIED Permission = 0
-	// Existing (numbers kept stable — do not renumber)
+	Permission_PERMISSION_UNSPECIFIED      Permission = 0
 	Permission_PERMISSION_VIEW_CHANNELS    Permission = 1
 	Permission_PERMISSION_SEND_MESSAGES    Permission = 2
 	Permission_PERMISSION_MANAGE_MESSAGES  Permission = 3
@@ -43,7 +35,7 @@ const (
 	Permission_PERMISSION_KICK_MEMBERS     Permission = 6
 	Permission_PERMISSION_BAN_MEMBERS      Permission = 7
 	Permission_PERMISSION_MANAGE_ROLES     Permission = 8
-	Permission_PERMISSION_MANAGE_INVITES   Permission = 9 // create instant invite, Discord-side
+	Permission_PERMISSION_MANAGE_INVITES   Permission = 9
 	Permission_PERMISSION_ADD_REACTIONS    Permission = 10
 	Permission_PERMISSION_CONNECT          Permission = 11
 	Permission_PERMISSION_SPEAK            Permission = 12
@@ -51,7 +43,7 @@ const (
 	Permission_PERMISSION_MUTE_MEMBERS     Permission = 14
 	Permission_PERMISSION_DEAFEN_MEMBERS   Permission = 15
 	Permission_PERMISSION_MENTION_EVERYONE Permission = 16
-	Permission_PERMISSION_MANAGE_EMOJIS    Permission = 17 // legacy name → MANAGE_GUILD_EXPRESSIONS
+	Permission_PERMISSION_MANAGE_EMOJIS    Permission = 17
 	Permission_PERMISSION_MANAGE_WEBHOOKS  Permission = 18
 	Permission_PERMISSION_ADMINISTRATOR    Permission = 19
 	// Guild-wide additions

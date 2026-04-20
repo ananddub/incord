@@ -1,8 +1,6 @@
 package app
 
 import (
-	"context"
-
 	gendb "github.com/ananddub/ndiscord_backend/gen/db"
 	"github.com/ananddub/ndiscord_backend/internal/features/auth"
 	"github.com/ananddub/ndiscord_backend/internal/features/channel"
@@ -56,12 +54,6 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 	guildSvc.SetStorage(infra.MinIO, infra.MinIOSigner, cfg.MinIO.Bucket)
 	guildSvc.SetInviteBaseURL(cfg.InviteBaseURL)
 	guildHandler := guild.NewHandler(guildSvc)
-
-	// One-shot authz backfill. Runs once per syncVersion per Redis
-	// dataset — subsequent boots are a single Redis GET, no DB reads,
-	// no OpenFGA writes. Bump `syncVersion` in guild/service.go when
-	// the authz model changes and existing data needs re-projecting.
-	guildSvc.RunOneTimeBackfillIfNeeded(context.Background())
 
 	// Channel
 	channelRepo := channel.NewRepository(infra.Pool)

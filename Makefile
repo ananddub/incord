@@ -1,4 +1,4 @@
-.PHONY: all build build-server build-voice run run-voice generate proto sqlc migrate test lint clean docker-up docker-down chrome openfga
+.PHONY: all build build-server build-voice run run-voice generate proto sqlc migrate test lint clean docker-up docker-down chrome
 all: generate build
 
 # Build
@@ -85,30 +85,3 @@ clean:
 chrome:
 	flatpak run com.google.Chrome --new-window >/dev/null 2>&1 &
 
-# Launch the OpenFGA Playground in Firefox. The /playground page iframes
-# the hosted https://play.fga.dev/sandbox, which calls back into our
-# 127.0.0.1:8080 API. Chrome's Private Network Access policy blocks that
-# HTTPS→loopback call; Firefox doesn't enforce PNA, so it just works.
-# Use `make openfga-chrome` if you specifically need Chrome and have
-# toggled chrome://flags/#block-insecure-private-network-requests to
-# Disabled.
-openfga:
-	flatpak run org.mozilla.firefox --new-window http://localhost:3000/playground >/dev/null 2>&1 &
-
-# Chrome variant. Requires `chrome://flags/#block-insecure-private-network-requests`
-# to be set to Disabled *persistently* in Chrome (the --disable-features
-# flag is ignored by Flatpak Chrome due to sandbox restrictions).
-openfga-chrome:
-	flatpak run com.google.Chrome --new-window http://localhost:3000/playground >/dev/null 2>&1 &
-
-# CLI-first alternative. The OpenFGA Playground is deprecated anyway,
-# so prefer the `fga` CLI — no browser, no CORS, no PNA headache.
-# Install once:  go install github.com/openfga/cli/cmd/fga@latest
-openfga-stores:
-	fga store list --api-url http://localhost:8090
-
-# Print the current authorization model tuples for the ndiscord store.
-# Usage:  make openfga-tuples
-openfga-tuples:
-	@STORE_ID=$$(fga store list --api-url http://localhost:8090 | awk '/ndiscord/ {print $$1}') ; \
-	fga tuple read --store-id $$STORE_ID --api-url http://localhost:8090
