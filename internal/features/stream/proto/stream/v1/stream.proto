@@ -5,6 +5,7 @@ package stream.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/stream/v1;streamv1";
 
 import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
 
 enum ChatEventType {
   CHAT_EVENT_UNSPECIFIED = 0;
@@ -96,25 +97,52 @@ enum GuildEventType {
   GUILD_EVENT_CHANNEL_DELETE = 14;
 }
 
+// All streaming RPCs are exposed over HTTP as SSE (Server-Sent Events).
+// grpc-gateway emits each streamed message as a newline-delimited JSON
+// object over HTTP chunked transfer — compatible with SSE consumers when
+// the gateway is wired with an SSE marshaler / `Accept: text/event-stream`
+// response header at the mux layer. All request types are empty (subscriber
+// identity comes from the bearer token), so GET is the correct verb.
+//
+// URL convention: `/v1/stream/*` — subscription endpoints live under a
+// single namespace so the frontend can multiplex them through one EventSource
+// per topic.
 service StreamService {
-  rpc StreamDmChat(StreamDmChatRequest) returns (stream DmChatEvent);
+  rpc StreamDmChat(StreamDmChatRequest) returns (stream DmChatEvent) {
+    option (google.api.http) = { get: "/v1/stream/dm/chat" };
+  }
 
-  rpc StreamDmChannels(StreamDmChannelsRequest) returns (stream DmChannelEvent);
+  rpc StreamDmChannels(StreamDmChannelsRequest) returns (stream DmChannelEvent) {
+    option (google.api.http) = { get: "/v1/stream/dm/channels" };
+  }
 
-  rpc StreamDmCalls(StreamDmCallsRequest) returns (stream DmCallEvent);
+  rpc StreamDmCalls(StreamDmCallsRequest) returns (stream DmCallEvent) {
+    option (google.api.http) = { get: "/v1/stream/dm/calls" };
+  }
 
-  rpc StreamTextChannels(StreamTextChannelsRequest) returns (stream TextChannelEvent);
+  rpc StreamTextChannels(StreamTextChannelsRequest) returns (stream TextChannelEvent) {
+    option (google.api.http) = { get: "/v1/stream/channels/text" };
+  }
 
-  rpc StreamVoiceChat(StreamVoiceChatRequest) returns (stream VoiceChatEvent);
+  rpc StreamVoiceChat(StreamVoiceChatRequest) returns (stream VoiceChatEvent) {
+    option (google.api.http) = { get: "/v1/stream/channels/voice-chat" };
+  }
 
-  rpc StreamGuildEvents(StreamGuildEventsRequest) returns (stream GuildEvent);
+  rpc StreamGuildEvents(StreamGuildEventsRequest) returns (stream GuildEvent) {
+    option (google.api.http) = { get: "/v1/stream/guilds" };
+  }
 
-  rpc StreamVoiceState(StreamVoiceStateRequest) returns (stream VoiceStateEvent);
+  rpc StreamVoiceState(StreamVoiceStateRequest) returns (stream VoiceStateEvent) {
+    option (google.api.http) = { get: "/v1/stream/voice-state" };
+  }
 
-  rpc StreamTyping(StreamTypingRequest) returns (stream TypingEvent);
+  rpc StreamTyping(StreamTypingRequest) returns (stream TypingEvent) {
+    option (google.api.http) = { get: "/v1/stream/typing" };
+  }
 
-
-  rpc StreamFriendActivity(StreamFriendActivityRequest) returns (stream FriendActivityEvent);
+  rpc StreamFriendActivity(StreamFriendActivityRequest) returns (stream FriendActivityEvent) {
+    option (google.api.http) = { get: "/v1/stream/friends" };
+  }
 }
 
 message ChatAttachment {

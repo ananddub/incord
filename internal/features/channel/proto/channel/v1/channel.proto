@@ -5,28 +5,70 @@ package channel.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/channel/v1;channelv1";
 
 import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
 import "buf/validate/validate.proto";
 
 service ChannelService {
-  rpc CreateChannel(CreateChannelRequest) returns (CreateChannelResponse);
-  rpc GetChannel(GetChannelRequest) returns (GetChannelResponse);
-  rpc UpdateChannel(UpdateChannelRequest) returns (UpdateChannelResponse);
-  rpc DeleteChannel(DeleteChannelRequest) returns (DeleteChannelResponse);
-  rpc ListGuildChannels(ListGuildChannelsRequest) returns (ListGuildChannelsResponse);
-  rpc CreateDMChannel(CreateDMChannelRequest) returns (CreateDMChannelResponse);
-  rpc ListDMChannels(ListDMChannelsRequest) returns (ListDMChannelsResponse);
-  rpc ListDMChannelMembers(ListDMChannelMembersRequest) returns (ListDMChannelMembersResponse);
-  rpc ListDMChannelsWithMembers(ListDMChannelsWithMembersRequest) returns (ListDMChannelsWithMembersResponse);
-  rpc AddDMGroupMember(AddDMGroupMemberRequest) returns (AddDMGroupMemberResponse);
-  rpc RemoveDMGroupMember(RemoveDMGroupMemberRequest) returns (RemoveDMGroupMemberResponse);
+  // Guild channels are nested under /v1/guilds/{guild_id}/channels so the
+  // URL reflects the parent → child relationship. Single-resource ops
+  // (GET / PATCH / DELETE) go through /v1/channels/{channel_id} because
+  // a channel id is already globally unique.
+  rpc CreateChannel(CreateChannelRequest) returns (CreateChannelResponse) {
+    option (google.api.http) = { post: "/v1/guilds/{guild_id}/channels" body: "*" };
+  }
+  rpc GetChannel(GetChannelRequest) returns (GetChannelResponse) {
+    option (google.api.http) = { get: "/v1/channels/{channel_id}" };
+  }
+  rpc UpdateChannel(UpdateChannelRequest) returns (UpdateChannelResponse) {
+    option (google.api.http) = { patch: "/v1/channels/{channel_id}" body: "*" };
+  }
+  rpc DeleteChannel(DeleteChannelRequest) returns (DeleteChannelResponse) {
+    option (google.api.http) = { delete: "/v1/channels/{channel_id}" };
+  }
+  rpc ListGuildChannels(ListGuildChannelsRequest) returns (ListGuildChannelsResponse) {
+    option (google.api.http) = { get: "/v1/guilds/{guild_id}/channels" };
+  }
+  // DM channels live under /v1/dms (no parent guild).
+  rpc CreateDMChannel(CreateDMChannelRequest) returns (CreateDMChannelResponse) {
+    option (google.api.http) = { post: "/v1/dms" body: "*" };
+  }
+  rpc ListDMChannels(ListDMChannelsRequest) returns (ListDMChannelsResponse) {
+    option (google.api.http) = { get: "/v1/dms" };
+  }
+  rpc ListDMChannelMembers(ListDMChannelMembersRequest) returns (ListDMChannelMembersResponse) {
+    option (google.api.http) = { get: "/v1/dms/{channel_id}/members" };
+  }
+  rpc ListDMChannelsWithMembers(ListDMChannelsWithMembersRequest) returns (ListDMChannelsWithMembersResponse) {
+    // Convenience variant — DMs + their member lists in one call.
+    option (google.api.http) = { get: "/v1/dms:withMembers" };
+  }
+  rpc AddDMGroupMember(AddDMGroupMemberRequest) returns (AddDMGroupMemberResponse) {
+    option (google.api.http) = { put: "/v1/dms/{channel_id}/members/{user_id}" body: "*" };
+  }
+  rpc RemoveDMGroupMember(RemoveDMGroupMemberRequest) returns (RemoveDMGroupMemberResponse) {
+    option (google.api.http) = { delete: "/v1/dms/{channel_id}/members/{user_id}" };
+  }
 
   // Per-channel allow/deny permission overrides. Layered on top of the
   // guild-level role permissions — Discord precedence rules apply
   // (user beats role, deny beats allow within a layer for user, allow
   // beats deny within a layer for role; owner and ADMINISTRATOR bypass).
-  rpc SetChannelOverride(SetChannelOverrideRequest) returns (SetChannelOverrideResponse);
-  rpc DeleteChannelOverride(DeleteChannelOverrideRequest) returns (DeleteChannelOverrideResponse);
-  rpc ListChannelOverrides(ListChannelOverridesRequest) returns (ListChannelOverridesResponse);
+  rpc SetChannelOverride(SetChannelOverrideRequest) returns (SetChannelOverrideResponse) {
+    // PUT on the (channel, target_type, target_id, permission) tuple —
+    // idempotent upsert of an allow/deny rule.
+    option (google.api.http) = {
+      put: "/v1/channels/{channel_id}/overrides/{target_type}/{target_id}/{permission}"
+      body: "*"
+    };
+  }
+  rpc DeleteChannelOverride(DeleteChannelOverrideRequest) returns (DeleteChannelOverrideResponse) {
+    option (google.api.http) = {
+      delete: "/v1/channels/{channel_id}/overrides/{target_type}/{target_id}/{permission}"
+    };
+  }
+  rpc ListChannelOverrides(ListChannelOverridesRequest) returns (ListChannelOverridesResponse) {
+    option (google.api.http) = { get: "/v1/channels/{channel_id}/overrides" };
+  }
 }
 
 enum OverrideTargetType {

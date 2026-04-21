@@ -39,11 +39,16 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChannelServiceClient interface {
+	// Guild channels are nested under /v1/guilds/{guild_id}/channels so the
+	// URL reflects the parent → child relationship. Single-resource ops
+	// (GET / PATCH / DELETE) go through /v1/channels/{channel_id} because
+	// a channel id is already globally unique.
 	CreateChannel(ctx context.Context, in *CreateChannelRequest, opts ...grpc.CallOption) (*CreateChannelResponse, error)
 	GetChannel(ctx context.Context, in *GetChannelRequest, opts ...grpc.CallOption) (*GetChannelResponse, error)
 	UpdateChannel(ctx context.Context, in *UpdateChannelRequest, opts ...grpc.CallOption) (*UpdateChannelResponse, error)
 	DeleteChannel(ctx context.Context, in *DeleteChannelRequest, opts ...grpc.CallOption) (*DeleteChannelResponse, error)
 	ListGuildChannels(ctx context.Context, in *ListGuildChannelsRequest, opts ...grpc.CallOption) (*ListGuildChannelsResponse, error)
+	// DM channels live under /v1/dms (no parent guild).
 	CreateDMChannel(ctx context.Context, in *CreateDMChannelRequest, opts ...grpc.CallOption) (*CreateDMChannelResponse, error)
 	ListDMChannels(ctx context.Context, in *ListDMChannelsRequest, opts ...grpc.CallOption) (*ListDMChannelsResponse, error)
 	ListDMChannelMembers(ctx context.Context, in *ListDMChannelMembersRequest, opts ...grpc.CallOption) (*ListDMChannelMembersResponse, error)
@@ -211,11 +216,16 @@ func (c *channelServiceClient) ListChannelOverrides(ctx context.Context, in *Lis
 // All implementations must embed UnimplementedChannelServiceServer
 // for forward compatibility.
 type ChannelServiceServer interface {
+	// Guild channels are nested under /v1/guilds/{guild_id}/channels so the
+	// URL reflects the parent → child relationship. Single-resource ops
+	// (GET / PATCH / DELETE) go through /v1/channels/{channel_id} because
+	// a channel id is already globally unique.
 	CreateChannel(context.Context, *CreateChannelRequest) (*CreateChannelResponse, error)
 	GetChannel(context.Context, *GetChannelRequest) (*GetChannelResponse, error)
 	UpdateChannel(context.Context, *UpdateChannelRequest) (*UpdateChannelResponse, error)
 	DeleteChannel(context.Context, *DeleteChannelRequest) (*DeleteChannelResponse, error)
 	ListGuildChannels(context.Context, *ListGuildChannelsRequest) (*ListGuildChannelsResponse, error)
+	// DM channels live under /v1/dms (no parent guild).
 	CreateDMChannel(context.Context, *CreateDMChannelRequest) (*CreateDMChannelResponse, error)
 	ListDMChannels(context.Context, *ListDMChannelsRequest) (*ListDMChannelsResponse, error)
 	ListDMChannelMembers(context.Context, *ListDMChannelMembersRequest) (*ListDMChannelMembersResponse, error)

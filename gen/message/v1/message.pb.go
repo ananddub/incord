@@ -8,6 +8,7 @@ package messagev1
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -2364,7 +2365,7 @@ var File_message_v1_message_proto protoreflect.FileDescriptor
 const file_message_v1_message_proto_rawDesc = "" +
 	"\n" +
 	"\x18message/v1/message.proto\x12\n" +
-	"message.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bbuf/validate/validate.proto\"\x81\x01\n" +
+	"message.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1bbuf/validate/validate.proto\"\x81\x01\n" +
 	"\n" +
 	"Attachment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
@@ -2554,28 +2555,28 @@ const file_message_v1_message_proto_rawDesc = "" +
 	"\x18MESSAGE_TYPE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14MESSAGE_TYPE_DEFAULT\x10\x01\x12\x17\n" +
 	"\x13MESSAGE_TYPE_SYSTEM\x10\x02\x12\x16\n" +
-	"\x12MESSAGE_TYPE_REPLY\x10\x032\xc3\v\n" +
-	"\x0eMessageService\x12N\n" +
-	"\vSendMessage\x12\x1e.message.v1.SendMessageRequest\x1a\x1f.message.v1.SendMessageResponse\x12K\n" +
+	"\x12MESSAGE_TYPE_REPLY\x10\x032\x9b\x13\n" +
+	"\x0eMessageService\x12}\n" +
+	"\vSendMessage\x12\x1e.message.v1.SendMessageRequest\x1a\x1f.message.v1.SendMessageResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/v1/channels/{channel_id}/messages\x12\x84\x01\n" +
 	"\n" +
-	"GetMessage\x12\x1d.message.v1.GetMessageRequest\x1a\x1e.message.v1.GetMessageResponse\x12N\n" +
-	"\vEditMessage\x12\x1e.message.v1.EditMessageRequest\x1a\x1f.message.v1.EditMessageResponse\x12T\n" +
-	"\rDeleteMessage\x12 .message.v1.DeleteMessageRequest\x1a!.message.v1.DeleteMessageResponse\x12Q\n" +
-	"\fListMessages\x12\x1f.message.v1.ListMessagesRequest\x1a .message.v1.ListMessagesResponse\x12K\n" +
+	"GetMessage\x12\x1d.message.v1.GetMessageRequest\x1a\x1e.message.v1.GetMessageResponse\"7\x82\xd3\xe4\x93\x021\x12//v1/channels/{channel_id}/messages/{message_id}\x12\x8a\x01\n" +
+	"\vEditMessage\x12\x1e.message.v1.EditMessageRequest\x1a\x1f.message.v1.EditMessageResponse\":\x82\xd3\xe4\x93\x024:\x01*2//v1/channels/{channel_id}/messages/{message_id}\x12\x8d\x01\n" +
+	"\rDeleteMessage\x12 .message.v1.DeleteMessageRequest\x1a!.message.v1.DeleteMessageResponse\"7\x82\xd3\xe4\x93\x021*//v1/channels/{channel_id}/messages/{message_id}\x12}\n" +
+	"\fListMessages\x12\x1f.message.v1.ListMessagesRequest\x1a .message.v1.ListMessagesResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/v1/channels/{channel_id}/messages\x12\x8b\x01\n" +
 	"\n" +
-	"PinMessage\x12\x1d.message.v1.PinMessageRequest\x1a\x1e.message.v1.PinMessageResponse\x12Q\n" +
-	"\fUnpinMessage\x12\x1f.message.v1.UnpinMessageRequest\x1a .message.v1.UnpinMessageResponse\x12N\n" +
-	"\vAddReaction\x12\x1e.message.v1.AddReactionRequest\x1a\x1f.message.v1.AddReactionResponse\x12W\n" +
-	"\x0eRemoveReaction\x12!.message.v1.RemoveReactionRequest\x1a\".message.v1.RemoveReactionResponse\x12K\n" +
+	"PinMessage\x12\x1d.message.v1.PinMessageRequest\x1a\x1e.message.v1.PinMessageResponse\">\x82\xd3\xe4\x93\x028:\x01*\x1a3/v1/channels/{channel_id}/messages/{message_id}/pin\x12\x8e\x01\n" +
+	"\fUnpinMessage\x12\x1f.message.v1.UnpinMessageRequest\x1a .message.v1.UnpinMessageResponse\";\x82\xd3\xe4\x93\x025*3/v1/channels/{channel_id}/messages/{message_id}/pin\x12\x9c\x01\n" +
+	"\vAddReaction\x12\x1e.message.v1.AddReactionRequest\x1a\x1f.message.v1.AddReactionResponse\"L\x82\xd3\xe4\x93\x02F:\x01*\x1aA/v1/channels/{channel_id}/messages/{message_id}/reactions/{emoji}\x12\xa2\x01\n" +
+	"\x0eRemoveReaction\x12!.message.v1.RemoveReactionRequest\x1a\".message.v1.RemoveReactionResponse\"I\x82\xd3\xe4\x93\x02C*A/v1/channels/{channel_id}/messages/{message_id}/reactions/{emoji}\x12\x8b\x01\n" +
 	"\n" +
-	"AckMessage\x12\x1d.message.v1.AckMessageRequest\x1a\x1e.message.v1.AckMessageResponse\x12N\n" +
-	"\vStartTyping\x12\x1e.message.v1.StartTypingRequest\x1a\x1f.message.v1.StartTypingResponse\x12`\n" +
-	"\x11SendDirectMessage\x12$.message.v1.SendDirectMessageRequest\x1a%.message.v1.SendDirectMessageResponse\x12Z\n" +
-	"\x0fGetUnreadCounts\x12\".message.v1.GetUnreadCountsRequest\x1a#.message.v1.GetUnreadCountsResponse\x12W\n" +
-	"\x0eSearchMessages\x12!.message.v1.SearchMessagesRequest\x1a\".message.v1.SearchMessagesResponse\x12`\n" +
-	"\x11GetThreadMessages\x12$.message.v1.GetThreadMessagesRequest\x1a%.message.v1.GetThreadMessagesResponse\x12c\n" +
-	"\x12BulkDeleteMessages\x12%.message.v1.BulkDeleteMessagesRequest\x1a&.message.v1.BulkDeleteMessagesResponse\x12W\n" +
-	"\x0eGetEditHistory\x12!.message.v1.GetEditHistoryRequest\x1a\".message.v1.GetEditHistoryResponseB?Z=github.com/ananddub/ndiscord_backend/gen/message/v1;messagev1b\x06proto3"
+	"AckMessage\x12\x1d.message.v1.AckMessageRequest\x1a\x1e.message.v1.AckMessageResponse\">\x82\xd3\xe4\x93\x028:\x01*\x1a3/v1/channels/{channel_id}/messages/{message_id}/ack\x12{\n" +
+	"\vStartTyping\x12\x1e.message.v1.StartTypingRequest\x1a\x1f.message.v1.StartTypingResponse\"+\x82\xd3\xe4\x93\x02%:\x01*\" /v1/channels/{channel_id}/typing\x12\x8e\x01\n" +
+	"\x11SendDirectMessage\x12$.message.v1.SendDirectMessageRequest\x1a%.message.v1.SendDirectMessageResponse\",\x82\xd3\xe4\x93\x02&:\x01*\"!/v1/users/{recipient_id}/messages\x12w\n" +
+	"\x0fGetUnreadCounts\x12\".message.v1.GetUnreadCountsRequest\x1a#.message.v1.GetUnreadCountsResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/messages/unread\x12\x8a\x01\n" +
+	"\x0eSearchMessages\x12!.message.v1.SearchMessagesRequest\x1a\".message.v1.SearchMessagesResponse\"1\x82\xd3\xe4\x93\x02+\x12)/v1/channels/{channel_id}/messages:search\x12\xa7\x01\n" +
+	"\x11GetThreadMessages\x12$.message.v1.GetThreadMessagesRequest\x1a%.message.v1.GetThreadMessagesResponse\"E\x82\xd3\xe4\x93\x02?\x12=/v1/channels/{channel_id}/messages/{parent_message_id}/thread\x12\x9e\x01\n" +
+	"\x12BulkDeleteMessages\x12%.message.v1.BulkDeleteMessagesRequest\x1a&.message.v1.BulkDeleteMessagesResponse\"9\x82\xd3\xe4\x93\x023:\x01*\"./v1/channels/{channel_id}/messages:bulk-delete\x12\x96\x01\n" +
+	"\x0eGetEditHistory\x12!.message.v1.GetEditHistoryRequest\x1a\".message.v1.GetEditHistoryResponse\"=\x82\xd3\xe4\x93\x027\x125/v1/channels/{channel_id}/messages/{message_id}/editsB?Z=github.com/ananddub/ndiscord_backend/gen/message/v1;messagev1b\x06proto3"
 
 var (
 	file_message_v1_message_proto_rawDescOnce sync.Once

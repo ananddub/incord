@@ -912,17 +912,26 @@ func (s *Service) RemoveRole(ctx context.Context, callerID, guildID, targetID, r
 // "KICK_MEMBERS", "BAN_MEMBERS", "SEND_MESSAGES"). Fires a ROLE_UPDATE
 // event with the full post-grant permission list embedded, so every
 // member of the guild refreshes their cached role state in one hop.
+//
+// Discord's anti-escalation rule: the caller must hold the permission
+// they're granting (or be guild owner / hold ADMINISTRATOR). Otherwise
+// a MANAGE_ROLES holder could grant themselves any privilege by going
+// through a freshly-created role. `CanGuildPermission` handles owner +
+// admin bypass internally so a single call enforces both.
 func (s *Service) GrantRolePermission(ctx context.Context, callerID, guildID, roleID pgtype.UUID, permission string) error {
 	if !s.authz.CanManageRoles(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return ErrInsufficientPermissions
+	}
+	relation, ok := authz.PermissionRelation[permission]
+	if !ok {
+		return ErrInvalidPermission
+	}
+	if !s.authz.CanGuildPermission(ctx, pgToStr(callerID), pgToStr(guildID), relation) {
 		return ErrInsufficientPermissions
 	}
 	role, err := s.repo.GetRoleByID(ctx, roleID)
 	if err != nil {
 		return ErrRoleNotFound
-	}
-	relation, ok := authz.PermissionRelation[permission]
-	if !ok {
-		return ErrInvalidPermission
 	}
 	if err := s.authz.GrantRolePermission(ctx, pgToStr(roleID), pgToStr(guildID), relation); err != nil {
 		return fmt.Errorf("failed to grant role permission: %w", err)
@@ -932,18 +941,23 @@ func (s *Service) GrantRolePermission(ctx context.Context, callerID, guildID, ro
 }
 
 // RevokeRolePermission removes a previously-granted permission from a role.
+// Same anti-escalation rule as Grant: you can't revoke a permission you
+// don't hold yourself (otherwise a moderator could disarm an admin role).
 // Fires ROLE_UPDATE with the updated permission list.
 func (s *Service) RevokeRolePermission(ctx context.Context, callerID, guildID, roleID pgtype.UUID, permission string) error {
 	if !s.authz.CanManageRoles(ctx, pgToStr(callerID), pgToStr(guildID)) {
 		return ErrInsufficientPermissions
 	}
-	role, err := s.repo.GetRoleByID(ctx, roleID)
-	if err != nil {
-		return ErrRoleNotFound
-	}
 	relation, ok := authz.PermissionRelation[permission]
 	if !ok {
 		return ErrInvalidPermission
+	}
+	if !s.authz.CanGuildPermission(ctx, pgToStr(callerID), pgToStr(guildID), relation) {
+		return ErrInsufficientPermissions
+	}
+	role, err := s.repo.GetRoleByID(ctx, roleID)
+	if err != nil {
+		return ErrRoleNotFound
 	}
 	if err := s.authz.RevokeRolePermission(ctx, pgToStr(roleID), pgToStr(guildID), relation); err != nil {
 		return fmt.Errorf("failed to revoke role permission: %w", err)

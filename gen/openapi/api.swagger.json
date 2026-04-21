@@ -1,0 +1,7324 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "auth/v1/auth.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "AuthService"
+    },
+    {
+      "name": "ChannelService"
+    },
+    {
+      "name": "GuildService"
+    },
+    {
+      "name": "MediaService"
+    },
+    {
+      "name": "MessageService"
+    },
+    {
+      "name": "PresenceService"
+    },
+    {
+      "name": "StreamService"
+    },
+    {
+      "name": "SyncService"
+    },
+    {
+      "name": "UserService"
+    },
+    {
+      "name": "VoiceService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/auth/login": {
+      "post": {
+        "operationId": "AuthService_Login",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LoginResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1LoginRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthService_Logout",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LogoutResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1LogoutRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/refresh": {
+      "post": {
+        "operationId": "AuthService_RefreshToken",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RefreshTokenResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RefreshTokenRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/register": {
+      "post": {
+        "operationId": "AuthService_Register",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RegisterResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RegisterRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/resend-otp": {
+      "post": {
+        "operationId": "AuthService_ResendOTP",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ResendOTPResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ResendOTPRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/validate": {
+      "post": {
+        "operationId": "AuthService_ValidateToken",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ValidateTokenResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ValidateTokenRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/auth/verify-otp": {
+      "post": {
+        "operationId": "AuthService_VerifyOTP",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1VerifyOTPResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1VerifyOTPRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthService"
+        ]
+      }
+    },
+    "/v1/blocks": {
+      "get": {
+        "operationId": "UserService_ListBlocked",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListBlockedResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/v1/blocks/{targetUserId}": {
+      "delete": {
+        "operationId": "UserService_UnblockUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UnblockUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "targetUserId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      },
+      "put": {
+        "operationId": "UserService_BlockUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BlockUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "targetUserId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserServiceBlockUserBody"
+            }
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}": {
+      "get": {
+        "operationId": "ChannelService_GetChannel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetChannelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ChannelService"
+        ]
+      },
+      "delete": {
+        "operationId": "ChannelService_DeleteChannel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteChannelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ChannelService"
+        ]
+      },
+      "patch": {
+        "operationId": "ChannelService_UpdateChannel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateChannelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ChannelServiceUpdateChannelBody"
+            }
+          }
+        ],
+        "tags": [
+          "ChannelService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/calls": {
+      "post": {
+        "summary": "DM / group-DM calls. StartDMCall is the caller-initiated action;\nJoinDMCall is the callee accepting. Both return a LiveKit token.",
+        "operationId": "VoiceService_StartDMCall",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StartDMCallResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VoiceServiceStartDMCallBody"
+            }
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/calls/join": {
+      "post": {
+        "operationId": "VoiceService_JoinDMCall",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1JoinDMCallResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VoiceServiceJoinDMCallBody"
+            }
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/calls/me": {
+      "delete": {
+        "operationId": "VoiceService_LeaveDMCall",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LeaveDMCallResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/calls/reject": {
+      "post": {
+        "operationId": "VoiceService_RejectDMCall",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RejectDMCallResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VoiceServiceRejectDMCallBody"
+            }
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/messages": {
+      "get": {
+        "operationId": "MessageService_ListMessages",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListMessagesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "MessageService"
+        ]
+      },
+      "post": {
+        "operationId": "MessageService_SendMessage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SendMessageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MessageServiceSendMessageBody"
+            }
+          }
+        ],
+        "tags": [
+          "MessageService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/messages/{messageId}": {
+      "get": {
+        "operationId": "MessageService_GetMessage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetMessageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MessageService"
+        ]
+      },
+      "delete": {
+        "operationId": "MessageService_DeleteMessage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteMessageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MessageService"
+        ]
+      },
+      "patch": {
+        "operationId": "MessageService_EditMessage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1EditMessageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MessageServiceEditMessageBody"
+            }
+          }
+        ],
+        "tags": [
+          "MessageService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/messages/{messageId}/ack": {
+      "put": {
+        "operationId": "MessageService_AckMessage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AckMessageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MessageServiceAckMessageBody"
+            }
+          }
+        ],
+        "tags": [
+          "MessageService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/messages/{messageId}/edits": {
+      "get": {
+        "operationId": "MessageService_GetEditHistory",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetEditHistoryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MessageService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/messages/{messageId}/pin": {
+      "delete": {
+        "operationId": "MessageService_UnpinMessage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UnpinMessageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MessageService"
+        ]
+      },
+      "put": {
+        "summary": "Pin/unpin via PUT/DELETE on the /pin sub-resource (idempotent).",
+        "operationId": "MessageService_PinMessage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PinMessageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MessageServicePinMessageBody"
+            }
+          }
+        ],
+        "tags": [
+          "MessageService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/messages/{messageId}/reactions/{emoji}": {
+      "delete": {
+        "operationId": "MessageService_RemoveReaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RemoveReactionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "emoji",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MessageService"
+        ]
+      },
+      "put": {
+        "operationId": "MessageService_AddReaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AddReactionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "emoji",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MessageServiceAddReactionBody"
+            }
+          }
+        ],
+        "tags": [
+          "MessageService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/messages/{parentMessageId}/thread": {
+      "get": {
+        "operationId": "MessageService_GetThreadMessages",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetThreadMessagesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "parentMessageId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "MessageService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/messages:bulk-delete": {
+      "post": {
+        "operationId": "MessageService_BulkDeleteMessages",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BulkDeleteMessagesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MessageServiceBulkDeleteMessagesBody"
+            }
+          }
+        ],
+        "tags": [
+          "MessageService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/messages:search": {
+      "get": {
+        "operationId": "MessageService_SearchMessages",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SearchMessagesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "MessageService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/overrides": {
+      "get": {
+        "operationId": "ChannelService_ListChannelOverrides",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListChannelOverridesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ChannelService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/overrides/{targetType}/{targetId}/{permission}": {
+      "delete": {
+        "operationId": "ChannelService_DeleteChannelOverride",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteChannelOverrideResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "targetType",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "permission",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ChannelService"
+        ]
+      },
+      "put": {
+        "summary": "Per-channel allow/deny permission overrides. Layered on top of the\nguild-level role permissions — Discord precedence rules apply\n(user beats role, deny beats allow within a layer for user, allow\nbeats deny within a layer for role; owner and ADMINISTRATOR bypass).",
+        "operationId": "ChannelService_SetChannelOverride",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SetChannelOverrideResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "targetType",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "permission",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ChannelServiceSetChannelOverrideBody"
+            }
+          }
+        ],
+        "tags": [
+          "ChannelService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/typing": {
+      "post": {
+        "operationId": "MessageService_StartTyping",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StartTypingResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MessageServiceStartTypingBody"
+            }
+          }
+        ],
+        "tags": [
+          "MessageService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/voice/join": {
+      "post": {
+        "operationId": "VoiceService_JoinChannel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1JoinChannelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VoiceServiceJoinChannelBody"
+            }
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/voice/me": {
+      "delete": {
+        "operationId": "VoiceService_LeaveChannel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LeaveChannelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "guildId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/voice/me/deaf": {
+      "delete": {
+        "operationId": "VoiceService_Undeafen",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1VoiceParticipantsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      },
+      "put": {
+        "operationId": "VoiceService_Deafen",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1VoiceParticipantsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VoiceServiceDeafenBody"
+            }
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/voice/me/mute": {
+      "delete": {
+        "operationId": "VoiceService_Unmute",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1VoiceParticipantsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      },
+      "put": {
+        "summary": "Self-state toggles. PUT = flag on (mute/deaf/video/screen), DELETE = off.\nReturns updated participant list so callers can refresh UI in one round trip.",
+        "operationId": "VoiceService_Mute",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1VoiceParticipantsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VoiceServiceMuteBody"
+            }
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/voice/me/screen": {
+      "delete": {
+        "operationId": "VoiceService_StopScreenShare",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1VoiceParticipantsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      },
+      "put": {
+        "operationId": "VoiceService_StartScreenShare",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1VoiceParticipantsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VoiceServiceStartScreenShareBody"
+            }
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/voice/me/video": {
+      "delete": {
+        "operationId": "VoiceService_DisableVideo",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1VoiceParticipantsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      },
+      "put": {
+        "operationId": "VoiceService_EnableVideo",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1VoiceParticipantsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VoiceServiceEnableVideoBody"
+            }
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/voice/participants": {
+      "get": {
+        "operationId": "VoiceService_GetChannelParticipants",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetChannelParticipantsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/voice/participants/{targetUserId}": {
+      "delete": {
+        "operationId": "VoiceService_DisconnectUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DisconnectUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "targetUserId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/voice/participants/{targetUserId}/deaf": {
+      "put": {
+        "operationId": "VoiceService_ServerDeafenUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ServerDeafenUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "targetUserId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VoiceServiceServerDeafenUserBody"
+            }
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      }
+    },
+    "/v1/channels/{channelId}/voice/participants/{targetUserId}/mute": {
+      "put": {
+        "summary": "Moderator-level ops: act on a specific participant. PUT body carries\nthe boolean because the action is \"set muted=true/false\", not strictly\nidempotent toggle (admin may force-mute regardless of current state).",
+        "operationId": "VoiceService_ServerMuteUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ServerMuteUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "targetUserId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/VoiceServiceServerMuteUserBody"
+            }
+          }
+        ],
+        "tags": [
+          "VoiceService"
+        ]
+      }
+    },
+    "/v1/dms": {
+      "get": {
+        "operationId": "ChannelService_ListDMChannels",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListDMChannelsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "ChannelService"
+        ]
+      },
+      "post": {
+        "summary": "DM channels live under /v1/dms (no parent guild).",
+        "operationId": "ChannelService_CreateDMChannel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateDMChannelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateDMChannelRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ChannelService"
+        ]
+      }
+    },
+    "/v1/dms/{channelId}/members": {
+      "get": {
+        "operationId": "ChannelService_ListDMChannelMembers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListDMChannelMembersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ChannelService"
+        ]
+      }
+    },
+    "/v1/dms/{channelId}/members/{userId}": {
+      "delete": {
+        "operationId": "ChannelService_RemoveDMGroupMember",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RemoveDMGroupMemberResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ChannelService"
+        ]
+      },
+      "put": {
+        "operationId": "ChannelService_AddDMGroupMember",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AddDMGroupMemberResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ChannelServiceAddDMGroupMemberBody"
+            }
+          }
+        ],
+        "tags": [
+          "ChannelService"
+        ]
+      }
+    },
+    "/v1/dms:withMembers": {
+      "get": {
+        "operationId": "ChannelService_ListDMChannelsWithMembers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListDMChannelsWithMembersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "ChannelService"
+        ]
+      }
+    },
+    "/v1/friends": {
+      "get": {
+        "operationId": "UserService_ListFriends",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListFriendsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/v1/friends/pending": {
+      "get": {
+        "operationId": "UserService_ListPendingRequests",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListPendingRequestsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/v1/friends/requests": {
+      "post": {
+        "summary": "Friends",
+        "operationId": "UserService_SendFriendRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SendFriendRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SendFriendRequestRequest"
+            }
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/v1/friends/{friendId}": {
+      "delete": {
+        "operationId": "UserService_RemoveFriend",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RemoveFriendResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "friendId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/v1/friends/{requesterUserId}/accept": {
+      "post": {
+        "operationId": "UserService_AcceptFriendRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AcceptFriendRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requesterUserId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserServiceAcceptFriendRequestBody"
+            }
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/v1/friends/{requesterUserId}/decline": {
+      "post": {
+        "operationId": "UserService_DeclineFriendRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeclineFriendRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "requesterUserId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserServiceDeclineFriendRequestBody"
+            }
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/v1/friends/{targetUserId}/cancel": {
+      "post": {
+        "operationId": "UserService_CancelFriendRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CancelFriendRequestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "targetUserId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserServiceCancelFriendRequestBody"
+            }
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/v1/guilds": {
+      "post": {
+        "operationId": "GuildService_CreateGuild",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateGuildResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateGuildRequest"
+            }
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/guilds/{guildId}": {
+      "get": {
+        "operationId": "GuildService_GetGuild",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetGuildResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      },
+      "delete": {
+        "operationId": "GuildService_DeleteGuild",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteGuildResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      },
+      "patch": {
+        "operationId": "GuildService_UpdateGuild",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateGuildResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GuildServiceUpdateGuildBody"
+            }
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/guilds/{guildId}/banner": {
+      "post": {
+        "operationId": "GuildService_UploadGuildBanner",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UploadGuildBannerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GuildServiceUploadGuildBannerBody"
+            }
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/guilds/{guildId}/bans/{userId}": {
+      "delete": {
+        "operationId": "GuildService_UnbanMember",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UnbanMemberResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      },
+      "put": {
+        "operationId": "GuildService_BanMember",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BanMemberResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GuildServiceBanMemberBody"
+            }
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/guilds/{guildId}/channels": {
+      "get": {
+        "operationId": "ChannelService_ListGuildChannels",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListGuildChannelsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ChannelService"
+        ]
+      },
+      "post": {
+        "summary": "Guild channels are nested under /v1/guilds/{guild_id}/channels so the\nURL reflects the parent → child relationship. Single-resource ops\n(GET / PATCH / DELETE) go through /v1/channels/{channel_id} because\na channel id is already globally unique.",
+        "operationId": "ChannelService_CreateChannel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateChannelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ChannelServiceCreateChannelBody"
+            }
+          }
+        ],
+        "tags": [
+          "ChannelService"
+        ]
+      }
+    },
+    "/v1/guilds/{guildId}/icon": {
+      "post": {
+        "operationId": "GuildService_UploadGuildIcon",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UploadGuildIconResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GuildServiceUploadGuildIconBody"
+            }
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/guilds/{guildId}/invites": {
+      "post": {
+        "operationId": "GuildService_CreateInvite",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateInviteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GuildServiceCreateInviteBody"
+            }
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/guilds/{guildId}/members": {
+      "get": {
+        "operationId": "GuildService_ListMembers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListMembersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/guilds/{guildId}/members/me": {
+      "delete": {
+        "operationId": "GuildService_LeaveGuild",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1LeaveGuildResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/guilds/{guildId}/members/{userId}": {
+      "delete": {
+        "operationId": "GuildService_KickMember",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1KickMemberResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/guilds/{guildId}/members/{userId}/permissions": {
+      "get": {
+        "operationId": "GuildService_GetUserPermissions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetUserPermissionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/guilds/{guildId}/members/{userId}/permissions/{permission}": {
+      "delete": {
+        "operationId": "GuildService_RevokePermission",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RevokePermissionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "permission",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "PERMISSION_UNSPECIFIED",
+              "PERMISSION_VIEW_CHANNELS",
+              "PERMISSION_SEND_MESSAGES",
+              "PERMISSION_MANAGE_MESSAGES",
+              "PERMISSION_MANAGE_CHANNELS",
+              "PERMISSION_MANAGE_GUILD",
+              "PERMISSION_KICK_MEMBERS",
+              "PERMISSION_BAN_MEMBERS",
+              "PERMISSION_MANAGE_ROLES",
+              "PERMISSION_MANAGE_INVITES",
+              "PERMISSION_ADD_REACTIONS",
+              "PERMISSION_CONNECT",
+              "PERMISSION_SPEAK",
+              "PERMISSION_STREAM",
+              "PERMISSION_MUTE_MEMBERS",
+              "PERMISSION_DEAFEN_MEMBERS",
+              "PERMISSION_MENTION_EVERYONE",
+              "PERMISSION_MANAGE_EMOJIS",
+              "PERMISSION_MANAGE_WEBHOOKS",
+              "PERMISSION_ADMINISTRATOR",
+              "PERMISSION_VIEW_AUDIT_LOG",
+              "PERMISSION_VIEW_GUILD_INSIGHTS",
+              "PERMISSION_MANAGE_NICKNAMES",
+              "PERMISSION_CHANGE_NICKNAME",
+              "PERMISSION_CREATE_GUILD_EXPRESSIONS",
+              "PERMISSION_MODERATE_MEMBERS",
+              "PERMISSION_VIEW_CREATOR_MONETIZATION_ANALYTICS",
+              "PERMISSION_SEND_TTS_MESSAGES",
+              "PERMISSION_EMBED_LINKS",
+              "PERMISSION_ATTACH_FILES",
+              "PERMISSION_READ_MESSAGE_HISTORY",
+              "PERMISSION_USE_EXTERNAL_EMOJIS",
+              "PERMISSION_USE_EXTERNAL_STICKERS",
+              "PERMISSION_USE_EXTERNAL_SOUNDS",
+              "PERMISSION_USE_EXTERNAL_APPS",
+              "PERMISSION_PRIORITY_SPEAKER",
+              "PERMISSION_MOVE_MEMBERS",
+              "PERMISSION_USE_VAD",
+              "PERMISSION_REQUEST_TO_SPEAK",
+              "PERMISSION_USE_SOUNDBOARD",
+              "PERMISSION_USE_EMBEDDED_ACTIVITIES",
+              "PERMISSION_SEND_VOICE_MESSAGES",
+              "PERMISSION_SEND_POLLS",
+              "PERMISSION_PIN_MESSAGES",
+              "PERMISSION_BYPASS_SLOWMODE",
+              "PERMISSION_CREATE_PUBLIC_THREADS",
+              "PERMISSION_CREATE_PRIVATE_THREADS",
+              "PERMISSION_SEND_MESSAGES_IN_THREADS",
+              "PERMISSION_MANAGE_THREADS",
+              "PERMISSION_CREATE_EVENTS",
+              "PERMISSION_MANAGE_EVENTS"
+            ]
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      },
+      "put": {
+        "summary": "Deprecated: per-user guild grants. REST mapping returns 501 in the\nhandler; kept here so old client SDKs compile. Prefer role-based\ngrants below or channel overrides in ChannelService.",
+        "operationId": "GuildService_GrantPermission",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GrantPermissionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "permission",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "PERMISSION_UNSPECIFIED",
+              "PERMISSION_VIEW_CHANNELS",
+              "PERMISSION_SEND_MESSAGES",
+              "PERMISSION_MANAGE_MESSAGES",
+              "PERMISSION_MANAGE_CHANNELS",
+              "PERMISSION_MANAGE_GUILD",
+              "PERMISSION_KICK_MEMBERS",
+              "PERMISSION_BAN_MEMBERS",
+              "PERMISSION_MANAGE_ROLES",
+              "PERMISSION_MANAGE_INVITES",
+              "PERMISSION_ADD_REACTIONS",
+              "PERMISSION_CONNECT",
+              "PERMISSION_SPEAK",
+              "PERMISSION_STREAM",
+              "PERMISSION_MUTE_MEMBERS",
+              "PERMISSION_DEAFEN_MEMBERS",
+              "PERMISSION_MENTION_EVERYONE",
+              "PERMISSION_MANAGE_EMOJIS",
+              "PERMISSION_MANAGE_WEBHOOKS",
+              "PERMISSION_ADMINISTRATOR",
+              "PERMISSION_VIEW_AUDIT_LOG",
+              "PERMISSION_VIEW_GUILD_INSIGHTS",
+              "PERMISSION_MANAGE_NICKNAMES",
+              "PERMISSION_CHANGE_NICKNAME",
+              "PERMISSION_CREATE_GUILD_EXPRESSIONS",
+              "PERMISSION_MODERATE_MEMBERS",
+              "PERMISSION_VIEW_CREATOR_MONETIZATION_ANALYTICS",
+              "PERMISSION_SEND_TTS_MESSAGES",
+              "PERMISSION_EMBED_LINKS",
+              "PERMISSION_ATTACH_FILES",
+              "PERMISSION_READ_MESSAGE_HISTORY",
+              "PERMISSION_USE_EXTERNAL_EMOJIS",
+              "PERMISSION_USE_EXTERNAL_STICKERS",
+              "PERMISSION_USE_EXTERNAL_SOUNDS",
+              "PERMISSION_USE_EXTERNAL_APPS",
+              "PERMISSION_PRIORITY_SPEAKER",
+              "PERMISSION_MOVE_MEMBERS",
+              "PERMISSION_USE_VAD",
+              "PERMISSION_REQUEST_TO_SPEAK",
+              "PERMISSION_USE_SOUNDBOARD",
+              "PERMISSION_USE_EMBEDDED_ACTIVITIES",
+              "PERMISSION_SEND_VOICE_MESSAGES",
+              "PERMISSION_SEND_POLLS",
+              "PERMISSION_PIN_MESSAGES",
+              "PERMISSION_BYPASS_SLOWMODE",
+              "PERMISSION_CREATE_PUBLIC_THREADS",
+              "PERMISSION_CREATE_PRIVATE_THREADS",
+              "PERMISSION_SEND_MESSAGES_IN_THREADS",
+              "PERMISSION_MANAGE_THREADS",
+              "PERMISSION_CREATE_EVENTS",
+              "PERMISSION_MANAGE_EVENTS"
+            ]
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GuildServiceGrantPermissionBody"
+            }
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/guilds/{guildId}/members/{userId}/roles/{roleId}": {
+      "delete": {
+        "operationId": "GuildService_RemoveRole",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RemoveRoleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      },
+      "put": {
+        "operationId": "GuildService_AssignRole",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AssignRoleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GuildServiceAssignRoleBody"
+            }
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/guilds/{guildId}/owner": {
+      "put": {
+        "summary": "Idempotent \"make X the owner\"; PUT on the /owner sub-resource.",
+        "operationId": "GuildService_TransferOwnership",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TransferOwnershipResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GuildServiceTransferOwnershipBody"
+            }
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/guilds/{guildId}/roles": {
+      "post": {
+        "operationId": "GuildService_CreateRole",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateRoleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GuildServiceCreateRoleBody"
+            }
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/guilds/{guildId}/roles/{roleId}": {
+      "delete": {
+        "operationId": "GuildService_DeleteRole",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteRoleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      },
+      "patch": {
+        "operationId": "GuildService_UpdateRole",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateRoleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GuildServiceUpdateRoleBody"
+            }
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/guilds/{guildId}/roles/{roleId}/permissions/{permission}": {
+      "delete": {
+        "operationId": "GuildService_RevokeRolePermission",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RevokeRolePermissionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "permission",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "PERMISSION_UNSPECIFIED",
+              "PERMISSION_VIEW_CHANNELS",
+              "PERMISSION_SEND_MESSAGES",
+              "PERMISSION_MANAGE_MESSAGES",
+              "PERMISSION_MANAGE_CHANNELS",
+              "PERMISSION_MANAGE_GUILD",
+              "PERMISSION_KICK_MEMBERS",
+              "PERMISSION_BAN_MEMBERS",
+              "PERMISSION_MANAGE_ROLES",
+              "PERMISSION_MANAGE_INVITES",
+              "PERMISSION_ADD_REACTIONS",
+              "PERMISSION_CONNECT",
+              "PERMISSION_SPEAK",
+              "PERMISSION_STREAM",
+              "PERMISSION_MUTE_MEMBERS",
+              "PERMISSION_DEAFEN_MEMBERS",
+              "PERMISSION_MENTION_EVERYONE",
+              "PERMISSION_MANAGE_EMOJIS",
+              "PERMISSION_MANAGE_WEBHOOKS",
+              "PERMISSION_ADMINISTRATOR",
+              "PERMISSION_VIEW_AUDIT_LOG",
+              "PERMISSION_VIEW_GUILD_INSIGHTS",
+              "PERMISSION_MANAGE_NICKNAMES",
+              "PERMISSION_CHANGE_NICKNAME",
+              "PERMISSION_CREATE_GUILD_EXPRESSIONS",
+              "PERMISSION_MODERATE_MEMBERS",
+              "PERMISSION_VIEW_CREATOR_MONETIZATION_ANALYTICS",
+              "PERMISSION_SEND_TTS_MESSAGES",
+              "PERMISSION_EMBED_LINKS",
+              "PERMISSION_ATTACH_FILES",
+              "PERMISSION_READ_MESSAGE_HISTORY",
+              "PERMISSION_USE_EXTERNAL_EMOJIS",
+              "PERMISSION_USE_EXTERNAL_STICKERS",
+              "PERMISSION_USE_EXTERNAL_SOUNDS",
+              "PERMISSION_USE_EXTERNAL_APPS",
+              "PERMISSION_PRIORITY_SPEAKER",
+              "PERMISSION_MOVE_MEMBERS",
+              "PERMISSION_USE_VAD",
+              "PERMISSION_REQUEST_TO_SPEAK",
+              "PERMISSION_USE_SOUNDBOARD",
+              "PERMISSION_USE_EMBEDDED_ACTIVITIES",
+              "PERMISSION_SEND_VOICE_MESSAGES",
+              "PERMISSION_SEND_POLLS",
+              "PERMISSION_PIN_MESSAGES",
+              "PERMISSION_BYPASS_SLOWMODE",
+              "PERMISSION_CREATE_PUBLIC_THREADS",
+              "PERMISSION_CREATE_PRIVATE_THREADS",
+              "PERMISSION_SEND_MESSAGES_IN_THREADS",
+              "PERMISSION_MANAGE_THREADS",
+              "PERMISSION_CREATE_EVENTS",
+              "PERMISSION_MANAGE_EVENTS"
+            ]
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      },
+      "put": {
+        "summary": "Role-scoped permission grants (Discord's primary model — a role\ncarries a permission set, every assigned user inherits).",
+        "operationId": "GuildService_GrantRolePermission",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GrantRolePermissionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "guildId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "permission",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "PERMISSION_UNSPECIFIED",
+              "PERMISSION_VIEW_CHANNELS",
+              "PERMISSION_SEND_MESSAGES",
+              "PERMISSION_MANAGE_MESSAGES",
+              "PERMISSION_MANAGE_CHANNELS",
+              "PERMISSION_MANAGE_GUILD",
+              "PERMISSION_KICK_MEMBERS",
+              "PERMISSION_BAN_MEMBERS",
+              "PERMISSION_MANAGE_ROLES",
+              "PERMISSION_MANAGE_INVITES",
+              "PERMISSION_ADD_REACTIONS",
+              "PERMISSION_CONNECT",
+              "PERMISSION_SPEAK",
+              "PERMISSION_STREAM",
+              "PERMISSION_MUTE_MEMBERS",
+              "PERMISSION_DEAFEN_MEMBERS",
+              "PERMISSION_MENTION_EVERYONE",
+              "PERMISSION_MANAGE_EMOJIS",
+              "PERMISSION_MANAGE_WEBHOOKS",
+              "PERMISSION_ADMINISTRATOR",
+              "PERMISSION_VIEW_AUDIT_LOG",
+              "PERMISSION_VIEW_GUILD_INSIGHTS",
+              "PERMISSION_MANAGE_NICKNAMES",
+              "PERMISSION_CHANGE_NICKNAME",
+              "PERMISSION_CREATE_GUILD_EXPRESSIONS",
+              "PERMISSION_MODERATE_MEMBERS",
+              "PERMISSION_VIEW_CREATOR_MONETIZATION_ANALYTICS",
+              "PERMISSION_SEND_TTS_MESSAGES",
+              "PERMISSION_EMBED_LINKS",
+              "PERMISSION_ATTACH_FILES",
+              "PERMISSION_READ_MESSAGE_HISTORY",
+              "PERMISSION_USE_EXTERNAL_EMOJIS",
+              "PERMISSION_USE_EXTERNAL_STICKERS",
+              "PERMISSION_USE_EXTERNAL_SOUNDS",
+              "PERMISSION_USE_EXTERNAL_APPS",
+              "PERMISSION_PRIORITY_SPEAKER",
+              "PERMISSION_MOVE_MEMBERS",
+              "PERMISSION_USE_VAD",
+              "PERMISSION_REQUEST_TO_SPEAK",
+              "PERMISSION_USE_SOUNDBOARD",
+              "PERMISSION_USE_EMBEDDED_ACTIVITIES",
+              "PERMISSION_SEND_VOICE_MESSAGES",
+              "PERMISSION_SEND_POLLS",
+              "PERMISSION_PIN_MESSAGES",
+              "PERMISSION_BYPASS_SLOWMODE",
+              "PERMISSION_CREATE_PUBLIC_THREADS",
+              "PERMISSION_CREATE_PRIVATE_THREADS",
+              "PERMISSION_SEND_MESSAGES_IN_THREADS",
+              "PERMISSION_MANAGE_THREADS",
+              "PERMISSION_CREATE_EVENTS",
+              "PERMISSION_MANAGE_EVENTS"
+            ]
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GuildServiceGrantRolePermissionBody"
+            }
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/invites/{inviteCode}": {
+      "get": {
+        "summary": "Public (bypasses auth interceptor) — GET on the invite resource.",
+        "operationId": "GuildService_PreviewInvite",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PreviewInviteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "inviteCode",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/invites/{inviteCode}/join": {
+      "post": {
+        "operationId": "GuildService_JoinGuild",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1JoinGuildResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "inviteCode",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GuildServiceJoinGuildBody"
+            }
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/media/files/{fileId}": {
+      "delete": {
+        "operationId": "MediaService_DeleteFile",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteFileResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MediaService"
+        ]
+      }
+    },
+    "/v1/media/files/{fileId}/download": {
+      "get": {
+        "operationId": "MediaService_GetDownloadURL",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetDownloadURLResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MediaService"
+        ]
+      }
+    },
+    "/v1/media/uploads": {
+      "post": {
+        "operationId": "MediaService_RequestUpload",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RequestUploadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RequestUploadRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MediaService"
+        ]
+      }
+    },
+    "/v1/media/uploads/{uploadId}/confirm": {
+      "post": {
+        "operationId": "MediaService_ConfirmUpload",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ConfirmUploadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uploadId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MediaServiceConfirmUploadBody"
+            }
+          }
+        ],
+        "tags": [
+          "MediaService"
+        ]
+      }
+    },
+    "/v1/messages/unread": {
+      "get": {
+        "operationId": "MessageService_GetUnreadCounts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetUnreadCountsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "MessageService"
+        ]
+      }
+    },
+    "/v1/presence": {
+      "get": {
+        "summary": "Bulk reader takes user_ids as repeated query params (?user_ids=a\u0026user_ids=b).\nKept GET even with a list because the operation is a pure fan-out read.",
+        "operationId": "PresenceService_GetBulkPresence",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetBulkPresenceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userIds",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "tags": [
+          "PresenceService"
+        ]
+      }
+    },
+    "/v1/stream/channels/text": {
+      "get": {
+        "operationId": "StreamService_StreamTextChannels",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/v1TextChannelEvent"
+                },
+                "error": {
+                  "$ref": "#/definitions/googleRpcStatus"
+                }
+              },
+              "title": "Stream result of v1TextChannelEvent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "StreamService"
+        ]
+      }
+    },
+    "/v1/stream/channels/voice-chat": {
+      "get": {
+        "operationId": "StreamService_StreamVoiceChat",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/v1VoiceChatEvent"
+                },
+                "error": {
+                  "$ref": "#/definitions/googleRpcStatus"
+                }
+              },
+              "title": "Stream result of v1VoiceChatEvent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "StreamService"
+        ]
+      }
+    },
+    "/v1/stream/dm/calls": {
+      "get": {
+        "operationId": "StreamService_StreamDmCalls",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/v1DmCallEvent"
+                },
+                "error": {
+                  "$ref": "#/definitions/googleRpcStatus"
+                }
+              },
+              "title": "Stream result of v1DmCallEvent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "StreamService"
+        ]
+      }
+    },
+    "/v1/stream/dm/channels": {
+      "get": {
+        "operationId": "StreamService_StreamDmChannels",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/v1DmChannelEvent"
+                },
+                "error": {
+                  "$ref": "#/definitions/googleRpcStatus"
+                }
+              },
+              "title": "Stream result of v1DmChannelEvent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "StreamService"
+        ]
+      }
+    },
+    "/v1/stream/dm/chat": {
+      "get": {
+        "operationId": "StreamService_StreamDmChat",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/v1DmChatEvent"
+                },
+                "error": {
+                  "$ref": "#/definitions/googleRpcStatus"
+                }
+              },
+              "title": "Stream result of v1DmChatEvent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "StreamService"
+        ]
+      }
+    },
+    "/v1/stream/friends": {
+      "get": {
+        "operationId": "StreamService_StreamFriendActivity",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/v1FriendActivityEvent"
+                },
+                "error": {
+                  "$ref": "#/definitions/googleRpcStatus"
+                }
+              },
+              "title": "Stream result of v1FriendActivityEvent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "StreamService"
+        ]
+      }
+    },
+    "/v1/stream/guilds": {
+      "get": {
+        "operationId": "StreamService_StreamGuildEvents",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/v1GuildEvent"
+                },
+                "error": {
+                  "$ref": "#/definitions/googleRpcStatus"
+                }
+              },
+              "title": "Stream result of v1GuildEvent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "StreamService"
+        ]
+      }
+    },
+    "/v1/stream/typing": {
+      "get": {
+        "operationId": "StreamService_StreamTyping",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/v1TypingEvent"
+                },
+                "error": {
+                  "$ref": "#/definitions/googleRpcStatus"
+                }
+              },
+              "title": "Stream result of v1TypingEvent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "StreamService"
+        ]
+      }
+    },
+    "/v1/stream/voice-state": {
+      "get": {
+        "operationId": "StreamService_StreamVoiceState",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/v1VoiceStateEvent"
+                },
+                "error": {
+                  "$ref": "#/definitions/googleRpcStatus"
+                }
+              },
+              "title": "Stream result of v1VoiceStateEvent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "StreamService"
+        ]
+      }
+    },
+    "/v1/sync": {
+      "post": {
+        "operationId": "SyncService_Sync",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SyncResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SyncRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SyncService"
+        ]
+      }
+    },
+    "/v1/users/by-username/{username}": {
+      "get": {
+        "operationId": "UserService_GetUserByUsername",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetUserByUsernameResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/v1/users/me": {
+      "delete": {
+        "operationId": "UserService_DeleteUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      },
+      "patch": {
+        "operationId": "UserService_UpdateUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpdateUserRequest"
+            }
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/v1/users/me/avatar": {
+      "post": {
+        "operationId": "UserService_UploadUserAvatar",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UploadUserAvatarResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UploadUserAvatarRequest"
+            }
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/v1/users/me/presence": {
+      "patch": {
+        "operationId": "PresenceService_UpdatePresence",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdatePresenceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpdatePresenceRequest"
+            }
+          }
+        ],
+        "tags": [
+          "PresenceService"
+        ]
+      }
+    },
+    "/v1/users/me/status": {
+      "patch": {
+        "operationId": "UserService_UpdateStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpdateStatusRequest"
+            }
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/v1/users/me/username": {
+      "patch": {
+        "operationId": "UserService_UpdateUsername",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateUsernameResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpdateUsernameRequest"
+            }
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/v1/users/search": {
+      "get": {
+        "operationId": "UserService_SearchUsers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SearchUsersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/v1/users/{recipientId}/messages": {
+      "post": {
+        "summary": "Convenience: auto-resolve/create DM channel by recipient and post.",
+        "operationId": "MessageService_SendDirectMessage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SendDirectMessageResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "recipientId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MessageServiceSendDirectMessageBody"
+            }
+          }
+        ],
+        "tags": [
+          "MessageService"
+        ]
+      }
+    },
+    "/v1/users/{userId}": {
+      "get": {
+        "operationId": "UserService_GetUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetUserResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "UserService"
+        ]
+      }
+    },
+    "/v1/users/{userId}/guilds": {
+      "get": {
+        "operationId": "GuildService_ListUserGuilds",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListUserGuildsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "GuildService"
+        ]
+      }
+    },
+    "/v1/users/{userId}/presence": {
+      "get": {
+        "operationId": "PresenceService_GetPresence",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetPresenceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googleRpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "PresenceService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "ChannelServiceAddDMGroupMemberBody": {
+      "type": "object"
+    },
+    "ChannelServiceCreateChannelBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/v1ChannelType"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": "string"
+        }
+      }
+    },
+    "ChannelServiceSetChannelOverrideBody": {
+      "type": "object",
+      "properties": {
+        "effect": {
+          "type": "string"
+        }
+      }
+    },
+    "ChannelServiceUpdateChannelBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "parentId": {
+          "type": "string"
+        }
+      }
+    },
+    "GuildServiceAssignRoleBody": {
+      "type": "object"
+    },
+    "GuildServiceBanMemberBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "GuildServiceCreateInviteBody": {
+      "type": "object",
+      "properties": {
+        "channelId": {
+          "type": "string"
+        },
+        "maxUses": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "maxAgeSeconds": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "GuildServiceCreateRoleBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        }
+      }
+    },
+    "GuildServiceGrantPermissionBody": {
+      "type": "object"
+    },
+    "GuildServiceGrantRolePermissionBody": {
+      "type": "object"
+    },
+    "GuildServiceJoinGuildBody": {
+      "type": "object"
+    },
+    "GuildServiceTransferOwnershipBody": {
+      "type": "object",
+      "properties": {
+        "newOwnerId": {
+          "type": "string"
+        }
+      }
+    },
+    "GuildServiceUpdateGuildBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "iconUrl": {
+          "type": "string"
+        },
+        "bannerUrl": {
+          "type": "string"
+        }
+      }
+    },
+    "GuildServiceUpdateRoleBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "GuildServiceUploadGuildBannerBody": {
+      "type": "object",
+      "properties": {
+        "filename": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": "string"
+        },
+        "data": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "GuildServiceUploadGuildIconBody": {
+      "type": "object",
+      "properties": {
+        "filename": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": "string"
+        },
+        "data": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "MediaServiceConfirmUploadBody": {
+      "type": "object"
+    },
+    "MessageServiceAckMessageBody": {
+      "type": "object"
+    },
+    "MessageServiceAddReactionBody": {
+      "type": "object"
+    },
+    "MessageServiceBulkDeleteMessagesBody": {
+      "type": "object",
+      "properties": {
+        "messageIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "MessageServiceEditMessageBody": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      }
+    },
+    "MessageServicePinMessageBody": {
+      "type": "object"
+    },
+    "MessageServiceSendDirectMessageBody": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        }
+      }
+    },
+    "MessageServiceSendMessageBody": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/v1MessageType"
+        },
+        "replyToId": {
+          "type": "string"
+        },
+        "attachmentIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "forwardedFrom": {
+          "$ref": "#/definitions/v1ForwardedReference"
+        },
+        "mentionUserIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "MessageServiceStartTypingBody": {
+      "type": "object",
+      "properties": {
+        "userName": {
+          "type": "string"
+        }
+      }
+    },
+    "UserServiceAcceptFriendRequestBody": {
+      "type": "object"
+    },
+    "UserServiceBlockUserBody": {
+      "type": "object"
+    },
+    "UserServiceCancelFriendRequestBody": {
+      "type": "object"
+    },
+    "UserServiceDeclineFriendRequestBody": {
+      "type": "object"
+    },
+    "VoiceServiceDeafenBody": {
+      "type": "object"
+    },
+    "VoiceServiceEnableVideoBody": {
+      "type": "object"
+    },
+    "VoiceServiceJoinChannelBody": {
+      "type": "object",
+      "properties": {
+        "guildId": {
+          "type": "string"
+        }
+      }
+    },
+    "VoiceServiceJoinDMCallBody": {
+      "type": "object",
+      "properties": {
+        "video": {
+          "type": "boolean"
+        }
+      }
+    },
+    "VoiceServiceMuteBody": {
+      "type": "object"
+    },
+    "VoiceServiceRejectDMCallBody": {
+      "type": "object"
+    },
+    "VoiceServiceServerDeafenUserBody": {
+      "type": "object",
+      "properties": {
+        "deafened": {
+          "type": "boolean"
+        }
+      }
+    },
+    "VoiceServiceServerMuteUserBody": {
+      "type": "object",
+      "properties": {
+        "muted": {
+          "type": "boolean"
+        }
+      }
+    },
+    "VoiceServiceStartDMCallBody": {
+      "type": "object",
+      "properties": {
+        "video": {
+          "type": "boolean"
+        }
+      }
+    },
+    "VoiceServiceStartScreenShareBody": {
+      "type": "object"
+    },
+    "googleRpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "presenceV1Status": {
+      "type": "string",
+      "enum": [
+        "STATUS_UNSPECIFIED",
+        "STATUS_ONLINE",
+        "STATUS_IDLE",
+        "STATUS_DND",
+        "STATUS_OFFLINE"
+      ],
+      "default": "STATUS_UNSPECIFIED"
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "v1AcceptFriendRequestResponse": {
+      "type": "object",
+      "properties": {
+        "friendship": {
+          "$ref": "#/definitions/v1Friendship"
+        }
+      }
+    },
+    "v1AckMessageResponse": {
+      "type": "object"
+    },
+    "v1AddDMGroupMemberResponse": {
+      "type": "object"
+    },
+    "v1AddReactionResponse": {
+      "type": "object"
+    },
+    "v1AssignRoleResponse": {
+      "type": "object"
+    },
+    "v1Attachment": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1BanMemberResponse": {
+      "type": "object"
+    },
+    "v1BlockUserResponse": {
+      "type": "object"
+    },
+    "v1BulkDeleteMessagesResponse": {
+      "type": "object",
+      "properties": {
+        "deletedCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1CancelFriendRequestResponse": {
+      "type": "object"
+    },
+    "v1Channel": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "guildId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/v1ChannelType"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "parentId": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1ChannelLifecycleType": {
+      "type": "string",
+      "enum": [
+        "CHANNEL_LIFECYCLE_UNSPECIFIED",
+        "CHANNEL_LIFECYCLE_CREATE",
+        "CHANNEL_LIFECYCLE_UPDATE",
+        "CHANNEL_LIFECYCLE_DELETE"
+      ],
+      "default": "CHANNEL_LIFECYCLE_UNSPECIFIED"
+    },
+    "v1ChannelOverride": {
+      "type": "object",
+      "properties": {
+        "targetType": {
+          "type": "string",
+          "title": "\"role\" or \"user\""
+        },
+        "targetId": {
+          "type": "string"
+        },
+        "permission": {
+          "type": "string",
+          "title": "Discord name, e.g. \"SEND_MESSAGES\""
+        },
+        "effect": {
+          "type": "string",
+          "title": "\"allow\" or \"deny\""
+        }
+      }
+    },
+    "v1ChannelType": {
+      "type": "string",
+      "enum": [
+        "CHANNEL_TYPE_UNSPECIFIED",
+        "CHANNEL_TYPE_TEXT",
+        "CHANNEL_TYPE_VOICE",
+        "CHANNEL_TYPE_VIDEO",
+        "CHANNEL_TYPE_CATEGORY",
+        "CHANNEL_TYPE_DM",
+        "CHANNEL_TYPE_GROUP_DM",
+        "CHANNEL_TYPE_ANNOUNCEMENT",
+        "CHANNEL_TYPE_FORUM",
+        "CHANNEL_TYPE_STAGE"
+      ],
+      "default": "CHANNEL_TYPE_UNSPECIFIED"
+    },
+    "v1ChatAttachment": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ChatEventType": {
+      "type": "string",
+      "enum": [
+        "CHAT_EVENT_UNSPECIFIED",
+        "CHAT_EVENT_CREATE",
+        "CHAT_EVENT_UPDATE",
+        "CHAT_EVENT_DELETE",
+        "CHAT_EVENT_PIN",
+        "CHAT_EVENT_UNPIN",
+        "CHAT_EVENT_REACTION_ADD",
+        "CHAT_EVENT_REACTION_REMOVE",
+        "CHAT_EVENT_READ_RECEIPT"
+      ],
+      "default": "CHAT_EVENT_UNSPECIFIED"
+    },
+    "v1ChatForwardedReference": {
+      "type": "object",
+      "properties": {
+        "channelId": {
+          "type": "string"
+        },
+        "messageId": {
+          "type": "string"
+        },
+        "authorId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ChatReactionCount": {
+      "type": "object",
+      "properties": {
+        "emoji": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "me": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1ConfirmUploadResponse": {
+      "type": "object",
+      "properties": {
+        "fileId": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateChannelResponse": {
+      "type": "object",
+      "properties": {
+        "channel": {
+          "$ref": "#/definitions/v1Channel"
+        }
+      }
+    },
+    "v1CreateDMChannelRequest": {
+      "type": "object",
+      "properties": {
+        "recipientIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1CreateDMChannelResponse": {
+      "type": "object",
+      "properties": {
+        "channel": {
+          "$ref": "#/definitions/v1Channel"
+        }
+      }
+    },
+    "v1CreateGuildRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "iconUrl": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateGuildResponse": {
+      "type": "object",
+      "properties": {
+        "guild": {
+          "$ref": "#/definitions/v1Guild"
+        }
+      }
+    },
+    "v1CreateInviteResponse": {
+      "type": "object",
+      "properties": {
+        "invite": {
+          "$ref": "#/definitions/v1Invite"
+        }
+      }
+    },
+    "v1CreateRoleResponse": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "$ref": "#/definitions/v1Role"
+        }
+      }
+    },
+    "v1DMChannelWithMembers": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "guildId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/v1ChannelType"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "parentId": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DMMember"
+          }
+        }
+      }
+    },
+    "v1DMMember": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string",
+          "title": "full \"name#1234\" handle"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "avatarUrl": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "description": "DMMember is a lightweight user profile embedded in DM channel responses so\nclients don't need a second round trip to UserService to render the list."
+    },
+    "v1DeclineFriendRequestResponse": {
+      "type": "object"
+    },
+    "v1DeleteChannelOverrideResponse": {
+      "type": "object"
+    },
+    "v1DeleteChannelResponse": {
+      "type": "object"
+    },
+    "v1DeleteFileResponse": {
+      "type": "object"
+    },
+    "v1DeleteGuildResponse": {
+      "type": "object"
+    },
+    "v1DeleteMessageResponse": {
+      "type": "object"
+    },
+    "v1DeleteRoleResponse": {
+      "type": "object"
+    },
+    "v1DeleteUserResponse": {
+      "type": "object"
+    },
+    "v1DisconnectUserResponse": {
+      "type": "object"
+    },
+    "v1DmCallEvent": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/v1DmCallType"
+        },
+        "channelId": {
+          "type": "string"
+        },
+        "callerId": {
+          "type": "string"
+        },
+        "participantId": {
+          "type": "string"
+        },
+        "video": {
+          "type": "boolean"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1DmCallType": {
+      "type": "string",
+      "enum": [
+        "DM_CALL_UNSPECIFIED",
+        "DM_CALL_INCOMING",
+        "DM_CALL_ACCEPTED",
+        "DM_CALL_REJECTED",
+        "DM_CALL_ENDED",
+        "DM_CALL_PARTICIPANT_LEFT"
+      ],
+      "default": "DM_CALL_UNSPECIFIED"
+    },
+    "v1DmChannelEvent": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/v1ChannelLifecycleType"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "channelType": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DmChannelMember"
+          }
+        }
+      }
+    },
+    "v1DmChannelMember": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "avatarUrl": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DmChatEvent": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/v1ChatEventType"
+        },
+        "channelId": {
+          "type": "string"
+        },
+        "messageId": {
+          "type": "string"
+        },
+        "senderId": {
+          "type": "string"
+        },
+        "authorId": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "replyToId": {
+          "type": "string"
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChatAttachment"
+          }
+        },
+        "msgType": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pinned": {
+          "type": "boolean"
+        },
+        "deleted": {
+          "type": "boolean"
+        },
+        "emoji": {
+          "type": "string"
+        },
+        "editedAt": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "mentionUserIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChatReactionCount"
+          }
+        },
+        "forwardedFrom": {
+          "$ref": "#/definitions/v1ChatForwardedReference"
+        }
+      }
+    },
+    "v1EditMessageResponse": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "$ref": "#/definitions/v1Message"
+        }
+      }
+    },
+    "v1ForwardedReference": {
+      "type": "object",
+      "properties": {
+        "channelId": {
+          "type": "string"
+        },
+        "messageId": {
+          "type": "string"
+        },
+        "authorId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1FriendActivityEvent": {
+      "type": "object",
+      "properties": {
+        "event": {
+          "$ref": "#/definitions/v1FriendEventType"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1PresenceStatus"
+        },
+        "customStatus": {
+          "type": "string"
+        },
+        "avatarUrl": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "channelId": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        }
+      }
+    },
+    "v1FriendEventType": {
+      "type": "string",
+      "enum": [
+        "FRIEND_EVENT_UNSPECIFIED",
+        "FRIEND_EVENT_PRESENCE_UPDATE",
+        "FRIEND_EVENT_PROFILE_UPDATE",
+        "FRIEND_EVENT_REQUEST",
+        "FRIEND_EVENT_ACCEPTED",
+        "FRIEND_EVENT_DECLINED",
+        "FRIEND_EVENT_REMOVED",
+        "FRIEND_EVENT_REQUEST_CANCELLED"
+      ],
+      "default": "FRIEND_EVENT_UNSPECIFIED"
+    },
+    "v1Friendship": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "friendId": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1FriendshipStatus"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1FriendshipStatus": {
+      "type": "string",
+      "enum": [
+        "FRIENDSHIP_STATUS_UNSPECIFIED",
+        "FRIENDSHIP_STATUS_PENDING",
+        "FRIENDSHIP_STATUS_ACCEPTED",
+        "FRIENDSHIP_STATUS_BLOCKED"
+      ],
+      "default": "FRIENDSHIP_STATUS_UNSPECIFIED"
+    },
+    "v1GetBulkPresenceResponse": {
+      "type": "object",
+      "properties": {
+        "presences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Presence"
+          }
+        }
+      }
+    },
+    "v1GetChannelParticipantsResponse": {
+      "type": "object",
+      "properties": {
+        "participants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1VoiceParticipant"
+          }
+        }
+      }
+    },
+    "v1GetChannelResponse": {
+      "type": "object",
+      "properties": {
+        "channel": {
+          "$ref": "#/definitions/v1Channel"
+        }
+      }
+    },
+    "v1GetDownloadURLResponse": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1GetEditHistoryResponse": {
+      "type": "object",
+      "properties": {
+        "edits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MessageEdit"
+          }
+        }
+      }
+    },
+    "v1GetGuildResponse": {
+      "type": "object",
+      "properties": {
+        "guild": {
+          "$ref": "#/definitions/v1Guild"
+        }
+      }
+    },
+    "v1GetMessageResponse": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "$ref": "#/definitions/v1Message"
+        }
+      }
+    },
+    "v1GetPresenceResponse": {
+      "type": "object",
+      "properties": {
+        "presence": {
+          "$ref": "#/definitions/v1Presence"
+        }
+      }
+    },
+    "v1GetThreadMessagesResponse": {
+      "type": "object",
+      "properties": {
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Message"
+          }
+        }
+      }
+    },
+    "v1GetUnreadCountsResponse": {
+      "type": "object",
+      "properties": {
+        "dmMessages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UnreadDM"
+          }
+        },
+        "channelMessages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1UnreadChannelMessage"
+          }
+        },
+        "totalUnread": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1GetUserByUsernameResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1User"
+        }
+      }
+    },
+    "v1GetUserPermissionsResponse": {
+      "type": "object",
+      "properties": {
+        "permissions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1Permission"
+          }
+        }
+      }
+    },
+    "v1GetUserResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1User"
+        }
+      }
+    },
+    "v1GrantPermissionResponse": {
+      "type": "object"
+    },
+    "v1GrantRolePermissionResponse": {
+      "type": "object"
+    },
+    "v1Guild": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "iconUrl": {
+          "type": "string"
+        },
+        "ownerId": {
+          "type": "string"
+        },
+        "memberCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "bannerUrl": {
+          "type": "string"
+        }
+      }
+    },
+    "v1GuildEvent": {
+      "type": "object",
+      "properties": {
+        "event": {
+          "$ref": "#/definitions/v1GuildEventType"
+        },
+        "guildId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "channelId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "format": "int64"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "parentId": {
+          "type": "string"
+        },
+        "iconUrl": {
+          "type": "string"
+        },
+        "roleId": {
+          "type": "string"
+        },
+        "bannerUrl": {
+          "type": "string",
+          "description": "Guild banner URL on \"update\" banner change."
+        },
+        "reason": {
+          "type": "string"
+        },
+        "action": {
+          "$ref": "#/definitions/v1GuildEventType"
+        },
+        "roleName": {
+          "type": "string",
+          "description": "Role snapshot — populated on ROLE_CREATE, ROLE_UPDATE, ROLE_DELETE,\nand on the ROLE_UPDATE events emitted by GrantRolePermission /\nRevokeRolePermission. Carrying the full role state in the event\nlets clients refresh their cache atomically without a follow-up\nListRolePermissions round trip."
+        },
+        "roleColor": {
+          "type": "string"
+        },
+        "rolePosition": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "rolePermissions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1GuildEventType": {
+      "type": "string",
+      "enum": [
+        "GUILD_EVENT_UNSPECIFIED",
+        "GUILD_EVENT_MEMBER_ADD",
+        "GUILD_EVENT_MEMBER_REMOVE",
+        "GUILD_EVENT_MEMBER_BAN",
+        "GUILD_EVENT_MEMBER_UNBAN",
+        "GUILD_EVENT_UPDATE",
+        "GUILD_EVENT_DELETE",
+        "GUILD_EVENT_ROLE_CREATE",
+        "GUILD_EVENT_ROLE_UPDATE",
+        "GUILD_EVENT_ROLE_DELETE",
+        "GUILD_EVENT_ROLE_ASSIGN",
+        "GUILD_EVENT_ROLE_REMOVE",
+        "GUILD_EVENT_CHANNEL_CREATE",
+        "GUILD_EVENT_CHANNEL_UPDATE",
+        "GUILD_EVENT_CHANNEL_DELETE"
+      ],
+      "default": "GUILD_EVENT_UNSPECIFIED"
+    },
+    "v1GuildMember": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "guildId": {
+          "type": "string"
+        },
+        "nickname": {
+          "type": "string"
+        },
+        "roleIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1Invite": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "guildId": {
+          "type": "string"
+        },
+        "channelId": {
+          "type": "string"
+        },
+        "creatorId": {
+          "type": "string"
+        },
+        "maxUses": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "uses": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "url": {
+          "type": "string"
+        }
+      }
+    },
+    "v1InviteChannelInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "parentId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1InvitePreview": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "guildId": {
+          "type": "string"
+        },
+        "guildName": {
+          "type": "string"
+        },
+        "guildIconUrl": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "memberCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "channelCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "inviterUsername": {
+          "type": "string"
+        },
+        "maxUses": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "uses": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "alreadyMember": {
+          "type": "boolean"
+        },
+        "url": {
+          "type": "string"
+        }
+      }
+    },
+    "v1JoinChannelResponse": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string"
+        },
+        "room": {
+          "type": "string"
+        },
+        "expiresIn": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1JoinDMCallResponse": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string"
+        },
+        "room": {
+          "type": "string"
+        },
+        "expiresIn": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1JoinGuildResponse": {
+      "type": "object",
+      "properties": {
+        "guild": {
+          "$ref": "#/definitions/v1Guild"
+        },
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1InviteChannelInfo"
+          }
+        },
+        "memberCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1KickMemberResponse": {
+      "type": "object"
+    },
+    "v1LeaveChannelResponse": {
+      "type": "object"
+    },
+    "v1LeaveDMCallResponse": {
+      "type": "object"
+    },
+    "v1LeaveGuildResponse": {
+      "type": "object"
+    },
+    "v1ListBlockedResponse": {
+      "type": "object",
+      "properties": {
+        "blocked": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1User"
+          }
+        }
+      }
+    },
+    "v1ListChannelOverridesResponse": {
+      "type": "object",
+      "properties": {
+        "overrides": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChannelOverride"
+          }
+        }
+      }
+    },
+    "v1ListDMChannelMembersResponse": {
+      "type": "object",
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DMMember"
+          }
+        }
+      }
+    },
+    "v1ListDMChannelsResponse": {
+      "type": "object",
+      "properties": {
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Channel"
+          }
+        }
+      }
+    },
+    "v1ListDMChannelsWithMembersResponse": {
+      "type": "object",
+      "properties": {
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1DMChannelWithMembers"
+          }
+        }
+      }
+    },
+    "v1ListFriendsResponse": {
+      "type": "object",
+      "properties": {
+        "friends": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1User"
+          }
+        }
+      }
+    },
+    "v1ListGuildChannelsResponse": {
+      "type": "object",
+      "properties": {
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Channel"
+          }
+        }
+      }
+    },
+    "v1ListMembersResponse": {
+      "type": "object",
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1GuildMember"
+          }
+        }
+      }
+    },
+    "v1ListMessagesResponse": {
+      "type": "object",
+      "properties": {
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Message"
+          }
+        }
+      }
+    },
+    "v1ListPendingRequestsResponse": {
+      "type": "object",
+      "properties": {
+        "incoming": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Friendship"
+          }
+        },
+        "outgoing": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Friendship"
+          }
+        }
+      }
+    },
+    "v1ListUserGuildsResponse": {
+      "type": "object",
+      "properties": {
+        "guilds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Guild"
+          }
+        }
+      }
+    },
+    "v1LoginRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      }
+    },
+    "v1LoginResponse": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "accessToken": {
+          "type": "string"
+        },
+        "refreshToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1LogoutRequest": {
+      "type": "object",
+      "properties": {
+        "refreshToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1LogoutResponse": {
+      "type": "object"
+    },
+    "v1Message": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "channelId": {
+          "type": "string"
+        },
+        "authorId": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/v1MessageType"
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Attachment"
+          }
+        },
+        "reactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Reaction"
+          }
+        },
+        "replyToId": {
+          "type": "string"
+        },
+        "pinned": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "editedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "forwardedFrom": {
+          "$ref": "#/definitions/v1ForwardedReference"
+        },
+        "mentionUserIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1MessageEdit": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        },
+        "editedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1MessageType": {
+      "type": "string",
+      "enum": [
+        "MESSAGE_TYPE_UNSPECIFIED",
+        "MESSAGE_TYPE_DEFAULT",
+        "MESSAGE_TYPE_SYSTEM",
+        "MESSAGE_TYPE_REPLY"
+      ],
+      "default": "MESSAGE_TYPE_UNSPECIFIED"
+    },
+    "v1Permission": {
+      "type": "string",
+      "enum": [
+        "PERMISSION_UNSPECIFIED",
+        "PERMISSION_VIEW_CHANNELS",
+        "PERMISSION_SEND_MESSAGES",
+        "PERMISSION_MANAGE_MESSAGES",
+        "PERMISSION_MANAGE_CHANNELS",
+        "PERMISSION_MANAGE_GUILD",
+        "PERMISSION_KICK_MEMBERS",
+        "PERMISSION_BAN_MEMBERS",
+        "PERMISSION_MANAGE_ROLES",
+        "PERMISSION_MANAGE_INVITES",
+        "PERMISSION_ADD_REACTIONS",
+        "PERMISSION_CONNECT",
+        "PERMISSION_SPEAK",
+        "PERMISSION_STREAM",
+        "PERMISSION_MUTE_MEMBERS",
+        "PERMISSION_DEAFEN_MEMBERS",
+        "PERMISSION_MENTION_EVERYONE",
+        "PERMISSION_MANAGE_EMOJIS",
+        "PERMISSION_MANAGE_WEBHOOKS",
+        "PERMISSION_ADMINISTRATOR",
+        "PERMISSION_VIEW_AUDIT_LOG",
+        "PERMISSION_VIEW_GUILD_INSIGHTS",
+        "PERMISSION_MANAGE_NICKNAMES",
+        "PERMISSION_CHANGE_NICKNAME",
+        "PERMISSION_CREATE_GUILD_EXPRESSIONS",
+        "PERMISSION_MODERATE_MEMBERS",
+        "PERMISSION_VIEW_CREATOR_MONETIZATION_ANALYTICS",
+        "PERMISSION_SEND_TTS_MESSAGES",
+        "PERMISSION_EMBED_LINKS",
+        "PERMISSION_ATTACH_FILES",
+        "PERMISSION_READ_MESSAGE_HISTORY",
+        "PERMISSION_USE_EXTERNAL_EMOJIS",
+        "PERMISSION_USE_EXTERNAL_STICKERS",
+        "PERMISSION_USE_EXTERNAL_SOUNDS",
+        "PERMISSION_USE_EXTERNAL_APPS",
+        "PERMISSION_PRIORITY_SPEAKER",
+        "PERMISSION_MOVE_MEMBERS",
+        "PERMISSION_USE_VAD",
+        "PERMISSION_REQUEST_TO_SPEAK",
+        "PERMISSION_USE_SOUNDBOARD",
+        "PERMISSION_USE_EMBEDDED_ACTIVITIES",
+        "PERMISSION_SEND_VOICE_MESSAGES",
+        "PERMISSION_SEND_POLLS",
+        "PERMISSION_PIN_MESSAGES",
+        "PERMISSION_BYPASS_SLOWMODE",
+        "PERMISSION_CREATE_PUBLIC_THREADS",
+        "PERMISSION_CREATE_PRIVATE_THREADS",
+        "PERMISSION_SEND_MESSAGES_IN_THREADS",
+        "PERMISSION_MANAGE_THREADS",
+        "PERMISSION_CREATE_EVENTS",
+        "PERMISSION_MANAGE_EVENTS"
+      ],
+      "default": "PERMISSION_UNSPECIFIED",
+      "title": "- PERMISSION_VIEW_AUDIT_LOG: Guild-wide additions\n - PERMISSION_MODERATE_MEMBERS: timeout\n - PERMISSION_SEND_TTS_MESSAGES: Channel / voice / text additions\n - PERMISSION_CREATE_PUBLIC_THREADS: Threads + events"
+    },
+    "v1PinMessageResponse": {
+      "type": "object"
+    },
+    "v1Presence": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/presenceV1Status"
+        },
+        "customStatus": {
+          "type": "string"
+        },
+        "lastSeen": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1PresenceStatus": {
+      "type": "string",
+      "enum": [
+        "PRESENCE_STATUS_UNSPECIFIED",
+        "PRESENCE_STATUS_ONLINE",
+        "PRESENCE_STATUS_IDLE",
+        "PRESENCE_STATUS_DND",
+        "PRESENCE_STATUS_OFFLINE"
+      ],
+      "default": "PRESENCE_STATUS_UNSPECIFIED"
+    },
+    "v1PreviewInviteResponse": {
+      "type": "object",
+      "properties": {
+        "preview": {
+          "$ref": "#/definitions/v1InvitePreview"
+        }
+      }
+    },
+    "v1Reaction": {
+      "type": "object",
+      "properties": {
+        "emoji": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "me": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1RefreshTokenRequest": {
+      "type": "object",
+      "properties": {
+        "refreshToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RefreshTokenResponse": {
+      "type": "object",
+      "properties": {
+        "accessToken": {
+          "type": "string"
+        },
+        "refreshToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RegisterRequest": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RegisterResponse": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RejectDMCallResponse": {
+      "type": "object"
+    },
+    "v1RemoveDMGroupMemberResponse": {
+      "type": "object"
+    },
+    "v1RemoveFriendResponse": {
+      "type": "object"
+    },
+    "v1RemoveReactionResponse": {
+      "type": "object"
+    },
+    "v1RemoveRoleResponse": {
+      "type": "object"
+    },
+    "v1RequestUploadRequest": {
+      "type": "object",
+      "properties": {
+        "filename": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1RequestUploadResponse": {
+      "type": "object",
+      "properties": {
+        "uploadId": {
+          "type": "string"
+        },
+        "uploadUrl": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ResendOTPRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ResendOTPResponse": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RevokePermissionResponse": {
+      "type": "object"
+    },
+    "v1RevokeRolePermissionResponse": {
+      "type": "object"
+    },
+    "v1Role": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "guildId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1SearchMessagesResponse": {
+      "type": "object",
+      "properties": {
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Message"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1SearchUsersResponse": {
+      "type": "object",
+      "properties": {
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1User"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1SendDirectMessageResponse": {
+      "type": "object",
+      "properties": {
+        "channelId": {
+          "type": "string"
+        },
+        "message": {
+          "$ref": "#/definitions/v1Message"
+        },
+        "userName": {
+          "type": "string"
+        }
+      }
+    },
+    "v1SendFriendRequestRequest": {
+      "type": "object",
+      "properties": {
+        "targetUsername": {
+          "type": "string",
+          "description": "Full handle of the user to friend-request, e.g. \"alice#1234\"."
+        }
+      }
+    },
+    "v1SendFriendRequestResponse": {
+      "type": "object",
+      "properties": {
+        "friendship": {
+          "$ref": "#/definitions/v1Friendship"
+        }
+      }
+    },
+    "v1SendMessageResponse": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "$ref": "#/definitions/v1Message"
+        }
+      }
+    },
+    "v1ServerDeafenUserResponse": {
+      "type": "object"
+    },
+    "v1ServerMuteUserResponse": {
+      "type": "object"
+    },
+    "v1SetChannelOverrideResponse": {
+      "type": "object"
+    },
+    "v1StartDMCallResponse": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string"
+        },
+        "room": {
+          "type": "string"
+        },
+        "expiresIn": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1StartTypingResponse": {
+      "type": "object"
+    },
+    "v1SyncChannel": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "isDeleted": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "guildId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "parentId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1SyncDmMember": {
+      "type": "object",
+      "properties": {
+        "channelId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "isDeleted": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1SyncFriendship": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "friendId": {
+          "type": "string"
+        },
+        "isDeleted": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "v1SyncGuild": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "isDeleted": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "iconUrl": {
+          "type": "string"
+        },
+        "ownerId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1SyncGuildMember": {
+      "type": "object",
+      "properties": {
+        "guildId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "isDeleted": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "nickname": {
+          "type": "string"
+        }
+      }
+    },
+    "v1SyncMessage": {
+      "type": "object",
+      "properties": {
+        "channelId": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "isDeleted": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "authorId": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "type": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "replyToId": {
+          "type": "string"
+        },
+        "pinned": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1SyncRequest": {
+      "type": "object",
+      "properties": {
+        "lastSyncTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1SyncResponse": {
+      "type": "object",
+      "properties": {
+        "serverTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SyncUser"
+          }
+        },
+        "guilds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SyncGuild"
+          }
+        },
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SyncChannel"
+          }
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SyncRole"
+          }
+        },
+        "guildMembers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SyncGuildMember"
+          }
+        },
+        "friendships": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SyncFriendship"
+          }
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SyncMessage"
+          }
+        },
+        "dmMembers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SyncDmMember"
+          }
+        }
+      }
+    },
+    "v1SyncRole": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "isDeleted": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "guildId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1SyncUser": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "isDeleted": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "username": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "avatarUrl": {
+          "type": "string"
+        },
+        "bio": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "verified": {
+          "type": "boolean"
+        },
+        "backgroundColor": {
+          "type": "string"
+        }
+      }
+    },
+    "v1TextChannelEvent": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/v1ChatEventType"
+        },
+        "guildId": {
+          "type": "string"
+        },
+        "channelId": {
+          "type": "string"
+        },
+        "messageId": {
+          "type": "string"
+        },
+        "authorId": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "senderId": {
+          "type": "string"
+        },
+        "replyToId": {
+          "type": "string"
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChatAttachment"
+          }
+        },
+        "msgType": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pinned": {
+          "type": "boolean"
+        },
+        "deleted": {
+          "type": "boolean"
+        },
+        "emoji": {
+          "type": "string"
+        },
+        "editedAt": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "mentionUserIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChatReactionCount"
+          }
+        },
+        "forwardedFrom": {
+          "$ref": "#/definitions/v1ChatForwardedReference"
+        }
+      }
+    },
+    "v1TransferOwnershipResponse": {
+      "type": "object",
+      "properties": {
+        "guild": {
+          "$ref": "#/definitions/v1Guild"
+        }
+      }
+    },
+    "v1TypingEvent": {
+      "type": "object",
+      "properties": {
+        "channelId": {
+          "type": "string"
+        },
+        "guildId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1UnbanMemberResponse": {
+      "type": "object"
+    },
+    "v1UnblockUserResponse": {
+      "type": "object"
+    },
+    "v1UnpinMessageResponse": {
+      "type": "object"
+    },
+    "v1UnreadChannelMessage": {
+      "type": "object",
+      "properties": {
+        "channelId": {
+          "type": "string"
+        },
+        "guildId": {
+          "type": "string"
+        },
+        "channelName": {
+          "type": "string"
+        },
+        "unreadCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "lastReadMessageId": {
+          "type": "string"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Message"
+          }
+        },
+        "lastMessageAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "mentionCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1UnreadDM": {
+      "type": "object",
+      "properties": {
+        "channelId": {
+          "type": "string"
+        },
+        "senderId": {
+          "type": "string"
+        },
+        "senderName": {
+          "type": "string"
+        },
+        "unreadCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "lastReadMessageId": {
+          "type": "string"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Message"
+          }
+        },
+        "lastMessageAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "mentionCount": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1UpdateChannelResponse": {
+      "type": "object",
+      "properties": {
+        "channel": {
+          "$ref": "#/definitions/v1Channel"
+        }
+      }
+    },
+    "v1UpdateGuildResponse": {
+      "type": "object",
+      "properties": {
+        "guild": {
+          "$ref": "#/definitions/v1Guild"
+        }
+      }
+    },
+    "v1UpdatePresenceRequest": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/presenceV1Status"
+        },
+        "customStatus": {
+          "type": "string"
+        }
+      }
+    },
+    "v1UpdatePresenceResponse": {
+      "type": "object",
+      "properties": {
+        "presence": {
+          "$ref": "#/definitions/v1Presence"
+        }
+      }
+    },
+    "v1UpdateRoleResponse": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "$ref": "#/definitions/v1Role"
+        }
+      }
+    },
+    "v1UpdateStatusRequest": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "v1UpdateStatusResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1User"
+        }
+      }
+    },
+    "v1UpdateUserRequest": {
+      "type": "object",
+      "properties": {
+        "avatarUrl": {
+          "type": "string"
+        },
+        "bio": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "backgroundColor": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        }
+      }
+    },
+    "v1UpdateUserResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1User"
+        }
+      }
+    },
+    "v1UpdateUsernameRequest": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        }
+      }
+    },
+    "v1UpdateUsernameResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/v1User"
+        }
+      }
+    },
+    "v1UploadGuildBannerResponse": {
+      "type": "object",
+      "properties": {
+        "bannerUrl": {
+          "type": "string"
+        },
+        "guild": {
+          "$ref": "#/definitions/v1Guild"
+        }
+      }
+    },
+    "v1UploadGuildIconResponse": {
+      "type": "object",
+      "properties": {
+        "iconUrl": {
+          "type": "string"
+        },
+        "guild": {
+          "$ref": "#/definitions/v1Guild"
+        }
+      }
+    },
+    "v1UploadUserAvatarRequest": {
+      "type": "object",
+      "properties": {
+        "filename": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": "string"
+        },
+        "data": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "v1UploadUserAvatarResponse": {
+      "type": "object",
+      "properties": {
+        "avatarUrl": {
+          "type": "string"
+        },
+        "user": {
+          "$ref": "#/definitions/v1User"
+        }
+      }
+    },
+    "v1User": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string",
+          "description": "Unique identity handle in \"name#1234\" format. Changeable but must stay unique."
+        },
+        "email": {
+          "type": "string"
+        },
+        "avatarUrl": {
+          "type": "string"
+        },
+        "bio": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "backgroundColor": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ValidateTokenRequest": {
+      "type": "object",
+      "properties": {
+        "accessToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ValidateTokenResponse": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "valid": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1VerifyOTPRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "otp": {
+          "type": "string"
+        }
+      }
+    },
+    "v1VerifyOTPResponse": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "accessToken": {
+          "type": "string"
+        },
+        "refreshToken": {
+          "type": "string"
+        }
+      }
+    },
+    "v1VoiceAction": {
+      "type": "string",
+      "enum": [
+        "VOICE_ACTION_UNSPECIFIED",
+        "VOICE_ACTION_JOIN",
+        "VOICE_ACTION_LEAVE",
+        "VOICE_ACTION_PARTICIPANT_JOINED",
+        "VOICE_ACTION_PARTICIPANT_LEFT",
+        "VOICE_ACTION_TRACK_UPDATE",
+        "VOICE_ACTION_STATE_SYNC",
+        "VOICE_ACTION_STATE_UPDATE",
+        "VOICE_ACTION_ROOM_STARTED",
+        "VOICE_ACTION_ROOM_FINISHED"
+      ],
+      "default": "VOICE_ACTION_UNSPECIFIED"
+    },
+    "v1VoiceChatEvent": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/v1ChatEventType"
+        },
+        "guildId": {
+          "type": "string"
+        },
+        "channelId": {
+          "type": "string"
+        },
+        "messageId": {
+          "type": "string"
+        },
+        "authorId": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "senderId": {
+          "type": "string"
+        },
+        "replyToId": {
+          "type": "string"
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChatAttachment"
+          }
+        },
+        "msgType": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pinned": {
+          "type": "boolean"
+        },
+        "deleted": {
+          "type": "boolean"
+        },
+        "emoji": {
+          "type": "string"
+        },
+        "editedAt": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "mentionUserIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChatReactionCount"
+          }
+        },
+        "forwardedFrom": {
+          "$ref": "#/definitions/v1ChatForwardedReference"
+        }
+      }
+    },
+    "v1VoiceEvent": {
+      "type": "string",
+      "enum": [
+        "VOICE_EVENT_UNSPECIFIED",
+        "VOICE_EVENT_STATE_UPDATE"
+      ],
+      "default": "VOICE_EVENT_UNSPECIFIED"
+    },
+    "v1VoiceParticipant": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "identity": {
+          "type": "string"
+        },
+        "sid": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "selfMute": {
+          "type": "boolean"
+        },
+        "selfDeaf": {
+          "type": "boolean"
+        },
+        "serverMute": {
+          "type": "boolean"
+        },
+        "serverDeaf": {
+          "type": "boolean"
+        },
+        "video": {
+          "type": "boolean"
+        },
+        "screenShare": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1VoiceParticipantsResponse": {
+      "type": "object",
+      "properties": {
+        "participants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1VoiceParticipant"
+          }
+        }
+      }
+    },
+    "v1VoiceStateEvent": {
+      "type": "object",
+      "properties": {
+        "event": {
+          "$ref": "#/definitions/v1VoiceEvent"
+        },
+        "guildId": {
+          "type": "string"
+        },
+        "channelId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "selfMute": {
+          "type": "boolean"
+        },
+        "selfDeaf": {
+          "type": "boolean"
+        },
+        "video": {
+          "type": "boolean"
+        },
+        "streaming": {
+          "type": "boolean"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "action": {
+          "$ref": "#/definitions/v1VoiceAction"
+        },
+        "sid": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "string"
+        },
+        "trackType": {
+          "$ref": "#/definitions/v1VoiceTrackType"
+        },
+        "published": {
+          "type": "boolean"
+        },
+        "roomActiveSince": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1VoiceTrackType": {
+      "type": "string",
+      "enum": [
+        "VOICE_TRACK_UNSPECIFIED",
+        "VOICE_TRACK_AUDIO",
+        "VOICE_TRACK_VIDEO",
+        "VOICE_TRACK_SCREEN_SHARE"
+      ],
+      "default": "VOICE_TRACK_UNSPECIFIED"
+    }
+  }
+}

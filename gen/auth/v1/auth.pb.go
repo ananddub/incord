@@ -8,6 +8,7 @@ package authv1
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/known/timestamppb"
@@ -723,7 +724,7 @@ var File_auth_v1_auth_proto protoreflect.FileDescriptor
 
 const file_auth_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x12auth/v1/auth.proto\x12\aauth.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bbuf/validate/validate.proto\"\x82\x01\n" +
+	"\x12auth/v1/auth.proto\x12\aauth.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1bbuf/validate/validate.proto\"\x82\x01\n" +
 	"\x0fRegisterRequest\x12%\n" +
 	"\busername\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x02\x18 R\busername\x12 \n" +
 	"\x05email\x18\x02 \x01(\tB\n" +
@@ -768,15 +769,15 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\faccess_token\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\vaccessToken\"F\n" +
 	"\x15ValidateTokenResponse\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
-	"\x05valid\x18\x02 \x01(\bR\x05valid2\xe6\x03\n" +
-	"\vAuthService\x12?\n" +
-	"\bRegister\x12\x18.auth.v1.RegisterRequest\x1a\x19.auth.v1.RegisterResponse\x12B\n" +
-	"\tVerifyOTP\x12\x19.auth.v1.VerifyOTPRequest\x1a\x1a.auth.v1.VerifyOTPResponse\x12B\n" +
-	"\tResendOTP\x12\x19.auth.v1.ResendOTPRequest\x1a\x1a.auth.v1.ResendOTPResponse\x126\n" +
-	"\x05Login\x12\x15.auth.v1.LoginRequest\x1a\x16.auth.v1.LoginResponse\x12K\n" +
-	"\fRefreshToken\x12\x1c.auth.v1.RefreshTokenRequest\x1a\x1d.auth.v1.RefreshTokenResponse\x129\n" +
-	"\x06Logout\x12\x16.auth.v1.LogoutRequest\x1a\x17.auth.v1.LogoutResponse\x12N\n" +
-	"\rValidateToken\x12\x1d.auth.v1.ValidateTokenRequest\x1a\x1e.auth.v1.ValidateTokenResponseB9Z7github.com/ananddub/ndiscord_backend/gen/auth/v1;authv1b\x06proto3"
+	"\x05valid\x18\x02 \x01(\bR\x05valid2\xb6\x05\n" +
+	"\vAuthService\x12]\n" +
+	"\bRegister\x12\x18.auth.v1.RegisterRequest\x1a\x19.auth.v1.RegisterResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/auth/register\x12b\n" +
+	"\tVerifyOTP\x12\x19.auth.v1.VerifyOTPRequest\x1a\x1a.auth.v1.VerifyOTPResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/v1/auth/verify-otp\x12b\n" +
+	"\tResendOTP\x12\x19.auth.v1.ResendOTPRequest\x1a\x1a.auth.v1.ResendOTPResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/v1/auth/resend-otp\x12Q\n" +
+	"\x05Login\x12\x15.auth.v1.LoginRequest\x1a\x16.auth.v1.LoginResponse\"\x19\x82\xd3\xe4\x93\x02\x13:\x01*\"\x0e/v1/auth/login\x12h\n" +
+	"\fRefreshToken\x12\x1c.auth.v1.RefreshTokenRequest\x1a\x1d.auth.v1.RefreshTokenResponse\"\x1b\x82\xd3\xe4\x93\x02\x15:\x01*\"\x10/v1/auth/refresh\x12U\n" +
+	"\x06Logout\x12\x16.auth.v1.LogoutRequest\x1a\x17.auth.v1.LogoutResponse\"\x1a\x82\xd3\xe4\x93\x02\x14:\x01*\"\x0f/v1/auth/logout\x12l\n" +
+	"\rValidateToken\x12\x1d.auth.v1.ValidateTokenRequest\x1a\x1e.auth.v1.ValidateTokenResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/auth/validateB9Z7github.com/ananddub/ndiscord_backend/gen/auth/v1;authv1b\x06proto3"
 
 var (
 	file_auth_v1_auth_proto_rawDescOnce sync.Once

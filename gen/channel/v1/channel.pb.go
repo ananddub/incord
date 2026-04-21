@@ -8,6 +8,7 @@ package channelv1
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -1862,7 +1863,7 @@ var File_channel_v1_channel_proto protoreflect.FileDescriptor
 const file_channel_v1_channel_proto_rawDesc = "" +
 	"\n" +
 	"\x18channel/v1/channel.proto\x12\n" +
-	"channel.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bbuf/validate/validate.proto\"\x87\x01\n" +
+	"channel.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1bbuf/validate/validate.proto\"\x87\x01\n" +
 	"\x0fChannelOverride\x12\x1f\n" +
 	"\vtarget_type\x18\x01 \x01(\tR\n" +
 	"targetType\x12\x1b\n" +
@@ -2005,24 +2006,23 @@ const file_channel_v1_channel_proto_rawDesc = "" +
 	"\x15CHANNEL_TYPE_GROUP_DM\x10\x06\x12\x1d\n" +
 	"\x19CHANNEL_TYPE_ANNOUNCEMENT\x10\a\x12\x16\n" +
 	"\x12CHANNEL_TYPE_FORUM\x10\b\x12\x16\n" +
-	"\x12CHANNEL_TYPE_STAGE\x10\t2\xe0\n" +
+	"\x12CHANNEL_TYPE_STAGE\x10\t2\xca\x0f\n" +
+	"\x0eChannelService\x12\x7f\n" +
+	"\rCreateChannel\x12 .channel.v1.CreateChannelRequest\x1a!.channel.v1.CreateChannelResponse\")\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/guilds/{guild_id}/channels\x12n\n" +
 	"\n" +
-	"\x0eChannelService\x12T\n" +
-	"\rCreateChannel\x12 .channel.v1.CreateChannelRequest\x1a!.channel.v1.CreateChannelResponse\x12K\n" +
-	"\n" +
-	"GetChannel\x12\x1d.channel.v1.GetChannelRequest\x1a\x1e.channel.v1.GetChannelResponse\x12T\n" +
-	"\rUpdateChannel\x12 .channel.v1.UpdateChannelRequest\x1a!.channel.v1.UpdateChannelResponse\x12T\n" +
-	"\rDeleteChannel\x12 .channel.v1.DeleteChannelRequest\x1a!.channel.v1.DeleteChannelResponse\x12`\n" +
-	"\x11ListGuildChannels\x12$.channel.v1.ListGuildChannelsRequest\x1a%.channel.v1.ListGuildChannelsResponse\x12Z\n" +
-	"\x0fCreateDMChannel\x12\".channel.v1.CreateDMChannelRequest\x1a#.channel.v1.CreateDMChannelResponse\x12W\n" +
-	"\x0eListDMChannels\x12!.channel.v1.ListDMChannelsRequest\x1a\".channel.v1.ListDMChannelsResponse\x12i\n" +
-	"\x14ListDMChannelMembers\x12'.channel.v1.ListDMChannelMembersRequest\x1a(.channel.v1.ListDMChannelMembersResponse\x12x\n" +
-	"\x19ListDMChannelsWithMembers\x12,.channel.v1.ListDMChannelsWithMembersRequest\x1a-.channel.v1.ListDMChannelsWithMembersResponse\x12]\n" +
-	"\x10AddDMGroupMember\x12#.channel.v1.AddDMGroupMemberRequest\x1a$.channel.v1.AddDMGroupMemberResponse\x12f\n" +
-	"\x13RemoveDMGroupMember\x12&.channel.v1.RemoveDMGroupMemberRequest\x1a'.channel.v1.RemoveDMGroupMemberResponse\x12c\n" +
-	"\x12SetChannelOverride\x12%.channel.v1.SetChannelOverrideRequest\x1a&.channel.v1.SetChannelOverrideResponse\x12l\n" +
-	"\x15DeleteChannelOverride\x12(.channel.v1.DeleteChannelOverrideRequest\x1a).channel.v1.DeleteChannelOverrideResponse\x12i\n" +
-	"\x14ListChannelOverrides\x12'.channel.v1.ListChannelOverridesRequest\x1a(.channel.v1.ListChannelOverridesResponseB?Z=github.com/ananddub/ndiscord_backend/gen/channel/v1;channelv1b\x06proto3"
+	"GetChannel\x12\x1d.channel.v1.GetChannelRequest\x1a\x1e.channel.v1.GetChannelResponse\"!\x82\xd3\xe4\x93\x02\x1b\x12\x19/v1/channels/{channel_id}\x12z\n" +
+	"\rUpdateChannel\x12 .channel.v1.UpdateChannelRequest\x1a!.channel.v1.UpdateChannelResponse\"$\x82\xd3\xe4\x93\x02\x1e:\x01*2\x19/v1/channels/{channel_id}\x12w\n" +
+	"\rDeleteChannel\x12 .channel.v1.DeleteChannelRequest\x1a!.channel.v1.DeleteChannelResponse\"!\x82\xd3\xe4\x93\x02\x1b*\x19/v1/channels/{channel_id}\x12\x88\x01\n" +
+	"\x11ListGuildChannels\x12$.channel.v1.ListGuildChannelsRequest\x1a%.channel.v1.ListGuildChannelsResponse\"&\x82\xd3\xe4\x93\x02 \x12\x1e/v1/guilds/{guild_id}/channels\x12n\n" +
+	"\x0fCreateDMChannel\x12\".channel.v1.CreateDMChannelRequest\x1a#.channel.v1.CreateDMChannelResponse\"\x12\x82\xd3\xe4\x93\x02\f:\x01*\"\a/v1/dms\x12h\n" +
+	"\x0eListDMChannels\x12!.channel.v1.ListDMChannelsRequest\x1a\".channel.v1.ListDMChannelsResponse\"\x0f\x82\xd3\xe4\x93\x02\t\x12\a/v1/dms\x12\x8f\x01\n" +
+	"\x14ListDMChannelMembers\x12'.channel.v1.ListDMChannelMembersRequest\x1a(.channel.v1.ListDMChannelMembersResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/v1/dms/{channel_id}/members\x12\x95\x01\n" +
+	"\x19ListDMChannelsWithMembers\x12,.channel.v1.ListDMChannelsWithMembersRequest\x1a-.channel.v1.ListDMChannelsWithMembersResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/dms:withMembers\x12\x90\x01\n" +
+	"\x10AddDMGroupMember\x12#.channel.v1.AddDMGroupMemberRequest\x1a$.channel.v1.AddDMGroupMemberResponse\"1\x82\xd3\xe4\x93\x02+:\x01*\x1a&/v1/dms/{channel_id}/members/{user_id}\x12\x96\x01\n" +
+	"\x13RemoveDMGroupMember\x12&.channel.v1.RemoveDMGroupMemberRequest\x1a'.channel.v1.RemoveDMGroupMemberResponse\".\x82\xd3\xe4\x93\x02(*&/v1/dms/{channel_id}/members/{user_id}\x12\xba\x01\n" +
+	"\x12SetChannelOverride\x12%.channel.v1.SetChannelOverrideRequest\x1a&.channel.v1.SetChannelOverrideResponse\"U\x82\xd3\xe4\x93\x02O:\x01*\x1aJ/v1/channels/{channel_id}/overrides/{target_type}/{target_id}/{permission}\x12\xc0\x01\n" +
+	"\x15DeleteChannelOverride\x12(.channel.v1.DeleteChannelOverrideRequest\x1a).channel.v1.DeleteChannelOverrideResponse\"R\x82\xd3\xe4\x93\x02L*J/v1/channels/{channel_id}/overrides/{target_type}/{target_id}/{permission}\x12\x96\x01\n" +
+	"\x14ListChannelOverrides\x12'.channel.v1.ListChannelOverridesRequest\x1a(.channel.v1.ListChannelOverridesResponse\"+\x82\xd3\xe4\x93\x02%\x12#/v1/channels/{channel_id}/overridesB?Z=github.com/ananddub/ndiscord_backend/gen/channel/v1;channelv1b\x06proto3"
 
 var (
 	file_channel_v1_channel_proto_rawDescOnce sync.Once

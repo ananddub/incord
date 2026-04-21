@@ -5,30 +5,75 @@ package user.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/user/v1;userv1";
 
 import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
 import "buf/validate/validate.proto";
 
+// URL conventions:
+//   /v1/users/{user_id}                       profile CRUD
+//   /v1/users/search?q=                       substring search
+//   /v1/users/by-username/{username}          alt lookup
+//   /v1/users/me/*                            authenticated-self shortcuts
+//   /v1/friends, /v1/friends/{friend_id}      friendship graph
+//   /v1/blocks, /v1/blocks/{user_id}          block list
 service UserService {
-  rpc GetUser(GetUserRequest) returns (GetUserResponse);
-  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
-  rpc UpdateUsername(UpdateUsernameRequest) returns (UpdateUsernameResponse);
-  rpc UpdateStatus(UpdateStatusRequest) returns (UpdateStatusResponse);
-  rpc UploadUserAvatar(UploadUserAvatarRequest) returns (UploadUserAvatarResponse);
-  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
-  rpc GetUserByUsername(GetUserByUsernameRequest) returns (GetUserByUsernameResponse);
-  rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
+  rpc GetUser(GetUserRequest) returns (GetUserResponse) {
+    option (google.api.http) = { get: "/v1/users/{user_id}" };
+  }
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {
+    option (google.api.http) = { patch: "/v1/users/me" body: "*" };
+  }
+  rpc UpdateUsername(UpdateUsernameRequest) returns (UpdateUsernameResponse) {
+    option (google.api.http) = { patch: "/v1/users/me/username" body: "*" };
+  }
+  rpc UpdateStatus(UpdateStatusRequest) returns (UpdateStatusResponse) {
+    option (google.api.http) = { patch: "/v1/users/me/status" body: "*" };
+  }
+  rpc UploadUserAvatar(UploadUserAvatarRequest) returns (UploadUserAvatarResponse) {
+    option (google.api.http) = { post: "/v1/users/me/avatar" body: "*" };
+  }
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {
+    option (google.api.http) = { delete: "/v1/users/me" };
+  }
+  rpc GetUserByUsername(GetUserByUsernameRequest) returns (GetUserByUsernameResponse) {
+    option (google.api.http) = { get: "/v1/users/by-username/{username}" };
+  }
+  rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse) {
+    option (google.api.http) = { get: "/v1/users/search" };
+  }
 
   // Friends
-  rpc SendFriendRequest(SendFriendRequestRequest) returns (SendFriendRequestResponse);
-  rpc AcceptFriendRequest(AcceptFriendRequestRequest) returns (AcceptFriendRequestResponse);
-  rpc DeclineFriendRequest(DeclineFriendRequestRequest) returns (DeclineFriendRequestResponse);
-  rpc CancelFriendRequest(CancelFriendRequestRequest) returns (CancelFriendRequestResponse);
-  rpc RemoveFriend(RemoveFriendRequest) returns (RemoveFriendResponse);
-  rpc BlockUser(BlockUserRequest) returns (BlockUserResponse);
-  rpc UnblockUser(UnblockUserRequest) returns (UnblockUserResponse);
-  rpc ListFriends(ListFriendsRequest) returns (ListFriendsResponse);
-  rpc ListPendingRequests(ListPendingRequestsRequest) returns (ListPendingRequestsResponse);
-  rpc ListBlocked(ListBlockedRequest) returns (ListBlockedResponse);
-
+  rpc SendFriendRequest(SendFriendRequestRequest) returns (SendFriendRequestResponse) {
+    // POST because request takes the friend's `name#1234` handle in the
+    // body rather than a UUID in the path.
+    option (google.api.http) = { post: "/v1/friends/requests" body: "*" };
+  }
+  rpc AcceptFriendRequest(AcceptFriendRequestRequest) returns (AcceptFriendRequestResponse) {
+    option (google.api.http) = { post: "/v1/friends/{requester_user_id}/accept" body: "*" };
+  }
+  rpc DeclineFriendRequest(DeclineFriendRequestRequest) returns (DeclineFriendRequestResponse) {
+    option (google.api.http) = { post: "/v1/friends/{requester_user_id}/decline" body: "*" };
+  }
+  rpc CancelFriendRequest(CancelFriendRequestRequest) returns (CancelFriendRequestResponse) {
+    option (google.api.http) = { post: "/v1/friends/{target_user_id}/cancel" body: "*" };
+  }
+  rpc RemoveFriend(RemoveFriendRequest) returns (RemoveFriendResponse) {
+    option (google.api.http) = { delete: "/v1/friends/{friend_id}" };
+  }
+  rpc BlockUser(BlockUserRequest) returns (BlockUserResponse) {
+    option (google.api.http) = { put: "/v1/blocks/{target_user_id}" body: "*" };
+  }
+  rpc UnblockUser(UnblockUserRequest) returns (UnblockUserResponse) {
+    option (google.api.http) = { delete: "/v1/blocks/{target_user_id}" };
+  }
+  rpc ListFriends(ListFriendsRequest) returns (ListFriendsResponse) {
+    option (google.api.http) = { get: "/v1/friends" };
+  }
+  rpc ListPendingRequests(ListPendingRequestsRequest) returns (ListPendingRequestsResponse) {
+    option (google.api.http) = { get: "/v1/friends/pending" };
+  }
+  rpc ListBlocked(ListBlockedRequest) returns (ListBlockedResponse) {
+    option (google.api.http) = { get: "/v1/blocks" };
+  }
 }
 
 message User {

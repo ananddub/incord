@@ -7,6 +7,7 @@
 package syncv1
 
 import (
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -914,7 +915,7 @@ var File_sync_v1_sync_proto protoreflect.FileDescriptor
 
 const file_sync_v1_sync_proto_rawDesc = "" +
 	"\n" +
-	"\x12sync/v1/sync.proto\x12\async.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"O\n" +
+	"\x12sync/v1/sync.proto\x12\async.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/api/annotations.proto\"O\n" +
 	"\vSyncRequest\x12@\n" +
 	"\x0elast_sync_time\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\flastSyncTime\"\xdd\x03\n" +
 	"\fSyncResponse\x12;\n" +
@@ -1012,9 +1013,9 @@ const file_sync_v1_sync_proto_rawDesc = "" +
 	"\n" +
 	"is_deleted\x18\x03 \x01(\bR\tisDeleted\x129\n" +
 	"\n" +
-	"updated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt2B\n" +
-	"\vSyncService\x123\n" +
-	"\x04Sync\x12\x14.sync.v1.SyncRequest\x1a\x15.sync.v1.SyncResponseB9Z7github.com/ananddub/ndiscord_backend/gen/sync/v1;syncv1b\x06proto3"
+	"updated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt2W\n" +
+	"\vSyncService\x12H\n" +
+	"\x04Sync\x12\x14.sync.v1.SyncRequest\x1a\x15.sync.v1.SyncResponse\"\x13\x82\xd3\xe4\x93\x02\r:\x01*\"\b/v1/syncB9Z7github.com/ananddub/ndiscord_backend/gen/sync/v1;syncv1b\x06proto3"
 
 var (
 	file_sync_v1_sync_proto_rawDescOnce sync.Once

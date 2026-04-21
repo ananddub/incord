@@ -5,29 +5,86 @@ package voice.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/voice/v1;voicev1";
 
 import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
 import "buf/validate/validate.proto";
 
+// URL conventions:
+//   /v1/channels/{channel_id}/voice/*   guild voice channel ops
+//   /v1/channels/{channel_id}/calls/*   DM / group-DM calls
+//   /v1/channels/{channel_id}/voice/me/{flag}  self-state toggles (PUT=on, DELETE=off)
+//   /v1/channels/{channel_id}/voice/participants/{user_id}/{flag}  moderator ops
 service VoiceService {
-  rpc JoinChannel(JoinChannelRequest) returns (JoinChannelResponse);
-  rpc LeaveChannel(LeaveChannelRequest) returns (LeaveChannelResponse);
-  rpc GetChannelParticipants(GetChannelParticipantsRequest) returns (GetChannelParticipantsResponse);
+  rpc JoinChannel(JoinChannelRequest) returns (JoinChannelResponse) {
+    option (google.api.http) = { post: "/v1/channels/{channel_id}/voice/join" body: "*" };
+  }
+  rpc LeaveChannel(LeaveChannelRequest) returns (LeaveChannelResponse) {
+    option (google.api.http) = { delete: "/v1/channels/{channel_id}/voice/me" };
+  }
+  rpc GetChannelParticipants(GetChannelParticipantsRequest) returns (GetChannelParticipantsResponse) {
+    option (google.api.http) = { get: "/v1/channels/{channel_id}/voice/participants" };
+  }
 
-  rpc StartDMCall(StartDMCallRequest) returns (StartDMCallResponse);
-  rpc JoinDMCall(JoinDMCallRequest) returns (JoinDMCallResponse);
-  rpc RejectDMCall(RejectDMCallRequest) returns (RejectDMCallResponse);
-  rpc LeaveDMCall(LeaveDMCallRequest) returns (LeaveDMCallResponse);
+  // DM / group-DM calls. StartDMCall is the caller-initiated action;
+  // JoinDMCall is the callee accepting. Both return a LiveKit token.
+  rpc StartDMCall(StartDMCallRequest) returns (StartDMCallResponse) {
+    option (google.api.http) = { post: "/v1/channels/{channel_id}/calls" body: "*" };
+  }
+  rpc JoinDMCall(JoinDMCallRequest) returns (JoinDMCallResponse) {
+    option (google.api.http) = { post: "/v1/channels/{channel_id}/calls/join" body: "*" };
+  }
+  rpc RejectDMCall(RejectDMCallRequest) returns (RejectDMCallResponse) {
+    option (google.api.http) = { post: "/v1/channels/{channel_id}/calls/reject" body: "*" };
+  }
+  rpc LeaveDMCall(LeaveDMCallRequest) returns (LeaveDMCallResponse) {
+    option (google.api.http) = { delete: "/v1/channels/{channel_id}/calls/me" };
+  }
 
-  rpc Mute(VoiceChannelRequest) returns (VoiceParticipantsResponse);
-  rpc Unmute(VoiceChannelRequest) returns (VoiceParticipantsResponse);
-  rpc Deafen(VoiceChannelRequest) returns (VoiceParticipantsResponse);
-  rpc Undeafen(VoiceChannelRequest) returns (VoiceParticipantsResponse);
-  rpc EnableVideo(VoiceChannelRequest) returns (VoiceParticipantsResponse);
-  rpc DisableVideo(VoiceChannelRequest) returns (VoiceParticipantsResponse);
-  rpc StartScreenShare(VoiceChannelRequest) returns (VoiceParticipantsResponse);
-  rpc StopScreenShare(VoiceChannelRequest) returns (VoiceParticipantsResponse);
-  rpc ServerMuteUser(ServerMuteUserRequest) returns (ServerMuteUserResponse);
-  rpc ServerDeafenUser(ServerDeafenUserRequest) returns (ServerDeafenUserResponse);
-  rpc DisconnectUser(DisconnectUserRequest) returns (DisconnectUserResponse);
+  // Self-state toggles. PUT = flag on (mute/deaf/video/screen), DELETE = off.
+  // Returns updated participant list so callers can refresh UI in one round trip.
+  rpc Mute(VoiceChannelRequest) returns (VoiceParticipantsResponse) {
+    option (google.api.http) = { put: "/v1/channels/{channel_id}/voice/me/mute" body: "*" };
+  }
+  rpc Unmute(VoiceChannelRequest) returns (VoiceParticipantsResponse) {
+    option (google.api.http) = { delete: "/v1/channels/{channel_id}/voice/me/mute" };
+  }
+  rpc Deafen(VoiceChannelRequest) returns (VoiceParticipantsResponse) {
+    option (google.api.http) = { put: "/v1/channels/{channel_id}/voice/me/deaf" body: "*" };
+  }
+  rpc Undeafen(VoiceChannelRequest) returns (VoiceParticipantsResponse) {
+    option (google.api.http) = { delete: "/v1/channels/{channel_id}/voice/me/deaf" };
+  }
+  rpc EnableVideo(VoiceChannelRequest) returns (VoiceParticipantsResponse) {
+    option (google.api.http) = { put: "/v1/channels/{channel_id}/voice/me/video" body: "*" };
+  }
+  rpc DisableVideo(VoiceChannelRequest) returns (VoiceParticipantsResponse) {
+    option (google.api.http) = { delete: "/v1/channels/{channel_id}/voice/me/video" };
+  }
+  rpc StartScreenShare(VoiceChannelRequest) returns (VoiceParticipantsResponse) {
+    option (google.api.http) = { put: "/v1/channels/{channel_id}/voice/me/screen" body: "*" };
+  }
+  rpc StopScreenShare(VoiceChannelRequest) returns (VoiceParticipantsResponse) {
+    option (google.api.http) = { delete: "/v1/channels/{channel_id}/voice/me/screen" };
+  }
+  // Moderator-level ops: act on a specific participant. PUT body carries
+  // the boolean because the action is "set muted=true/false", not strictly
+  // idempotent toggle (admin may force-mute regardless of current state).
+  rpc ServerMuteUser(ServerMuteUserRequest) returns (ServerMuteUserResponse) {
+    option (google.api.http) = {
+      put: "/v1/channels/{channel_id}/voice/participants/{target_user_id}/mute"
+      body: "*"
+    };
+  }
+  rpc ServerDeafenUser(ServerDeafenUserRequest) returns (ServerDeafenUserResponse) {
+    option (google.api.http) = {
+      put: "/v1/channels/{channel_id}/voice/participants/{target_user_id}/deaf"
+      body: "*"
+    };
+  }
+  rpc DisconnectUser(DisconnectUserRequest) returns (DisconnectUserResponse) {
+    option (google.api.http) = {
+      delete: "/v1/channels/{channel_id}/voice/participants/{target_user_id}"
+    };
+  }
 }
 
 

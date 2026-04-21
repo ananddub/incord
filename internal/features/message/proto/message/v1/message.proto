@@ -5,33 +5,84 @@ package message.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/message/v1;messagev1";
 
 import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
 import "buf/validate/validate.proto";
 
 service MessageService {
-  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
-  rpc GetMessage(GetMessageRequest) returns (GetMessageResponse);
-  rpc EditMessage(EditMessageRequest) returns (EditMessageResponse);
-  rpc DeleteMessage(DeleteMessageRequest) returns (DeleteMessageResponse);
-  rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse);
-  rpc PinMessage(PinMessageRequest) returns (PinMessageResponse);
-  rpc UnpinMessage(UnpinMessageRequest) returns (UnpinMessageResponse);
-  rpc AddReaction(AddReactionRequest) returns (AddReactionResponse);
-  rpc RemoveReaction(RemoveReactionRequest) returns (RemoveReactionResponse);
-  rpc AckMessage(AckMessageRequest) returns (AckMessageResponse);
-  rpc StartTyping(StartTypingRequest) returns (StartTypingResponse);
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {
+    option (google.api.http) = { post: "/v1/channels/{channel_id}/messages" body: "*" };
+  }
+  rpc GetMessage(GetMessageRequest) returns (GetMessageResponse) {
+    option (google.api.http) = { get: "/v1/channels/{channel_id}/messages/{message_id}" };
+  }
+  rpc EditMessage(EditMessageRequest) returns (EditMessageResponse) {
+    option (google.api.http) = { patch: "/v1/channels/{channel_id}/messages/{message_id}" body: "*" };
+  }
+  rpc DeleteMessage(DeleteMessageRequest) returns (DeleteMessageResponse) {
+    option (google.api.http) = { delete: "/v1/channels/{channel_id}/messages/{message_id}" };
+  }
+  rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse) {
+    option (google.api.http) = { get: "/v1/channels/{channel_id}/messages" };
+  }
+  // Pin/unpin via PUT/DELETE on the /pin sub-resource (idempotent).
+  rpc PinMessage(PinMessageRequest) returns (PinMessageResponse) {
+    option (google.api.http) = { put: "/v1/channels/{channel_id}/messages/{message_id}/pin" body: "*" };
+  }
+  rpc UnpinMessage(UnpinMessageRequest) returns (UnpinMessageResponse) {
+    option (google.api.http) = { delete: "/v1/channels/{channel_id}/messages/{message_id}/pin" };
+  }
+  rpc AddReaction(AddReactionRequest) returns (AddReactionResponse) {
+    option (google.api.http) = {
+      put: "/v1/channels/{channel_id}/messages/{message_id}/reactions/{emoji}"
+      body: "*"
+    };
+  }
+  rpc RemoveReaction(RemoveReactionRequest) returns (RemoveReactionResponse) {
+    option (google.api.http) = {
+      delete: "/v1/channels/{channel_id}/messages/{message_id}/reactions/{emoji}"
+    };
+  }
+  rpc AckMessage(AckMessageRequest) returns (AckMessageResponse) {
+    option (google.api.http) = {
+      put: "/v1/channels/{channel_id}/messages/{message_id}/ack"
+      body: "*"
+    };
+  }
+  rpc StartTyping(StartTypingRequest) returns (StartTypingResponse) {
+    option (google.api.http) = { post: "/v1/channels/{channel_id}/typing" body: "*" };
+  }
 
-  rpc SendDirectMessage(SendDirectMessageRequest) returns (SendDirectMessageResponse);
+  // Convenience: auto-resolve/create DM channel by recipient and post.
+  rpc SendDirectMessage(SendDirectMessageRequest) returns (SendDirectMessageResponse) {
+    option (google.api.http) = { post: "/v1/users/{recipient_id}/messages" body: "*" };
+  }
 
-  rpc GetUnreadCounts(GetUnreadCountsRequest) returns (GetUnreadCountsResponse);
+  rpc GetUnreadCounts(GetUnreadCountsRequest) returns (GetUnreadCountsResponse) {
+    option (google.api.http) = { get: "/v1/messages/unread" };
+  }
 
-  rpc SearchMessages(SearchMessagesRequest) returns (SearchMessagesResponse);
+  rpc SearchMessages(SearchMessagesRequest) returns (SearchMessagesResponse) {
+    option (google.api.http) = { get: "/v1/channels/{channel_id}/messages:search" };
+  }
 
-  rpc GetThreadMessages(GetThreadMessagesRequest) returns (GetThreadMessagesResponse);
+  rpc GetThreadMessages(GetThreadMessagesRequest) returns (GetThreadMessagesResponse) {
+    option (google.api.http) = {
+      get: "/v1/channels/{channel_id}/messages/{parent_message_id}/thread"
+    };
+  }
 
-  rpc BulkDeleteMessages(BulkDeleteMessagesRequest) returns (BulkDeleteMessagesResponse);
+  rpc BulkDeleteMessages(BulkDeleteMessagesRequest) returns (BulkDeleteMessagesResponse) {
+    option (google.api.http) = {
+      post: "/v1/channels/{channel_id}/messages:bulk-delete"
+      body: "*"
+    };
+  }
 
-  rpc GetEditHistory(GetEditHistoryRequest) returns (GetEditHistoryResponse);
-
+  rpc GetEditHistory(GetEditHistoryRequest) returns (GetEditHistoryResponse) {
+    option (google.api.http) = {
+      get: "/v1/channels/{channel_id}/messages/{message_id}/edits"
+    };
+  }
 }
 
 enum MessageType {

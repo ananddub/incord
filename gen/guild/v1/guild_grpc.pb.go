@@ -58,6 +58,7 @@ type GuildServiceClient interface {
 	UploadGuildBanner(ctx context.Context, in *UploadGuildBannerRequest, opts ...grpc.CallOption) (*UploadGuildBannerResponse, error)
 	DeleteGuild(ctx context.Context, in *DeleteGuildRequest, opts ...grpc.CallOption) (*DeleteGuildResponse, error)
 	ListUserGuilds(ctx context.Context, in *ListUserGuildsRequest, opts ...grpc.CallOption) (*ListUserGuildsResponse, error)
+	// Public (bypasses auth interceptor) — GET on the invite resource.
 	PreviewInvite(ctx context.Context, in *PreviewInviteRequest, opts ...grpc.CallOption) (*PreviewInviteResponse, error)
 	JoinGuild(ctx context.Context, in *JoinGuildRequest, opts ...grpc.CallOption) (*JoinGuildResponse, error)
 	LeaveGuild(ctx context.Context, in *LeaveGuildRequest, opts ...grpc.CallOption) (*LeaveGuildResponse, error)
@@ -71,10 +72,16 @@ type GuildServiceClient interface {
 	DeleteRole(ctx context.Context, in *DeleteRoleRequest, opts ...grpc.CallOption) (*DeleteRoleResponse, error)
 	AssignRole(ctx context.Context, in *AssignRoleRequest, opts ...grpc.CallOption) (*AssignRoleResponse, error)
 	RemoveRole(ctx context.Context, in *RemoveRoleRequest, opts ...grpc.CallOption) (*RemoveRoleResponse, error)
+	// Idempotent "make X the owner"; PUT on the /owner sub-resource.
 	TransferOwnership(ctx context.Context, in *TransferOwnershipRequest, opts ...grpc.CallOption) (*TransferOwnershipResponse, error)
+	// Deprecated: per-user guild grants. REST mapping returns 501 in the
+	// handler; kept here so old client SDKs compile. Prefer role-based
+	// grants below or channel overrides in ChannelService.
 	GrantPermission(ctx context.Context, in *GrantPermissionRequest, opts ...grpc.CallOption) (*GrantPermissionResponse, error)
 	RevokePermission(ctx context.Context, in *RevokePermissionRequest, opts ...grpc.CallOption) (*RevokePermissionResponse, error)
 	GetUserPermissions(ctx context.Context, in *GetUserPermissionsRequest, opts ...grpc.CallOption) (*GetUserPermissionsResponse, error)
+	// Role-scoped permission grants (Discord's primary model — a role
+	// carries a permission set, every assigned user inherits).
 	GrantRolePermission(ctx context.Context, in *GrantRolePermissionRequest, opts ...grpc.CallOption) (*GrantRolePermissionResponse, error)
 	RevokeRolePermission(ctx context.Context, in *RevokeRolePermissionRequest, opts ...grpc.CallOption) (*RevokeRolePermissionResponse, error)
 }
@@ -358,6 +365,7 @@ type GuildServiceServer interface {
 	UploadGuildBanner(context.Context, *UploadGuildBannerRequest) (*UploadGuildBannerResponse, error)
 	DeleteGuild(context.Context, *DeleteGuildRequest) (*DeleteGuildResponse, error)
 	ListUserGuilds(context.Context, *ListUserGuildsRequest) (*ListUserGuildsResponse, error)
+	// Public (bypasses auth interceptor) — GET on the invite resource.
 	PreviewInvite(context.Context, *PreviewInviteRequest) (*PreviewInviteResponse, error)
 	JoinGuild(context.Context, *JoinGuildRequest) (*JoinGuildResponse, error)
 	LeaveGuild(context.Context, *LeaveGuildRequest) (*LeaveGuildResponse, error)
@@ -371,10 +379,16 @@ type GuildServiceServer interface {
 	DeleteRole(context.Context, *DeleteRoleRequest) (*DeleteRoleResponse, error)
 	AssignRole(context.Context, *AssignRoleRequest) (*AssignRoleResponse, error)
 	RemoveRole(context.Context, *RemoveRoleRequest) (*RemoveRoleResponse, error)
+	// Idempotent "make X the owner"; PUT on the /owner sub-resource.
 	TransferOwnership(context.Context, *TransferOwnershipRequest) (*TransferOwnershipResponse, error)
+	// Deprecated: per-user guild grants. REST mapping returns 501 in the
+	// handler; kept here so old client SDKs compile. Prefer role-based
+	// grants below or channel overrides in ChannelService.
 	GrantPermission(context.Context, *GrantPermissionRequest) (*GrantPermissionResponse, error)
 	RevokePermission(context.Context, *RevokePermissionRequest) (*RevokePermissionResponse, error)
 	GetUserPermissions(context.Context, *GetUserPermissionsRequest) (*GetUserPermissionsResponse, error)
+	// Role-scoped permission grants (Discord's primary model — a role
+	// carries a permission set, every assigned user inherits).
 	GrantRolePermission(context.Context, *GrantRolePermissionRequest) (*GrantRolePermissionResponse, error)
 	RevokeRolePermission(context.Context, *RevokeRolePermissionRequest) (*RevokeRolePermissionResponse, error)
 	mustEmbedUnimplementedGuildServiceServer()

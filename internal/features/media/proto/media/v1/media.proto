@@ -5,13 +5,25 @@ package media.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/media/v1;mediav1";
 
 import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
 import "buf/validate/validate.proto";
 
+// Two-phase upload: client POSTs metadata to get a presigned URL, uploads
+// bytes directly to object storage, then POSTs back to confirm. Reads and
+// deletes are keyed by the opaque file_id.
 service MediaService {
-  rpc RequestUpload(RequestUploadRequest) returns (RequestUploadResponse);
-  rpc ConfirmUpload(ConfirmUploadRequest) returns (ConfirmUploadResponse);
-  rpc GetDownloadURL(GetDownloadURLRequest) returns (GetDownloadURLResponse);
-  rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse);
+  rpc RequestUpload(RequestUploadRequest) returns (RequestUploadResponse) {
+    option (google.api.http) = { post: "/v1/media/uploads" body: "*" };
+  }
+  rpc ConfirmUpload(ConfirmUploadRequest) returns (ConfirmUploadResponse) {
+    option (google.api.http) = { post: "/v1/media/uploads/{upload_id}/confirm" body: "*" };
+  }
+  rpc GetDownloadURL(GetDownloadURLRequest) returns (GetDownloadURLResponse) {
+    option (google.api.http) = { get: "/v1/media/files/{file_id}/download" };
+  }
+  rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse) {
+    option (google.api.http) = { delete: "/v1/media/files/{file_id}" };
+  }
 }
 
 message RequestUploadRequest {

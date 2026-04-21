@@ -8,6 +8,7 @@ package guildv1
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -3375,7 +3376,7 @@ var File_guild_v1_guild_proto protoreflect.FileDescriptor
 
 const file_guild_v1_guild_proto_rawDesc = "" +
 	"\n" +
-	"\x14guild/v1/guild.proto\x12\bguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bbuf/validate/validate.proto\"\x80\x02\n" +
+	"\x14guild/v1/guild.proto\x12\bguild.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1bbuf/validate/validate.proto\"\x80\x02\n" +
 	"\x05Guild\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -3662,41 +3663,42 @@ const file_guild_v1_guild_proto_rawDesc = "" +
 	"#PERMISSION_SEND_MESSAGES_IN_THREADS\x10/\x12\x1d\n" +
 	"\x19PERMISSION_MANAGE_THREADS\x100\x12\x1c\n" +
 	"\x18PERMISSION_CREATE_EVENTS\x101\x12\x1c\n" +
-	"\x18PERMISSION_MANAGE_EVENTS\x1022\xc1\x10\n" +
-	"\fGuildService\x12J\n" +
-	"\vCreateGuild\x12\x1c.guild.v1.CreateGuildRequest\x1a\x1d.guild.v1.CreateGuildResponse\x12A\n" +
-	"\bGetGuild\x12\x19.guild.v1.GetGuildRequest\x1a\x1a.guild.v1.GetGuildResponse\x12J\n" +
-	"\vUpdateGuild\x12\x1c.guild.v1.UpdateGuildRequest\x1a\x1d.guild.v1.UpdateGuildResponse\x12V\n" +
-	"\x0fUploadGuildIcon\x12 .guild.v1.UploadGuildIconRequest\x1a!.guild.v1.UploadGuildIconResponse\x12\\\n" +
-	"\x11UploadGuildBanner\x12\".guild.v1.UploadGuildBannerRequest\x1a#.guild.v1.UploadGuildBannerResponse\x12J\n" +
-	"\vDeleteGuild\x12\x1c.guild.v1.DeleteGuildRequest\x1a\x1d.guild.v1.DeleteGuildResponse\x12S\n" +
-	"\x0eListUserGuilds\x12\x1f.guild.v1.ListUserGuildsRequest\x1a .guild.v1.ListUserGuildsResponse\x12P\n" +
-	"\rPreviewInvite\x12\x1e.guild.v1.PreviewInviteRequest\x1a\x1f.guild.v1.PreviewInviteResponse\x12D\n" +
-	"\tJoinGuild\x12\x1a.guild.v1.JoinGuildRequest\x1a\x1b.guild.v1.JoinGuildResponse\x12G\n" +
+	"\x18PERMISSION_MANAGE_EVENTS\x1022\xab\x1a\n" +
+	"\fGuildService\x12a\n" +
+	"\vCreateGuild\x12\x1c.guild.v1.CreateGuildRequest\x1a\x1d.guild.v1.CreateGuildResponse\"\x15\x82\xd3\xe4\x93\x02\x0f:\x01*\"\n" +
+	"/v1/guilds\x12`\n" +
+	"\bGetGuild\x12\x19.guild.v1.GetGuildRequest\x1a\x1a.guild.v1.GetGuildResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/guilds/{guild_id}\x12l\n" +
+	"\vUpdateGuild\x12\x1c.guild.v1.UpdateGuildRequest\x1a\x1d.guild.v1.UpdateGuildResponse\" \x82\xd3\xe4\x93\x02\x1a:\x01*2\x15/v1/guilds/{guild_id}\x12}\n" +
+	"\x0fUploadGuildIcon\x12 .guild.v1.UploadGuildIconRequest\x1a!.guild.v1.UploadGuildIconResponse\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/v1/guilds/{guild_id}/icon\x12\x85\x01\n" +
+	"\x11UploadGuildBanner\x12\".guild.v1.UploadGuildBannerRequest\x1a#.guild.v1.UploadGuildBannerResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/guilds/{guild_id}/banner\x12i\n" +
+	"\vDeleteGuild\x12\x1c.guild.v1.DeleteGuildRequest\x1a\x1d.guild.v1.DeleteGuildResponse\"\x1d\x82\xd3\xe4\x93\x02\x17*\x15/v1/guilds/{guild_id}\x12w\n" +
+	"\x0eListUserGuilds\x12\x1f.guild.v1.ListUserGuildsRequest\x1a .guild.v1.ListUserGuildsResponse\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/v1/users/{user_id}/guilds\x12s\n" +
+	"\rPreviewInvite\x12\x1e.guild.v1.PreviewInviteRequest\x1a\x1f.guild.v1.PreviewInviteResponse\"!\x82\xd3\xe4\x93\x02\x1b\x12\x19/v1/invites/{invite_code}\x12o\n" +
+	"\tJoinGuild\x12\x1a.guild.v1.JoinGuildRequest\x1a\x1b.guild.v1.JoinGuildResponse\")\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/invites/{invite_code}/join\x12q\n" +
 	"\n" +
-	"LeaveGuild\x12\x1b.guild.v1.LeaveGuildRequest\x1a\x1c.guild.v1.LeaveGuildResponse\x12J\n" +
-	"\vListMembers\x12\x1c.guild.v1.ListMembersRequest\x1a\x1d.guild.v1.ListMembersResponse\x12G\n" +
+	"LeaveGuild\x12\x1b.guild.v1.LeaveGuildRequest\x1a\x1c.guild.v1.LeaveGuildResponse\"(\x82\xd3\xe4\x93\x02\"* /v1/guilds/{guild_id}/members/me\x12q\n" +
+	"\vListMembers\x12\x1c.guild.v1.ListMembersRequest\x1a\x1d.guild.v1.ListMembersResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/v1/guilds/{guild_id}/members\x12x\n" +
 	"\n" +
-	"KickMember\x12\x1b.guild.v1.KickMemberRequest\x1a\x1c.guild.v1.KickMemberResponse\x12D\n" +
-	"\tBanMember\x12\x1a.guild.v1.BanMemberRequest\x1a\x1b.guild.v1.BanMemberResponse\x12J\n" +
-	"\vUnbanMember\x12\x1c.guild.v1.UnbanMemberRequest\x1a\x1d.guild.v1.UnbanMemberResponse\x12M\n" +
-	"\fCreateInvite\x12\x1d.guild.v1.CreateInviteRequest\x1a\x1e.guild.v1.CreateInviteResponse\x12G\n" +
+	"KickMember\x12\x1b.guild.v1.KickMemberRequest\x1a\x1c.guild.v1.KickMemberResponse\"/\x82\xd3\xe4\x93\x02)*'/v1/guilds/{guild_id}/members/{user_id}\x12u\n" +
+	"\tBanMember\x12\x1a.guild.v1.BanMemberRequest\x1a\x1b.guild.v1.BanMemberResponse\"/\x82\xd3\xe4\x93\x02):\x01*\x1a$/v1/guilds/{guild_id}/bans/{user_id}\x12x\n" +
+	"\vUnbanMember\x12\x1c.guild.v1.UnbanMemberRequest\x1a\x1d.guild.v1.UnbanMemberResponse\",\x82\xd3\xe4\x93\x02&*$/v1/guilds/{guild_id}/bans/{user_id}\x12w\n" +
+	"\fCreateInvite\x12\x1d.guild.v1.CreateInviteRequest\x1a\x1e.guild.v1.CreateInviteResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/v1/guilds/{guild_id}/invites\x12o\n" +
 	"\n" +
-	"CreateRole\x12\x1b.guild.v1.CreateRoleRequest\x1a\x1c.guild.v1.CreateRoleResponse\x12G\n" +
+	"CreateRole\x12\x1b.guild.v1.CreateRoleRequest\x1a\x1c.guild.v1.CreateRoleResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/v1/guilds/{guild_id}/roles\x12y\n" +
 	"\n" +
-	"UpdateRole\x12\x1b.guild.v1.UpdateRoleRequest\x1a\x1c.guild.v1.UpdateRoleResponse\x12G\n" +
+	"UpdateRole\x12\x1b.guild.v1.UpdateRoleRequest\x1a\x1c.guild.v1.UpdateRoleResponse\"0\x82\xd3\xe4\x93\x02*:\x01*2%/v1/guilds/{guild_id}/roles/{role_id}\x12v\n" +
 	"\n" +
-	"DeleteRole\x12\x1b.guild.v1.DeleteRoleRequest\x1a\x1c.guild.v1.DeleteRoleResponse\x12G\n" +
+	"DeleteRole\x12\x1b.guild.v1.DeleteRoleRequest\x1a\x1c.guild.v1.DeleteRoleResponse\"-\x82\xd3\xe4\x93\x02'*%/v1/guilds/{guild_id}/roles/{role_id}\x12\x8b\x01\n" +
 	"\n" +
-	"AssignRole\x12\x1b.guild.v1.AssignRoleRequest\x1a\x1c.guild.v1.AssignRoleResponse\x12G\n" +
+	"AssignRole\x12\x1b.guild.v1.AssignRoleRequest\x1a\x1c.guild.v1.AssignRoleResponse\"B\x82\xd3\xe4\x93\x02<:\x01*\x1a7/v1/guilds/{guild_id}/members/{user_id}/roles/{role_id}\x12\x88\x01\n" +
 	"\n" +
-	"RemoveRole\x12\x1b.guild.v1.RemoveRoleRequest\x1a\x1c.guild.v1.RemoveRoleResponse\x12\\\n" +
-	"\x11TransferOwnership\x12\".guild.v1.TransferOwnershipRequest\x1a#.guild.v1.TransferOwnershipResponse\x12V\n" +
-	"\x0fGrantPermission\x12 .guild.v1.GrantPermissionRequest\x1a!.guild.v1.GrantPermissionResponse\x12Y\n" +
-	"\x10RevokePermission\x12!.guild.v1.RevokePermissionRequest\x1a\".guild.v1.RevokePermissionResponse\x12_\n" +
-	"\x12GetUserPermissions\x12#.guild.v1.GetUserPermissionsRequest\x1a$.guild.v1.GetUserPermissionsResponse\x12b\n" +
-	"\x13GrantRolePermission\x12$.guild.v1.GrantRolePermissionRequest\x1a%.guild.v1.GrantRolePermissionResponse\x12e\n" +
-	"\x14RevokeRolePermission\x12%.guild.v1.RevokeRolePermissionRequest\x1a&.guild.v1.RevokeRolePermissionResponseB;Z9github.com/ananddub/ndiscord_backend/gen/guild/v1;guildv1b\x06proto3"
+	"RemoveRole\x12\x1b.guild.v1.RemoveRoleRequest\x1a\x1c.guild.v1.RemoveRoleResponse\"?\x82\xd3\xe4\x93\x029*7/v1/guilds/{guild_id}/members/{user_id}/roles/{role_id}\x12\x84\x01\n" +
+	"\x11TransferOwnership\x12\".guild.v1.TransferOwnershipRequest\x1a#.guild.v1.TransferOwnershipResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\x1a\x1b/v1/guilds/{guild_id}/owner\x12\xa3\x01\n" +
+	"\x0fGrantPermission\x12 .guild.v1.GrantPermissionRequest\x1a!.guild.v1.GrantPermissionResponse\"K\x82\xd3\xe4\x93\x02E:\x01*\x1a@/v1/guilds/{guild_id}/members/{user_id}/permissions/{permission}\x12\xa3\x01\n" +
+	"\x10RevokePermission\x12!.guild.v1.RevokePermissionRequest\x1a\".guild.v1.RevokePermissionResponse\"H\x82\xd3\xe4\x93\x02B*@/v1/guilds/{guild_id}/members/{user_id}/permissions/{permission}\x12\x9c\x01\n" +
+	"\x12GetUserPermissions\x12#.guild.v1.GetUserPermissionsRequest\x1a$.guild.v1.GetUserPermissionsResponse\";\x82\xd3\xe4\x93\x025\x123/v1/guilds/{guild_id}/members/{user_id}/permissions\x12\xad\x01\n" +
+	"\x13GrantRolePermission\x12$.guild.v1.GrantRolePermissionRequest\x1a%.guild.v1.GrantRolePermissionResponse\"I\x82\xd3\xe4\x93\x02C:\x01*\x1a>/v1/guilds/{guild_id}/roles/{role_id}/permissions/{permission}\x12\xad\x01\n" +
+	"\x14RevokeRolePermission\x12%.guild.v1.RevokeRolePermissionRequest\x1a&.guild.v1.RevokeRolePermissionResponse\"F\x82\xd3\xe4\x93\x02@*>/v1/guilds/{guild_id}/roles/{role_id}/permissions/{permission}B;Z9github.com/ananddub/ndiscord_backend/gen/guild/v1;guildv1b\x06proto3"
 
 var (
 	file_guild_v1_guild_proto_rawDescOnce sync.Once

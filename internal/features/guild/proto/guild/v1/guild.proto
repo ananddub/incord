@@ -5,6 +5,7 @@ package guild.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/guild/v1;guildv1";
 
 import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
 import "buf/validate/validate.proto";
 
 enum Permission {
@@ -69,36 +70,106 @@ enum Permission {
 }
 
 service GuildService {
-  rpc CreateGuild(CreateGuildRequest) returns (CreateGuildResponse);
-  rpc GetGuild(GetGuildRequest) returns (GetGuildResponse);
-  rpc UpdateGuild(UpdateGuildRequest) returns (UpdateGuildResponse);
-  rpc UploadGuildIcon(UploadGuildIconRequest) returns (UploadGuildIconResponse);
-  rpc UploadGuildBanner(UploadGuildBannerRequest) returns (UploadGuildBannerResponse);
-  rpc DeleteGuild(DeleteGuildRequest) returns (DeleteGuildResponse);
-  rpc ListUserGuilds(ListUserGuildsRequest) returns (ListUserGuildsResponse);
-  rpc PreviewInvite(PreviewInviteRequest) returns (PreviewInviteResponse);
-  rpc JoinGuild(JoinGuildRequest) returns (JoinGuildResponse);
-  rpc LeaveGuild(LeaveGuildRequest) returns (LeaveGuildResponse);
-  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
-  rpc KickMember(KickMemberRequest) returns (KickMemberResponse);
-  rpc BanMember(BanMemberRequest) returns (BanMemberResponse);
-  rpc UnbanMember(UnbanMemberRequest) returns (UnbanMemberResponse);
-  rpc CreateInvite(CreateInviteRequest) returns (CreateInviteResponse);
-  rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse);
-  rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
-  rpc DeleteRole(DeleteRoleRequest) returns (DeleteRoleResponse);
-  rpc AssignRole(AssignRoleRequest) returns (AssignRoleResponse);
-  rpc RemoveRole(RemoveRoleRequest) returns (RemoveRoleResponse);
+  rpc CreateGuild(CreateGuildRequest) returns (CreateGuildResponse) {
+    option (google.api.http) = { post: "/v1/guilds" body: "*" };
+  }
+  rpc GetGuild(GetGuildRequest) returns (GetGuildResponse) {
+    option (google.api.http) = { get: "/v1/guilds/{guild_id}" };
+  }
+  rpc UpdateGuild(UpdateGuildRequest) returns (UpdateGuildResponse) {
+    option (google.api.http) = { patch: "/v1/guilds/{guild_id}" body: "*" };
+  }
+  rpc UploadGuildIcon(UploadGuildIconRequest) returns (UploadGuildIconResponse) {
+    option (google.api.http) = { post: "/v1/guilds/{guild_id}/icon" body: "*" };
+  }
+  rpc UploadGuildBanner(UploadGuildBannerRequest) returns (UploadGuildBannerResponse) {
+    option (google.api.http) = { post: "/v1/guilds/{guild_id}/banner" body: "*" };
+  }
+  rpc DeleteGuild(DeleteGuildRequest) returns (DeleteGuildResponse) {
+    option (google.api.http) = { delete: "/v1/guilds/{guild_id}" };
+  }
+  rpc ListUserGuilds(ListUserGuildsRequest) returns (ListUserGuildsResponse) {
+    option (google.api.http) = { get: "/v1/users/{user_id}/guilds" };
+  }
+  // Public (bypasses auth interceptor) — GET on the invite resource.
+  rpc PreviewInvite(PreviewInviteRequest) returns (PreviewInviteResponse) {
+    option (google.api.http) = { get: "/v1/invites/{invite_code}" };
+  }
+  rpc JoinGuild(JoinGuildRequest) returns (JoinGuildResponse) {
+    option (google.api.http) = { post: "/v1/invites/{invite_code}/join" body: "*" };
+  }
+  rpc LeaveGuild(LeaveGuildRequest) returns (LeaveGuildResponse) {
+    option (google.api.http) = { delete: "/v1/guilds/{guild_id}/members/me" };
+  }
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse) {
+    option (google.api.http) = { get: "/v1/guilds/{guild_id}/members" };
+  }
+  rpc KickMember(KickMemberRequest) returns (KickMemberResponse) {
+    option (google.api.http) = { delete: "/v1/guilds/{guild_id}/members/{user_id}" };
+  }
+  rpc BanMember(BanMemberRequest) returns (BanMemberResponse) {
+    option (google.api.http) = { put: "/v1/guilds/{guild_id}/bans/{user_id}" body: "*" };
+  }
+  rpc UnbanMember(UnbanMemberRequest) returns (UnbanMemberResponse) {
+    option (google.api.http) = { delete: "/v1/guilds/{guild_id}/bans/{user_id}" };
+  }
+  rpc CreateInvite(CreateInviteRequest) returns (CreateInviteResponse) {
+    option (google.api.http) = { post: "/v1/guilds/{guild_id}/invites" body: "*" };
+  }
+  rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse) {
+    option (google.api.http) = { post: "/v1/guilds/{guild_id}/roles" body: "*" };
+  }
+  rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse) {
+    option (google.api.http) = { patch: "/v1/guilds/{guild_id}/roles/{role_id}" body: "*" };
+  }
+  rpc DeleteRole(DeleteRoleRequest) returns (DeleteRoleResponse) {
+    option (google.api.http) = { delete: "/v1/guilds/{guild_id}/roles/{role_id}" };
+  }
+  rpc AssignRole(AssignRoleRequest) returns (AssignRoleResponse) {
+    option (google.api.http) = { put: "/v1/guilds/{guild_id}/members/{user_id}/roles/{role_id}" body: "*" };
+  }
+  rpc RemoveRole(RemoveRoleRequest) returns (RemoveRoleResponse) {
+    option (google.api.http) = { delete: "/v1/guilds/{guild_id}/members/{user_id}/roles/{role_id}" };
+  }
 
-  rpc TransferOwnership(TransferOwnershipRequest) returns (TransferOwnershipResponse);
+  // Idempotent "make X the owner"; PUT on the /owner sub-resource.
+  rpc TransferOwnership(TransferOwnershipRequest) returns (TransferOwnershipResponse) {
+    option (google.api.http) = { put: "/v1/guilds/{guild_id}/owner" body: "*" };
+  }
 
-  rpc GrantPermission(GrantPermissionRequest) returns (GrantPermissionResponse);
-  rpc RevokePermission(RevokePermissionRequest) returns (RevokePermissionResponse);
-  rpc GetUserPermissions(GetUserPermissionsRequest) returns (GetUserPermissionsResponse);
+  // Deprecated: per-user guild grants. REST mapping returns 501 in the
+  // handler; kept here so old client SDKs compile. Prefer role-based
+  // grants below or channel overrides in ChannelService.
+  rpc GrantPermission(GrantPermissionRequest) returns (GrantPermissionResponse) {
+    option (google.api.http) = {
+      put: "/v1/guilds/{guild_id}/members/{user_id}/permissions/{permission}"
+      body: "*"
+    };
+  }
+  rpc RevokePermission(RevokePermissionRequest) returns (RevokePermissionResponse) {
+    option (google.api.http) = {
+      delete: "/v1/guilds/{guild_id}/members/{user_id}/permissions/{permission}"
+    };
+  }
+  rpc GetUserPermissions(GetUserPermissionsRequest) returns (GetUserPermissionsResponse) {
+    option (google.api.http) = {
+      get: "/v1/guilds/{guild_id}/members/{user_id}/permissions"
+    };
+  }
 
-  rpc GrantRolePermission(GrantRolePermissionRequest) returns (GrantRolePermissionResponse);
-  rpc RevokeRolePermission(RevokeRolePermissionRequest) returns (RevokeRolePermissionResponse);
-
+  // Role-scoped permission grants (Discord's primary model — a role
+  // carries a permission set, every assigned user inherits).
+  rpc GrantRolePermission(GrantRolePermissionRequest) returns (GrantRolePermissionResponse) {
+    option (google.api.http) = {
+      put: "/v1/guilds/{guild_id}/roles/{role_id}/permissions/{permission}"
+      body: "*"
+    };
+  }
+  rpc RevokeRolePermission(RevokeRolePermissionRequest) returns (RevokeRolePermissionResponse) {
+    option (google.api.http) = {
+      delete: "/v1/guilds/{guild_id}/roles/{role_id}/permissions/{permission}"
+    };
+  }
 }
 
 message Guild {

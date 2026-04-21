@@ -31,6 +31,10 @@ const (
 // AuthServiceClient is the client API for AuthService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// All methods sit under `/v1/auth/*`. Every mutation is POST because
+// each one has a request body and is non-idempotent (OTP codes are
+// consumed on verify, tokens are rotated on refresh).
 type AuthServiceClient interface {
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	VerifyOTP(ctx context.Context, in *VerifyOTPRequest, opts ...grpc.CallOption) (*VerifyOTPResponse, error)
@@ -122,6 +126,10 @@ func (c *authServiceClient) ValidateToken(ctx context.Context, in *ValidateToken
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
+//
+// All methods sit under `/v1/auth/*`. Every mutation is POST because
+// each one has a request body and is non-idempotent (OTP codes are
+// consumed on verify, tokens are rotated on refresh).
 type AuthServiceServer interface {
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	VerifyOTP(context.Context, *VerifyOTPRequest) (*VerifyOTPResponse, error)

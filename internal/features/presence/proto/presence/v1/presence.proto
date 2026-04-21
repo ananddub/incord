@@ -5,12 +5,25 @@ package presence.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/presence/v1;presencev1";
 
 import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
 import "buf/validate/validate.proto";
 
+// URL conventions:
+//   PATCH /v1/users/me/presence          self-update (online/idle/dnd/offline)
+//   GET   /v1/users/{user_id}/presence   single-user read
+//   GET   /v1/presence?user_ids=...      bulk read (comma-joined via repeated proxy)
 service PresenceService {
-  rpc UpdatePresence(UpdatePresenceRequest) returns (UpdatePresenceResponse);
-  rpc GetPresence(GetPresenceRequest) returns (GetPresenceResponse);
-  rpc GetBulkPresence(GetBulkPresenceRequest) returns (GetBulkPresenceResponse);
+  rpc UpdatePresence(UpdatePresenceRequest) returns (UpdatePresenceResponse) {
+    option (google.api.http) = { patch: "/v1/users/me/presence" body: "*" };
+  }
+  rpc GetPresence(GetPresenceRequest) returns (GetPresenceResponse) {
+    option (google.api.http) = { get: "/v1/users/{user_id}/presence" };
+  }
+  // Bulk reader takes user_ids as repeated query params (?user_ids=a&user_ids=b).
+  // Kept GET even with a list because the operation is a pure fan-out read.
+  rpc GetBulkPresence(GetBulkPresenceRequest) returns (GetBulkPresenceResponse) {
+    option (google.api.http) = { get: "/v1/presence" };
+  }
 }
 
 enum Status {

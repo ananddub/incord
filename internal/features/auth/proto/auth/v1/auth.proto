@@ -5,16 +5,34 @@ package auth.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/auth/v1;authv1";
 
 import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
 import "buf/validate/validate.proto";
 
+// All methods sit under `/v1/auth/*`. Every mutation is POST because
+// each one has a request body and is non-idempotent (OTP codes are
+// consumed on verify, tokens are rotated on refresh).
 service AuthService {
-  rpc Register(RegisterRequest) returns (RegisterResponse);
-  rpc VerifyOTP(VerifyOTPRequest) returns (VerifyOTPResponse);
-  rpc ResendOTP(ResendOTPRequest) returns (ResendOTPResponse);
-  rpc Login(LoginRequest) returns (LoginResponse);
-  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
-  rpc Logout(LogoutRequest) returns (LogoutResponse);
-  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  rpc Register(RegisterRequest) returns (RegisterResponse) {
+    option (google.api.http) = { post: "/v1/auth/register" body: "*" };
+  }
+  rpc VerifyOTP(VerifyOTPRequest) returns (VerifyOTPResponse) {
+    option (google.api.http) = { post: "/v1/auth/verify-otp" body: "*" };
+  }
+  rpc ResendOTP(ResendOTPRequest) returns (ResendOTPResponse) {
+    option (google.api.http) = { post: "/v1/auth/resend-otp" body: "*" };
+  }
+  rpc Login(LoginRequest) returns (LoginResponse) {
+    option (google.api.http) = { post: "/v1/auth/login" body: "*" };
+  }
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse) {
+    option (google.api.http) = { post: "/v1/auth/refresh" body: "*" };
+  }
+  rpc Logout(LogoutRequest) returns (LogoutResponse) {
+    option (google.api.http) = { post: "/v1/auth/logout" body: "*" };
+  }
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse) {
+    option (google.api.http) = { post: "/v1/auth/validate" body: "*" };
+  }
 }
 
 message RegisterRequest {

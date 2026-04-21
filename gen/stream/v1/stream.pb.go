@@ -7,6 +7,7 @@
 package streamv1
 
 import (
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -2429,7 +2430,7 @@ var File_stream_v1_stream_proto protoreflect.FileDescriptor
 
 const file_stream_v1_stream_proto_rawDesc = "" +
 	"\n" +
-	"\x16stream/v1/stream.proto\x12\tstream.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x85\x01\n" +
+	"\x16stream/v1/stream.proto\x12\tstream.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/api/annotations.proto\"\x85\x01\n" +
 	"\x0eChatAttachment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x10\n" +
@@ -2685,17 +2686,17 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\x17GUILD_EVENT_ROLE_REMOVE\x10\v\x12\x1e\n" +
 	"\x1aGUILD_EVENT_CHANNEL_CREATE\x10\f\x12\x1e\n" +
 	"\x1aGUILD_EVENT_CHANNEL_UPDATE\x10\r\x12\x1e\n" +
-	"\x1aGUILD_EVENT_CHANNEL_DELETE\x10\x0e2\xfd\x05\n" +
-	"\rStreamService\x12H\n" +
-	"\fStreamDmChat\x12\x1e.stream.v1.StreamDmChatRequest\x1a\x16.stream.v1.DmChatEvent0\x01\x12S\n" +
-	"\x10StreamDmChannels\x12\".stream.v1.StreamDmChannelsRequest\x1a\x19.stream.v1.DmChannelEvent0\x01\x12J\n" +
-	"\rStreamDmCalls\x12\x1f.stream.v1.StreamDmCallsRequest\x1a\x16.stream.v1.DmCallEvent0\x01\x12Y\n" +
-	"\x12StreamTextChannels\x12$.stream.v1.StreamTextChannelsRequest\x1a\x1b.stream.v1.TextChannelEvent0\x01\x12Q\n" +
-	"\x0fStreamVoiceChat\x12!.stream.v1.StreamVoiceChatRequest\x1a\x19.stream.v1.VoiceChatEvent0\x01\x12Q\n" +
-	"\x11StreamGuildEvents\x12#.stream.v1.StreamGuildEventsRequest\x1a\x15.stream.v1.GuildEvent0\x01\x12T\n" +
-	"\x10StreamVoiceState\x12\".stream.v1.StreamVoiceStateRequest\x1a\x1a.stream.v1.VoiceStateEvent0\x01\x12H\n" +
-	"\fStreamTyping\x12\x1e.stream.v1.StreamTypingRequest\x1a\x16.stream.v1.TypingEvent0\x01\x12`\n" +
-	"\x14StreamFriendActivity\x12&.stream.v1.StreamFriendActivityRequest\x1a\x1e.stream.v1.FriendActivityEvent0\x01B=Z;github.com/ananddub/ndiscord_backend/gen/stream/v1;streamv1b\x06proto3"
+	"\x1aGUILD_EVENT_CHANNEL_DELETE\x10\x0e2\x92\b\n" +
+	"\rStreamService\x12d\n" +
+	"\fStreamDmChat\x12\x1e.stream.v1.StreamDmChatRequest\x1a\x16.stream.v1.DmChatEvent\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/v1/stream/dm/chat0\x01\x12s\n" +
+	"\x10StreamDmChannels\x12\".stream.v1.StreamDmChannelsRequest\x1a\x19.stream.v1.DmChannelEvent\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/v1/stream/dm/channels0\x01\x12g\n" +
+	"\rStreamDmCalls\x12\x1f.stream.v1.StreamDmCallsRequest\x1a\x16.stream.v1.DmCallEvent\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/stream/dm/calls0\x01\x12{\n" +
+	"\x12StreamTextChannels\x12$.stream.v1.StreamTextChannelsRequest\x1a\x1b.stream.v1.TextChannelEvent\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/v1/stream/channels/text0\x01\x12y\n" +
+	"\x0fStreamVoiceChat\x12!.stream.v1.StreamVoiceChatRequest\x1a\x19.stream.v1.VoiceChatEvent\"&\x82\xd3\xe4\x93\x02 \x12\x1e/v1/stream/channels/voice-chat0\x01\x12l\n" +
+	"\x11StreamGuildEvents\x12#.stream.v1.StreamGuildEventsRequest\x1a\x15.stream.v1.GuildEvent\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/stream/guilds0\x01\x12t\n" +
+	"\x10StreamVoiceState\x12\".stream.v1.StreamVoiceStateRequest\x1a\x1a.stream.v1.VoiceStateEvent\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/v1/stream/voice-state0\x01\x12c\n" +
+	"\fStreamTyping\x12\x1e.stream.v1.StreamTypingRequest\x1a\x16.stream.v1.TypingEvent\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/stream/typing0\x01\x12|\n" +
+	"\x14StreamFriendActivity\x12&.stream.v1.StreamFriendActivityRequest\x1a\x1e.stream.v1.FriendActivityEvent\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/v1/stream/friends0\x01B=Z;github.com/ananddub/ndiscord_backend/gen/stream/v1;streamv1b\x06proto3"
 
 var (
 	file_stream_v1_stream_proto_rawDescOnce sync.Once

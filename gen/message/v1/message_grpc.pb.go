@@ -47,12 +47,14 @@ type MessageServiceClient interface {
 	EditMessage(ctx context.Context, in *EditMessageRequest, opts ...grpc.CallOption) (*EditMessageResponse, error)
 	DeleteMessage(ctx context.Context, in *DeleteMessageRequest, opts ...grpc.CallOption) (*DeleteMessageResponse, error)
 	ListMessages(ctx context.Context, in *ListMessagesRequest, opts ...grpc.CallOption) (*ListMessagesResponse, error)
+	// Pin/unpin via PUT/DELETE on the /pin sub-resource (idempotent).
 	PinMessage(ctx context.Context, in *PinMessageRequest, opts ...grpc.CallOption) (*PinMessageResponse, error)
 	UnpinMessage(ctx context.Context, in *UnpinMessageRequest, opts ...grpc.CallOption) (*UnpinMessageResponse, error)
 	AddReaction(ctx context.Context, in *AddReactionRequest, opts ...grpc.CallOption) (*AddReactionResponse, error)
 	RemoveReaction(ctx context.Context, in *RemoveReactionRequest, opts ...grpc.CallOption) (*RemoveReactionResponse, error)
 	AckMessage(ctx context.Context, in *AckMessageRequest, opts ...grpc.CallOption) (*AckMessageResponse, error)
 	StartTyping(ctx context.Context, in *StartTypingRequest, opts ...grpc.CallOption) (*StartTypingResponse, error)
+	// Convenience: auto-resolve/create DM channel by recipient and post.
 	SendDirectMessage(ctx context.Context, in *SendDirectMessageRequest, opts ...grpc.CallOption) (*SendDirectMessageResponse, error)
 	GetUnreadCounts(ctx context.Context, in *GetUnreadCountsRequest, opts ...grpc.CallOption) (*GetUnreadCountsResponse, error)
 	SearchMessages(ctx context.Context, in *SearchMessagesRequest, opts ...grpc.CallOption) (*SearchMessagesResponse, error)
@@ -248,12 +250,14 @@ type MessageServiceServer interface {
 	EditMessage(context.Context, *EditMessageRequest) (*EditMessageResponse, error)
 	DeleteMessage(context.Context, *DeleteMessageRequest) (*DeleteMessageResponse, error)
 	ListMessages(context.Context, *ListMessagesRequest) (*ListMessagesResponse, error)
+	// Pin/unpin via PUT/DELETE on the /pin sub-resource (idempotent).
 	PinMessage(context.Context, *PinMessageRequest) (*PinMessageResponse, error)
 	UnpinMessage(context.Context, *UnpinMessageRequest) (*UnpinMessageResponse, error)
 	AddReaction(context.Context, *AddReactionRequest) (*AddReactionResponse, error)
 	RemoveReaction(context.Context, *RemoveReactionRequest) (*RemoveReactionResponse, error)
 	AckMessage(context.Context, *AckMessageRequest) (*AckMessageResponse, error)
 	StartTyping(context.Context, *StartTypingRequest) (*StartTypingResponse, error)
+	// Convenience: auto-resolve/create DM channel by recipient and post.
 	SendDirectMessage(context.Context, *SendDirectMessageRequest) (*SendDirectMessageResponse, error)
 	GetUnreadCounts(context.Context, *GetUnreadCountsRequest) (*GetUnreadCountsResponse, error)
 	SearchMessages(context.Context, *SearchMessagesRequest) (*SearchMessagesResponse, error)

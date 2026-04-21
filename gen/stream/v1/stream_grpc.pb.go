@@ -33,6 +33,17 @@ const (
 // StreamServiceClient is the client API for StreamService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// All streaming RPCs are exposed over HTTP as SSE (Server-Sent Events).
+// grpc-gateway emits each streamed message as a newline-delimited JSON
+// object over HTTP chunked transfer — compatible with SSE consumers when
+// the gateway is wired with an SSE marshaler / `Accept: text/event-stream`
+// response header at the mux layer. All request types are empty (subscriber
+// identity comes from the bearer token), so GET is the correct verb.
+//
+// URL convention: `/v1/stream/*` — subscription endpoints live under a
+// single namespace so the frontend can multiplex them through one EventSource
+// per topic.
 type StreamServiceClient interface {
 	StreamDmChat(ctx context.Context, in *StreamDmChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DmChatEvent], error)
 	StreamDmChannels(ctx context.Context, in *StreamDmChannelsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DmChannelEvent], error)
@@ -227,6 +238,17 @@ type StreamService_StreamFriendActivityClient = grpc.ServerStreamingClient[Frien
 // StreamServiceServer is the server API for StreamService service.
 // All implementations must embed UnimplementedStreamServiceServer
 // for forward compatibility.
+//
+// All streaming RPCs are exposed over HTTP as SSE (Server-Sent Events).
+// grpc-gateway emits each streamed message as a newline-delimited JSON
+// object over HTTP chunked transfer — compatible with SSE consumers when
+// the gateway is wired with an SSE marshaler / `Accept: text/event-stream`
+// response header at the mux layer. All request types are empty (subscriber
+// identity comes from the bearer token), so GET is the correct verb.
+//
+// URL convention: `/v1/stream/*` — subscription endpoints live under a
+// single namespace so the frontend can multiplex them through one EventSource
+// per topic.
 type StreamServiceServer interface {
 	StreamDmChat(*StreamDmChatRequest, grpc.ServerStreamingServer[DmChatEvent]) error
 	StreamDmChannels(*StreamDmChannelsRequest, grpc.ServerStreamingServer[DmChannelEvent]) error

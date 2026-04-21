@@ -28,6 +28,10 @@ const (
 // MediaServiceClient is the client API for MediaService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Two-phase upload: client POSTs metadata to get a presigned URL, uploads
+// bytes directly to object storage, then POSTs back to confirm. Reads and
+// deletes are keyed by the opaque file_id.
 type MediaServiceClient interface {
 	RequestUpload(ctx context.Context, in *RequestUploadRequest, opts ...grpc.CallOption) (*RequestUploadResponse, error)
 	ConfirmUpload(ctx context.Context, in *ConfirmUploadRequest, opts ...grpc.CallOption) (*ConfirmUploadResponse, error)
@@ -86,6 +90,10 @@ func (c *mediaServiceClient) DeleteFile(ctx context.Context, in *DeleteFileReque
 // MediaServiceServer is the server API for MediaService service.
 // All implementations must embed UnimplementedMediaServiceServer
 // for forward compatibility.
+//
+// Two-phase upload: client POSTs metadata to get a presigned URL, uploads
+// bytes directly to object storage, then POSTs back to confirm. Reads and
+// deletes are keyed by the opaque file_id.
 type MediaServiceServer interface {
 	RequestUpload(context.Context, *RequestUploadRequest) (*RequestUploadResponse, error)
 	ConfirmUpload(context.Context, *ConfirmUploadRequest) (*ConfirmUploadResponse, error)

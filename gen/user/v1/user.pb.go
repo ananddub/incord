@@ -8,6 +8,7 @@ package userv1
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -1865,7 +1866,7 @@ var File_user_v1_user_proto protoreflect.FileDescriptor
 
 const file_user_v1_user_proto_rawDesc = "" +
 	"\n" +
-	"\x12user/v1/user.proto\x12\auser.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bbuf/validate/validate.proto\"\xd5\x02\n" +
+	"\x12user/v1/user.proto\x12\auser.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1bbuf/validate/validate.proto\"\xd5\x02\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x14\n" +
@@ -1980,28 +1981,29 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\x1dFRIENDSHIP_STATUS_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19FRIENDSHIP_STATUS_PENDING\x10\x01\x12\x1e\n" +
 	"\x1aFRIENDSHIP_STATUS_ACCEPTED\x10\x02\x12\x1d\n" +
-	"\x19FRIENDSHIP_STATUS_BLOCKED\x10\x032\xce\v\n" +
-	"\vUserService\x12<\n" +
-	"\aGetUser\x12\x17.user.v1.GetUserRequest\x1a\x18.user.v1.GetUserResponse\x12E\n" +
+	"\x19FRIENDSHIP_STATUS_BLOCKED\x10\x032\xb0\x10\n" +
+	"\vUserService\x12Y\n" +
+	"\aGetUser\x12\x17.user.v1.GetUserRequest\x1a\x18.user.v1.GetUserResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/users/{user_id}\x12^\n" +
 	"\n" +
-	"UpdateUser\x12\x1a.user.v1.UpdateUserRequest\x1a\x1b.user.v1.UpdateUserResponse\x12Q\n" +
-	"\x0eUpdateUsername\x12\x1e.user.v1.UpdateUsernameRequest\x1a\x1f.user.v1.UpdateUsernameResponse\x12K\n" +
-	"\fUpdateStatus\x12\x1c.user.v1.UpdateStatusRequest\x1a\x1d.user.v1.UpdateStatusResponse\x12W\n" +
-	"\x10UploadUserAvatar\x12 .user.v1.UploadUserAvatarRequest\x1a!.user.v1.UploadUserAvatarResponse\x12E\n" +
+	"UpdateUser\x12\x1a.user.v1.UpdateUserRequest\x1a\x1b.user.v1.UpdateUserResponse\"\x17\x82\xd3\xe4\x93\x02\x11:\x01*2\f/v1/users/me\x12s\n" +
+	"\x0eUpdateUsername\x12\x1e.user.v1.UpdateUsernameRequest\x1a\x1f.user.v1.UpdateUsernameResponse\" \x82\xd3\xe4\x93\x02\x1a:\x01*2\x15/v1/users/me/username\x12k\n" +
+	"\fUpdateStatus\x12\x1c.user.v1.UpdateStatusRequest\x1a\x1d.user.v1.UpdateStatusResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*2\x13/v1/users/me/status\x12w\n" +
+	"\x10UploadUserAvatar\x12 .user.v1.UploadUserAvatarRequest\x1a!.user.v1.UploadUserAvatarResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/v1/users/me/avatar\x12[\n" +
 	"\n" +
-	"DeleteUser\x12\x1a.user.v1.DeleteUserRequest\x1a\x1b.user.v1.DeleteUserResponse\x12Z\n" +
-	"\x11GetUserByUsername\x12!.user.v1.GetUserByUsernameRequest\x1a\".user.v1.GetUserByUsernameResponse\x12H\n" +
-	"\vSearchUsers\x12\x1b.user.v1.SearchUsersRequest\x1a\x1c.user.v1.SearchUsersResponse\x12Z\n" +
-	"\x11SendFriendRequest\x12!.user.v1.SendFriendRequestRequest\x1a\".user.v1.SendFriendRequestResponse\x12`\n" +
-	"\x13AcceptFriendRequest\x12#.user.v1.AcceptFriendRequestRequest\x1a$.user.v1.AcceptFriendRequestResponse\x12c\n" +
-	"\x14DeclineFriendRequest\x12$.user.v1.DeclineFriendRequestRequest\x1a%.user.v1.DeclineFriendRequestResponse\x12`\n" +
-	"\x13CancelFriendRequest\x12#.user.v1.CancelFriendRequestRequest\x1a$.user.v1.CancelFriendRequestResponse\x12K\n" +
-	"\fRemoveFriend\x12\x1c.user.v1.RemoveFriendRequest\x1a\x1d.user.v1.RemoveFriendResponse\x12B\n" +
-	"\tBlockUser\x12\x19.user.v1.BlockUserRequest\x1a\x1a.user.v1.BlockUserResponse\x12H\n" +
-	"\vUnblockUser\x12\x1b.user.v1.UnblockUserRequest\x1a\x1c.user.v1.UnblockUserResponse\x12H\n" +
-	"\vListFriends\x12\x1b.user.v1.ListFriendsRequest\x1a\x1c.user.v1.ListFriendsResponse\x12`\n" +
-	"\x13ListPendingRequests\x12#.user.v1.ListPendingRequestsRequest\x1a$.user.v1.ListPendingRequestsResponse\x12H\n" +
-	"\vListBlocked\x12\x1b.user.v1.ListBlockedRequest\x1a\x1c.user.v1.ListBlockedResponseB9Z7github.com/ananddub/ndiscord_backend/gen/user/v1;userv1b\x06proto3"
+	"DeleteUser\x12\x1a.user.v1.DeleteUserRequest\x1a\x1b.user.v1.DeleteUserResponse\"\x14\x82\xd3\xe4\x93\x02\x0e*\f/v1/users/me\x12\x84\x01\n" +
+	"\x11GetUserByUsername\x12!.user.v1.GetUserByUsernameRequest\x1a\".user.v1.GetUserByUsernameResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /v1/users/by-username/{username}\x12b\n" +
+	"\vSearchUsers\x12\x1b.user.v1.SearchUsersRequest\x1a\x1c.user.v1.SearchUsersResponse\"\x18\x82\xd3\xe4\x93\x02\x12\x12\x10/v1/users/search\x12{\n" +
+	"\x11SendFriendRequest\x12!.user.v1.SendFriendRequestRequest\x1a\".user.v1.SendFriendRequestResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/v1/friends/requests\x12\x93\x01\n" +
+	"\x13AcceptFriendRequest\x12#.user.v1.AcceptFriendRequestRequest\x1a$.user.v1.AcceptFriendRequestResponse\"1\x82\xd3\xe4\x93\x02+:\x01*\"&/v1/friends/{requester_user_id}/accept\x12\x97\x01\n" +
+	"\x14DeclineFriendRequest\x12$.user.v1.DeclineFriendRequestRequest\x1a%.user.v1.DeclineFriendRequestResponse\"2\x82\xd3\xe4\x93\x02,:\x01*\"'/v1/friends/{requester_user_id}/decline\x12\x90\x01\n" +
+	"\x13CancelFriendRequest\x12#.user.v1.CancelFriendRequestRequest\x1a$.user.v1.CancelFriendRequestResponse\".\x82\xd3\xe4\x93\x02(:\x01*\"#/v1/friends/{target_user_id}/cancel\x12l\n" +
+	"\fRemoveFriend\x12\x1c.user.v1.RemoveFriendRequest\x1a\x1d.user.v1.RemoveFriendResponse\"\x1f\x82\xd3\xe4\x93\x02\x19*\x17/v1/friends/{friend_id}\x12j\n" +
+	"\tBlockUser\x12\x19.user.v1.BlockUserRequest\x1a\x1a.user.v1.BlockUserResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\x1a\x1b/v1/blocks/{target_user_id}\x12m\n" +
+	"\vUnblockUser\x12\x1b.user.v1.UnblockUserRequest\x1a\x1c.user.v1.UnblockUserResponse\"#\x82\xd3\xe4\x93\x02\x1d*\x1b/v1/blocks/{target_user_id}\x12]\n" +
+	"\vListFriends\x12\x1b.user.v1.ListFriendsRequest\x1a\x1c.user.v1.ListFriendsResponse\"\x13\x82\xd3\xe4\x93\x02\r\x12\v/v1/friends\x12}\n" +
+	"\x13ListPendingRequests\x12#.user.v1.ListPendingRequestsRequest\x1a$.user.v1.ListPendingRequestsResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/friends/pending\x12\\\n" +
+	"\vListBlocked\x12\x1b.user.v1.ListBlockedRequest\x1a\x1c.user.v1.ListBlockedResponse\"\x12\x82\xd3\xe4\x93\x02\f\x12\n" +
+	"/v1/blocksB9Z7github.com/ananddub/ndiscord_backend/gen/user/v1;userv1b\x06proto3"
 
 var (
 	file_user_v1_user_proto_rawDescOnce sync.Once

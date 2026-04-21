@@ -25,6 +25,10 @@ const (
 // SyncServiceClient is the client API for SyncService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Incremental delta pull: client sends last_sync_time, server returns every
+// row touched since. POST because the body carries an (optional) timestamp
+// and this is a client-driven refresh, not a cacheable GET.
 type SyncServiceClient interface {
 	Sync(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*SyncResponse, error)
 }
@@ -50,6 +54,10 @@ func (c *syncServiceClient) Sync(ctx context.Context, in *SyncRequest, opts ...g
 // SyncServiceServer is the server API for SyncService service.
 // All implementations must embed UnimplementedSyncServiceServer
 // for forward compatibility.
+//
+// Incremental delta pull: client sends last_sync_time, server returns every
+// row touched since. POST because the body carries an (optional) timestamp
+// and this is a client-driven refresh, not a cacheable GET.
 type SyncServiceServer interface {
 	Sync(context.Context, *SyncRequest) (*SyncResponse, error)
 	mustEmbedUnimplementedSyncServiceServer()

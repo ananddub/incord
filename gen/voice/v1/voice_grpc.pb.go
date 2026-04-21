@@ -42,14 +42,25 @@ const (
 // VoiceServiceClient is the client API for VoiceService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// URL conventions:
+//
+//	/v1/channels/{channel_id}/voice/*   guild voice channel ops
+//	/v1/channels/{channel_id}/calls/*   DM / group-DM calls
+//	/v1/channels/{channel_id}/voice/me/{flag}  self-state toggles (PUT=on, DELETE=off)
+//	/v1/channels/{channel_id}/voice/participants/{user_id}/{flag}  moderator ops
 type VoiceServiceClient interface {
 	JoinChannel(ctx context.Context, in *JoinChannelRequest, opts ...grpc.CallOption) (*JoinChannelResponse, error)
 	LeaveChannel(ctx context.Context, in *LeaveChannelRequest, opts ...grpc.CallOption) (*LeaveChannelResponse, error)
 	GetChannelParticipants(ctx context.Context, in *GetChannelParticipantsRequest, opts ...grpc.CallOption) (*GetChannelParticipantsResponse, error)
+	// DM / group-DM calls. StartDMCall is the caller-initiated action;
+	// JoinDMCall is the callee accepting. Both return a LiveKit token.
 	StartDMCall(ctx context.Context, in *StartDMCallRequest, opts ...grpc.CallOption) (*StartDMCallResponse, error)
 	JoinDMCall(ctx context.Context, in *JoinDMCallRequest, opts ...grpc.CallOption) (*JoinDMCallResponse, error)
 	RejectDMCall(ctx context.Context, in *RejectDMCallRequest, opts ...grpc.CallOption) (*RejectDMCallResponse, error)
 	LeaveDMCall(ctx context.Context, in *LeaveDMCallRequest, opts ...grpc.CallOption) (*LeaveDMCallResponse, error)
+	// Self-state toggles. PUT = flag on (mute/deaf/video/screen), DELETE = off.
+	// Returns updated participant list so callers can refresh UI in one round trip.
 	Mute(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
 	Unmute(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
 	Deafen(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
@@ -58,6 +69,9 @@ type VoiceServiceClient interface {
 	DisableVideo(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
 	StartScreenShare(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
 	StopScreenShare(ctx context.Context, in *VoiceChannelRequest, opts ...grpc.CallOption) (*VoiceParticipantsResponse, error)
+	// Moderator-level ops: act on a specific participant. PUT body carries
+	// the boolean because the action is "set muted=true/false", not strictly
+	// idempotent toggle (admin may force-mute regardless of current state).
 	ServerMuteUser(ctx context.Context, in *ServerMuteUserRequest, opts ...grpc.CallOption) (*ServerMuteUserResponse, error)
 	ServerDeafenUser(ctx context.Context, in *ServerDeafenUserRequest, opts ...grpc.CallOption) (*ServerDeafenUserResponse, error)
 	DisconnectUser(ctx context.Context, in *DisconnectUserRequest, opts ...grpc.CallOption) (*DisconnectUserResponse, error)
@@ -254,14 +268,25 @@ func (c *voiceServiceClient) DisconnectUser(ctx context.Context, in *DisconnectU
 // VoiceServiceServer is the server API for VoiceService service.
 // All implementations must embed UnimplementedVoiceServiceServer
 // for forward compatibility.
+//
+// URL conventions:
+//
+//	/v1/channels/{channel_id}/voice/*   guild voice channel ops
+//	/v1/channels/{channel_id}/calls/*   DM / group-DM calls
+//	/v1/channels/{channel_id}/voice/me/{flag}  self-state toggles (PUT=on, DELETE=off)
+//	/v1/channels/{channel_id}/voice/participants/{user_id}/{flag}  moderator ops
 type VoiceServiceServer interface {
 	JoinChannel(context.Context, *JoinChannelRequest) (*JoinChannelResponse, error)
 	LeaveChannel(context.Context, *LeaveChannelRequest) (*LeaveChannelResponse, error)
 	GetChannelParticipants(context.Context, *GetChannelParticipantsRequest) (*GetChannelParticipantsResponse, error)
+	// DM / group-DM calls. StartDMCall is the caller-initiated action;
+	// JoinDMCall is the callee accepting. Both return a LiveKit token.
 	StartDMCall(context.Context, *StartDMCallRequest) (*StartDMCallResponse, error)
 	JoinDMCall(context.Context, *JoinDMCallRequest) (*JoinDMCallResponse, error)
 	RejectDMCall(context.Context, *RejectDMCallRequest) (*RejectDMCallResponse, error)
 	LeaveDMCall(context.Context, *LeaveDMCallRequest) (*LeaveDMCallResponse, error)
+	// Self-state toggles. PUT = flag on (mute/deaf/video/screen), DELETE = off.
+	// Returns updated participant list so callers can refresh UI in one round trip.
 	Mute(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
 	Unmute(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
 	Deafen(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
@@ -270,6 +295,9 @@ type VoiceServiceServer interface {
 	DisableVideo(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
 	StartScreenShare(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
 	StopScreenShare(context.Context, *VoiceChannelRequest) (*VoiceParticipantsResponse, error)
+	// Moderator-level ops: act on a specific participant. PUT body carries
+	// the boolean because the action is "set muted=true/false", not strictly
+	// idempotent toggle (admin may force-mute regardless of current state).
 	ServerMuteUser(context.Context, *ServerMuteUserRequest) (*ServerMuteUserResponse, error)
 	ServerDeafenUser(context.Context, *ServerDeafenUserRequest) (*ServerDeafenUserResponse, error)
 	DisconnectUser(context.Context, *DisconnectUserRequest) (*DisconnectUserResponse, error)

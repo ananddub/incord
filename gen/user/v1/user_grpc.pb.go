@@ -42,6 +42,15 @@ const (
 // UserServiceClient is the client API for UserService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// URL conventions:
+//
+//	/v1/users/{user_id}                       profile CRUD
+//	/v1/users/search?q=                       substring search
+//	/v1/users/by-username/{username}          alt lookup
+//	/v1/users/me/*                            authenticated-self shortcuts
+//	/v1/friends, /v1/friends/{friend_id}      friendship graph
+//	/v1/blocks, /v1/blocks/{user_id}          block list
 type UserServiceClient interface {
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
 	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
@@ -255,6 +264,15 @@ func (c *userServiceClient) ListBlocked(ctx context.Context, in *ListBlockedRequ
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
+//
+// URL conventions:
+//
+//	/v1/users/{user_id}                       profile CRUD
+//	/v1/users/search?q=                       substring search
+//	/v1/users/by-username/{username}          alt lookup
+//	/v1/users/me/*                            authenticated-self shortcuts
+//	/v1/friends, /v1/friends/{friend_id}      friendship graph
+//	/v1/blocks, /v1/blocks/{user_id}          block list
 type UserServiceServer interface {
 	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
 	UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error)
