@@ -16,6 +16,9 @@ import (
 	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/test/bufconn"
 )
 
 func main() {
@@ -45,14 +48,34 @@ func main() {
 	// Create gRPC server
 	srv := app.NewGRPCServer(handlers, cfg.JWT.Secret, infra.Redis)
 
-	// REST gateway — same-process handlers, Discord-style paths under /v1/*.
-	// Auth middleware on the HTTP side would go here; for now REST inherits
-	// whatever validation the gRPC handler enforces internally.
-	gwMux, err := app.NewGatewayMux(ctx, handlers)
+	// In-memory loopback for the REST gateway. REST requests flow:
+	//   HTTP /v1/... → grpc-gateway mux → bufconn → grpc.Server → interceptors → handler
+	// This is what gives REST calls the same auth / rate-limit / validation
+	// chain as native gRPC, and critically it's the only path that supports
+	// server-streaming RPCs (the in-process HandlerServer variant does not).
+	bufLis := bufconn.Listen(1 << 20) // 1 MiB pipe buffer
+	go func() {
+		if err := srv.Serve(bufLis); err != nil {
+			log.Error().Err(err).Msg("bufconn gRPC serve stopped")
+		}
+	}()
+	gwConn, err := grpc.NewClient(
+		"passthrough:///bufnet",
+		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
+			return bufLis.DialContext(ctx)
+		}),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to dial bufconn loopback")
+	}
+	defer gwConn.Close()
+
+	gwMux, err := app.NewGatewayMux(ctx, gwConn)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to build REST gateway mux")
 	}
-	publicHTTP := app.NewPublicHTTPHandler(gwMux, cfg.JWT.Secret, infra.Redis)
+	publicHTTP := app.NewPublicHTTPHandler(gwMux)
 
 	// Single-port dispatch: HTTP/2 clients sending `application/grpc` go to
 	// the gRPC server; everything else (HTTP/1.1 JSON, browser SSE, Swagger

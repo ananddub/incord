@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/redis/go-redis/v9"
+	"google.golang.org/grpc"
 
 	authv1 "github.com/ananddub/ndiscord_backend/gen/auth/v1"
 	channelv1 "github.com/ananddub/ndiscord_backend/gen/channel/v1"
@@ -25,47 +25,53 @@ import (
 )
 
 // NewGatewayMux builds an HTTP mux that fronts all 10 gRPC services over REST.
-// Handlers are registered in-process (no loopback dial) so REST calls skip the
-// gRPC interceptor chain entirely — auth, rate-limit, and validation must be
-// enforced again at the HTTP layer via middleware wrapped around this mux.
 //
-// Streaming RPCs are exposed as SSE: grpc-gateway emits each message as a
-// newline-delimited JSON object over HTTP chunked transfer; the SSE marshaler
-// registered below adds the `data: ` prefix and the required response headers.
-func NewGatewayMux(ctx context.Context, h *Handlers) (*runtime.ServeMux, error) {
+// The mux is wired to a real *grpc.ClientConn (typically an in-process
+// bufconn loopback). This matters: the older RegisterXxxHandlerServer
+// path uses an in-process transport that **does not support streaming
+// calls**, so SSE endpoints under /v1/stream/* return 501. With a real
+// ClientConn the same handlers support unary + server-streaming RPCs
+// uniformly, and all gRPC interceptors (auth, rate-limit, validation)
+// run on every REST-originated call — one chain, no duplicate HTTP
+// middleware required.
+//
+// Streaming RPCs are exposed as SSE: grpc-gateway emits each streamed
+// message as an event through our sseMarshaler (registered for
+// text/event-stream). Clients opt in by sending `Accept: text/event-stream`.
+func NewGatewayMux(ctx context.Context, conn *grpc.ClientConn) (*runtime.ServeMux, error) {
 	mux := runtime.NewServeMux(
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{}),
 		runtime.WithMarshalerOption("text/event-stream", &sseMarshaler{}),
 	)
 
-	if err := authv1.RegisterAuthServiceHandlerServer(ctx, mux, h.Auth); err != nil {
+	if err := authv1.RegisterAuthServiceHandler(ctx, mux, conn); err != nil {
 		return nil, err
 	}
-	if err := userv1.RegisterUserServiceHandlerServer(ctx, mux, h.User); err != nil {
+	if err := userv1.RegisterUserServiceHandler(ctx, mux, conn); err != nil {
 		return nil, err
 	}
-	if err := guildv1.RegisterGuildServiceHandlerServer(ctx, mux, h.Guild); err != nil {
+	if err := guildv1.RegisterGuildServiceHandler(ctx, mux, conn); err != nil {
 		return nil, err
 	}
-	if err := channelv1.RegisterChannelServiceHandlerServer(ctx, mux, h.Channel); err != nil {
+	if err := channelv1.RegisterChannelServiceHandler(ctx, mux, conn); err != nil {
 		return nil, err
 	}
-	if err := messagev1.RegisterMessageServiceHandlerServer(ctx, mux, h.Message); err != nil {
+	if err := messagev1.RegisterMessageServiceHandler(ctx, mux, conn); err != nil {
 		return nil, err
 	}
-	if err := streamv1.RegisterStreamServiceHandlerServer(ctx, mux, h.Stream); err != nil {
+	if err := streamv1.RegisterStreamServiceHandler(ctx, mux, conn); err != nil {
 		return nil, err
 	}
-	if err := syncv1.RegisterSyncServiceHandlerServer(ctx, mux, h.Sync); err != nil {
+	if err := syncv1.RegisterSyncServiceHandler(ctx, mux, conn); err != nil {
 		return nil, err
 	}
-	if err := presencev1.RegisterPresenceServiceHandlerServer(ctx, mux, h.Presence); err != nil {
+	if err := presencev1.RegisterPresenceServiceHandler(ctx, mux, conn); err != nil {
 		return nil, err
 	}
-	if err := mediav1.RegisterMediaServiceHandlerServer(ctx, mux, h.Media); err != nil {
+	if err := mediav1.RegisterMediaServiceHandler(ctx, mux, conn); err != nil {
 		return nil, err
 	}
-	if err := voicev1.RegisterVoiceServiceHandlerServer(ctx, mux, h.Voice); err != nil {
+	if err := voicev1.RegisterVoiceServiceHandler(ctx, mux, conn); err != nil {
 		return nil, err
 	}
 	return mux, nil
@@ -76,19 +82,16 @@ func NewGatewayMux(ctx context.Context, h *Handlers) (*runtime.ServeMux, error) 
 //   - OpenAPI spec at /openapi.json
 //   - Swagger UI at /swagger/
 //
-// Auth + rate-limit + logging middleware wraps ONLY the /v1/* gateway so
-// the Swagger UI and OpenAPI spec stay publicly reachable without a token
-// (you need them unauthenticated to discover which endpoints to call).
-// The middleware reuses the same context key as the gRPC interceptor so
-// feature handlers are transport-agnostic.
-func NewPublicHTTPHandler(gw *runtime.ServeMux, jwtSecret string, rdb *redis.Client) http.Handler {
-	protectedGateway := middleware.HTTPLoggingMiddleware()(
-		middleware.HTTPRateLimitMiddleware(rdb)(
-			middleware.HTTPAuthMiddleware(jwtSecret)(gw),
-		),
-	)
+// The gRPC interceptor chain (auth / rate-limit / validation) runs on
+// every REST call via the loopback, so the only HTTP-layer middleware we
+// add is structured access logging — URL-level visibility the gRPC log
+// (which shows /guild.v1.GuildService/GetGuild) doesn't give us.
+// Swagger UI and the spec stay outside the logged path so they remain
+// publicly reachable even without a token.
+func NewPublicHTTPHandler(gw *runtime.ServeMux) http.Handler {
+	logged := middleware.HTTPLoggingMiddleware()(gw)
 	mux := http.NewServeMux()
-	mux.Handle("/v1/", protectedGateway)
+	mux.Handle("/v1/", logged)
 	mux.HandleFunc("/openapi.json", serveOpenAPISpec)
 	mux.HandleFunc("/swagger/", serveSwaggerUI)
 	mux.HandleFunc("/swagger", func(w http.ResponseWriter, r *http.Request) {
