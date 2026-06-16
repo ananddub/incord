@@ -47,7 +47,7 @@ services:
       SCYLLA_HOST: scylladb:9042
       SCYLLA_KEYSPACE: ndiscord
       MINIO_ENDPOINT: rustfs:9000
-      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-192.168.1.3:9000}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-192.168.1.3:7000}
       MINIO_ACCESS_KEY: ndiscord
       MINIO_SECRET_KEY: ndiscord123
       MINIO_BUCKET: ndiscord
@@ -132,7 +132,7 @@ services:
     image: rustfs/rustfs:latest
     container_name: ndiscord-rustfs
     ports:
-      - "9000:9000"
+      - "7000:9000"
       - "9001:9001"
     environment:
       RUSTFS_ACCESS_KEY: ndiscord

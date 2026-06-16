@@ -5,6 +5,7 @@ go 1.26.1
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260209202127-80ab13bee0bf.1
 	buf.build/go/protovalidate v1.1.3
+	github.com/apache/cassandra-gocql-driver/v2 v2.1.2
 	github.com/gocql/gocql v1.7.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
