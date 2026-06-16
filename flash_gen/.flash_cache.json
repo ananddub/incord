@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "query_file_checksums": {
+    "db/scylla/queries/message.sql": "da72c4d7f36b378ca3d7e6c8de5b5b761cc40fb5ff97a68d7bbc5f9aeec95cd8"
+  },
+  "schema_checksum": "34b7760d25d42b9fc6e6046191b69d349672df002be3b4c308d38a9322ce4358",
+  "config_checksum": "5969a7a97749cc85bf47c858263c80b0f82e387e2082ea58912bd1c0c5bb6844",
+  "query_table_deps": {
+    "db/scylla/queries/message.sql": [
+      "ndiscord.read_states",
+      "ndiscord.message_edit_history",
+      "ndiscord.messages",
+      "ndiscord.message_attachments",
+      "ndiscord.message_reactions"
+    ]
+  },
+  "generated_file_checksums": {
+    "flash_gen/message.go": "8ed24b52f5f109d7dfefa5dd84698345066a0aca3c74a9211e5fcef3c5875509"
+  },
+  "last_generation": "2026-06-16T22:36:08.250803766+05:30"
+}
