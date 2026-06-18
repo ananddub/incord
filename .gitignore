@@ -3,3 +3,8 @@ tmp/
 .claude
 coverage.out
 coverage.html
+.idea/
+.direnv/
+.claude/
+.vscode/
+tmp/

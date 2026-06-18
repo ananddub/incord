@@ -7,6 +7,9 @@ import (
 	"testing"
 	"time"
 
+	messagev1 "github.com/ananddub/ndiscord_backend/gen/message/v1"
+	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
+	"github.com/ananddub/ndiscord_backend/internal/shared/middleware"
 	"github.com/gocql/gocql"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/redis/go-redis/v9"
@@ -19,10 +22,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-
-	messagev1 "github.com/ananddub/ndiscord_backend/gen/message/v1"
-	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
-	"github.com/ananddub/ndiscord_backend/internal/shared/middleware"
 )
 
 const testSecret = "test-secret"

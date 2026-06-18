@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ananddub/ndiscord_backend/gen/scylladb"
 	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -149,11 +150,11 @@ func newTestRepo(t *testing.T) *Repository {
 // helpers
 // ---------------------------------------------------------------------------
 
-func makeMessage(channelID, authorID gocql.UUID, content string) *Message {
-	return &Message{
-		ChannelID: channelID,
-		ID:        gocql.TimeUUID(),
-		AuthorID:  authorID,
+func makeMessage(channelID, authorID gocql.UUID, content string) *scylladb.CreatemessageParams {
+	return &scylladb.CreatemessageParams{
+		ChannelId: channelID,
+		Id:        gocql.TimeUUID(),
+		AuthorId:  authorID,
 		Content:   content,
 		Type:      0,
 		Pinned:    false,
@@ -176,14 +177,14 @@ func TestCreateAndGetMessage(t *testing.T) {
 	err := repo.CreateMessage(ctx, msg)
 	require.NoError(t, err)
 
-	got, err := repo.GetMessage(ctx, channelID, msg.ID)
+	got, err := repo.GetMessage(ctx, channelID, msg.Id)
 	require.NoError(t, err)
-	assert.Equal(t, msg.ChannelID, got.ChannelID)
-	assert.Equal(t, msg.ID, got.ID)
-	assert.Equal(t, msg.AuthorID, got.AuthorID)
-	assert.Equal(t, msg.Content, got.Content)
-	assert.Equal(t, msg.Type, got.Type)
-	assert.Equal(t, msg.Pinned, got.Pinned)
+	assert.Equal(t, msg.ChannelId, uuidValue(got.ChannelId))
+	assert.Equal(t, msg.Id, uuidValue(got.Id))
+	assert.Equal(t, msg.AuthorId, uuidValue(got.AuthorId))
+	assert.Equal(t, msg.Content, stringValue(got.Content))
+	assert.Equal(t, msg.Type, int64Value(got.Type))
+	assert.Equal(t, msg.Pinned, boolValue(got.Pinned))
 }
 
 func TestGetMessage_NotFound(t *testing.T) {
@@ -205,12 +206,12 @@ func TestUpdateMessageContent(t *testing.T) {
 	require.NoError(t, repo.CreateMessage(ctx, msg))
 
 	editedAt := time.Now().Truncate(time.Millisecond)
-	err := repo.UpdateMessageContent(ctx, channelID, msg.ID, "updated", editedAt)
+	err := repo.UpdateMessageContent(ctx, channelID, msg.Id, "updated", editedAt)
 	require.NoError(t, err)
 
-	got, err := repo.GetMessage(ctx, channelID, msg.ID)
+	got, err := repo.GetMessage(ctx, channelID, msg.Id)
 	require.NoError(t, err)
-	assert.Equal(t, "updated", got.Content)
+	assert.Equal(t, "updated", stringValue(got.Content))
 	require.NotNil(t, got.EditedAt)
 	// ScyllaDB timestamps are millisecond-precision.
 	assert.WithinDuration(t, editedAt, *got.EditedAt, time.Millisecond)
@@ -226,10 +227,10 @@ func TestDeleteMessage(t *testing.T) {
 
 	require.NoError(t, repo.CreateMessage(ctx, msg))
 
-	err := repo.DeleteMessage(ctx, channelID, msg.ID)
+	err := repo.DeleteMessage(ctx, channelID, msg.Id)
 	require.NoError(t, err)
 
-	_, err = repo.GetMessage(ctx, channelID, msg.ID)
+	_, err = repo.GetMessage(ctx, channelID, msg.Id)
 	assert.Error(t, err, "expected not found after delete")
 }
 
@@ -244,7 +245,7 @@ func TestListMessages_DefaultOrder(t *testing.T) {
 	ids := make([]gocql.UUID, 5)
 	for i := 0; i < 5; i++ {
 		msg := makeMessage(channelID, authorID, fmt.Sprintf("msg-%d", i))
-		ids[i] = msg.ID
+		ids[i] = msg.Id
 		require.NoError(t, repo.CreateMessage(ctx, msg))
 		time.Sleep(5 * time.Millisecond) // ensure distinct TimeUUIDs
 	}
@@ -256,8 +257,8 @@ func TestListMessages_DefaultOrder(t *testing.T) {
 
 	// Should be in descending order of id (newest first).
 	for i := 1; i < len(msgs); i++ {
-		assert.True(t, msgs[i-1].ID.Time().After(msgs[i].ID.Time()) ||
-			msgs[i-1].ID.Time().Equal(msgs[i].ID.Time()),
+		assert.True(t, uuidValue(msgs[i-1].Id).Time().After(uuidValue(msgs[i].Id).Time()) ||
+			uuidValue(msgs[i-1].Id).Time().Equal(uuidValue(msgs[i].Id).Time()),
 			"messages should be ordered newest first")
 	}
 }
@@ -290,7 +291,7 @@ func TestListMessages_BeforeCursor(t *testing.T) {
 	ids := make([]gocql.UUID, 5)
 	for i := 0; i < 5; i++ {
 		msg := makeMessage(channelID, authorID, fmt.Sprintf("msg-%d", i))
-		ids[i] = msg.ID
+		ids[i] = msg.Id
 		require.NoError(t, repo.CreateMessage(ctx, msg))
 		time.Sleep(5 * time.Millisecond)
 	}
@@ -301,7 +302,7 @@ func TestListMessages_BeforeCursor(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, msgs, 4)
 	for _, m := range msgs {
-		assert.True(t, m.ID.Time().Before(cursor.Time()),
+		assert.True(t, uuidValue(m.Id).Time().Before(cursor.Time()),
 			"all returned messages should be older than cursor")
 	}
 }
@@ -316,7 +317,7 @@ func TestListMessages_AfterCursor(t *testing.T) {
 	ids := make([]gocql.UUID, 5)
 	for i := 0; i < 5; i++ {
 		msg := makeMessage(channelID, authorID, fmt.Sprintf("msg-%d", i))
-		ids[i] = msg.ID
+		ids[i] = msg.Id
 		require.NoError(t, repo.CreateMessage(ctx, msg))
 		time.Sleep(5 * time.Millisecond)
 	}
@@ -327,7 +328,7 @@ func TestListMessages_AfterCursor(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, msgs, 4)
 	for _, m := range msgs {
-		assert.True(t, m.ID.Time().After(cursor.Time()),
+		assert.True(t, uuidValue(m.Id).Time().After(cursor.Time()),
 			"all returned messages should be newer than cursor")
 	}
 }
@@ -343,20 +344,20 @@ func TestSetPinned(t *testing.T) {
 	require.NoError(t, repo.CreateMessage(ctx, msg))
 
 	// Pin the message.
-	err := repo.SetPinned(ctx, channelID, msg.ID, true)
+	err := repo.SetPinned(ctx, channelID, msg.Id, true)
 	require.NoError(t, err)
 
-	got, err := repo.GetMessage(ctx, channelID, msg.ID)
+	got, err := repo.GetMessage(ctx, channelID, msg.Id)
 	require.NoError(t, err)
-	assert.True(t, got.Pinned)
+	assert.True(t, boolValue(got.Pinned))
 
 	// Unpin the message.
-	err = repo.SetPinned(ctx, channelID, msg.ID, false)
+	err = repo.SetPinned(ctx, channelID, msg.Id, false)
 	require.NoError(t, err)
 
-	got, err = repo.GetMessage(ctx, channelID, msg.ID)
+	got, err = repo.GetMessage(ctx, channelID, msg.Id)
 	require.NoError(t, err)
-	assert.False(t, got.Pinned)
+	assert.False(t, boolValue(got.Pinned))
 }
 
 func TestAddAndGetReactions(t *testing.T) {
@@ -372,12 +373,12 @@ func TestAddAndGetReactions(t *testing.T) {
 	user2 := gocql.MustRandomUUID()
 
 	// Two users react with the same emoji, user1 also adds a different one.
-	require.NoError(t, repo.AddReaction(ctx, channelID, msg.ID, "thumbsup", user1))
-	require.NoError(t, repo.AddReaction(ctx, channelID, msg.ID, "thumbsup", user2))
-	require.NoError(t, repo.AddReaction(ctx, channelID, msg.ID, "heart", user1))
+	require.NoError(t, repo.AddReaction(ctx, channelID, msg.Id, "thumbsup", user1))
+	require.NoError(t, repo.AddReaction(ctx, channelID, msg.Id, "thumbsup", user2))
+	require.NoError(t, repo.AddReaction(ctx, channelID, msg.Id, "heart", user1))
 
 	// Get reactions from user1's perspective.
-	reactions, err := repo.GetReactions(ctx, channelID, msg.ID, user1)
+	reactions, err := repo.GetReactions(ctx, channelID, msg.Id, user1)
 	require.NoError(t, err)
 	assert.Len(t, reactions, 2)
 
@@ -395,7 +396,7 @@ func TestAddAndGetReactions(t *testing.T) {
 	assert.True(t, heart.Me, "user1 reacted with heart")
 
 	// Get reactions from user2's perspective.
-	reactions2, err := repo.GetReactions(ctx, channelID, msg.ID, user2)
+	reactions2, err := repo.GetReactions(ctx, channelID, msg.Id, user2)
 	require.NoError(t, err)
 
 	byEmoji2 := make(map[string]ReactionCount)
@@ -416,19 +417,19 @@ func TestRemoveReaction(t *testing.T) {
 	require.NoError(t, repo.CreateMessage(ctx, msg))
 
 	user := gocql.MustRandomUUID()
-	require.NoError(t, repo.AddReaction(ctx, channelID, msg.ID, "fire", user))
+	require.NoError(t, repo.AddReaction(ctx, channelID, msg.Id, "fire", user))
 
 	// Verify it exists.
-	reactions, err := repo.GetReactions(ctx, channelID, msg.ID, user)
+	reactions, err := repo.GetReactions(ctx, channelID, msg.Id, user)
 	require.NoError(t, err)
 	require.Len(t, reactions, 1)
 
 	// Remove.
-	err = repo.RemoveReaction(ctx, channelID, msg.ID, "fire", user)
+	err = repo.RemoveReaction(ctx, channelID, msg.Id, "fire", user)
 	require.NoError(t, err)
 
 	// Should be gone.
-	reactions, err = repo.GetReactions(ctx, channelID, msg.ID, user)
+	reactions, err = repo.GetReactions(ctx, channelID, msg.Id, user)
 	require.NoError(t, err)
 	assert.Empty(t, reactions)
 }
@@ -471,12 +472,12 @@ func TestCreateMessage_WithReplyTo(t *testing.T) {
 	require.NoError(t, repo.CreateMessage(ctx, original))
 
 	reply := makeMessage(channelID, authorID, "this is a reply")
-	reply.ReplyToID = original.ID
+	reply.ReplyToId = original.Id
 	require.NoError(t, repo.CreateMessage(ctx, reply))
 
-	got, err := repo.GetMessage(ctx, channelID, reply.ID)
+	got, err := repo.GetMessage(ctx, channelID, reply.Id)
 	require.NoError(t, err)
-	assert.Equal(t, original.ID, got.ReplyToID)
+	assert.Equal(t, original.Id, uuidValue(got.ReplyToId))
 }
 
 func TestGetReactions_NoReactions(t *testing.T) {
@@ -488,7 +489,7 @@ func TestGetReactions_NoReactions(t *testing.T) {
 	msg := makeMessage(channelID, authorID, "no reactions here")
 	require.NoError(t, repo.CreateMessage(ctx, msg))
 
-	reactions, err := repo.GetReactions(ctx, channelID, msg.ID, gocql.MustRandomUUID())
+	reactions, err := repo.GetReactions(ctx, channelID, msg.Id, gocql.MustRandomUUID())
 	require.NoError(t, err)
 	assert.Empty(t, reactions)
 }
@@ -505,10 +506,10 @@ func TestAddReaction_Idempotent(t *testing.T) {
 	user := gocql.MustRandomUUID()
 
 	// Add the same reaction twice.
-	require.NoError(t, repo.AddReaction(ctx, channelID, msg.ID, "star", user))
-	require.NoError(t, repo.AddReaction(ctx, channelID, msg.ID, "star", user))
+	require.NoError(t, repo.AddReaction(ctx, channelID, msg.Id, "star", user))
+	require.NoError(t, repo.AddReaction(ctx, channelID, msg.Id, "star", user))
 
-	reactions, err := repo.GetReactions(ctx, channelID, msg.ID, user)
+	reactions, err := repo.GetReactions(ctx, channelID, msg.Id, user)
 	require.NoError(t, err)
 	require.Len(t, reactions, 1)
 	assert.Equal(t, int32(1), reactions[0].Count, "duplicate INSERT should be idempotent in Scylla")

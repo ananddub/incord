@@ -1,10 +1,9 @@
 CREATE KEYSPACE IF NOT EXISTS ndiscord
 WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
 
-USE ndiscord;
 
 -- Messages: partitioned by channel, clustered by time desc
-CREATE TABLE IF NOT EXISTS ndiscord.messages (
+CREATE TABLE IF NOT EXISTS messages (
     channel_id UUID,
     id         TIMEUUID,
     author_id  UUID,
@@ -24,7 +23,7 @@ CREATE TABLE IF NOT EXISTS ndiscord.messages (
 ) WITH CLUSTERING ORDER BY (id DESC);
 
 -- Message attachments
-CREATE TABLE IF NOT EXISTS ndiscord.message_attachments (
+CREATE TABLE IF NOT EXISTS message_attachments (
     channel_id   UUID,
     message_id   TIMEUUID,
     id           UUID,
@@ -36,7 +35,7 @@ CREATE TABLE IF NOT EXISTS ndiscord.message_attachments (
 );
 
 -- Message reactions
-CREATE TABLE IF NOT EXISTS ndiscord.message_reactions (
+CREATE TABLE IF NOT EXISTS message_reactions (
     channel_id UUID,
     message_id TIMEUUID,
     emoji      TEXT,
@@ -45,7 +44,7 @@ CREATE TABLE IF NOT EXISTS ndiscord.message_reactions (
 );
 
 -- Read states: tracks last read message per user per channel
-CREATE TABLE IF NOT EXISTS ndiscord.read_states (
+CREATE TABLE IF NOT EXISTS read_states (
     user_id             UUID,
     channel_id          UUID,
     last_read_message_id TIMEUUID,
@@ -54,7 +53,7 @@ CREATE TABLE IF NOT EXISTS ndiscord.read_states (
 );
 
 -- Audit log
-CREATE TABLE IF NOT EXISTS ndiscord.audit_log (
+CREATE TABLE IF NOT EXISTS audit_log (
     guild_id    UUID,
     id          TIMEUUID,
     action_type INT,
@@ -66,7 +65,7 @@ CREATE TABLE IF NOT EXISTS ndiscord.audit_log (
 ) WITH CLUSTERING ORDER BY (id DESC);
 
 -- Message edit history
-CREATE TABLE IF NOT EXISTS ndiscord.message_edit_history (
+CREATE TABLE IF NOT EXISTS message_edit_history (
     channel_id  UUID,
     message_id  TIMEUUID,
     old_content TEXT,

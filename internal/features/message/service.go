@@ -6,9 +6,11 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
+
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/ananddub/ndiscord_backend/gen/scylladb"
 	streamv1 "github.com/ananddub/ndiscord_backend/gen/stream/v1"
 	"github.com/ananddub/ndiscord_backend/internal/shared/authz"
 	"github.com/ananddub/ndiscord_backend/internal/shared/realtime"
@@ -165,20 +167,30 @@ func (s *Service) loadAttachments(ctx context.Context, channelID, messageID gocq
 // field names match DmChatEvent too, the same payload deserialises cleanly
 // into DmChatEvent on the DM-stream path — guild_id is simply ignored there.
 func (s *Service) buildMessageEvent(ctx context.Context, evtType streamv1.ChatEventType, channelID, guildID, userID string, msg *Message, atts []Attachment) *streamv1.TextChannelEvent {
+	msgID := uuidValue(msg.Id)
+	msgChannelID := uuidValue(msg.ChannelId)
+	authorID := uuidValue(msg.AuthorId)
+	replyToID := uuidValue(msg.ReplyToId)
+	forwardedFromChannelID := uuidValue(msg.ForwardedFromChannelId)
+	forwardedFromMessageID := uuidValue(msg.ForwardedFromMessageId)
+	forwardedFromAuthorID := uuidValue(msg.ForwardedFromAuthorId)
+	createdAt := timeValue(msg.CreatedAt)
+	mentions := uuidSliceValue(msg.MentionUserIds)
+
 	evt := &streamv1.TextChannelEvent{
 		Type:      evtType,
-		MessageId: msg.ID.String(),
+		MessageId: msgID.String(),
 		ChannelId: channelID,
 		GuildId:   guildID,
-		AuthorId:  msg.AuthorID.String(),
+		AuthorId:  authorID.String(),
 		SenderId:  userID,
-		Content:   msg.Content,
-		MsgType:   int32(msg.Type),
-		Pinned:    msg.Pinned,
-		Deleted:   msg.Deleted,
+		Content:   stringValue(msg.Content),
+		MsgType:   int32(int64Value(msg.Type)),
+		Pinned:    boolValue(msg.Pinned),
+		Deleted:   boolValue(msg.Deleted),
 	}
 
-	if reactions, err := s.repo.GetReactions(ctx, msg.ChannelID, msg.ID, msg.AuthorID); err == nil && len(reactions) > 0 {
+	if reactions, err := s.repo.GetReactions(ctx, msgChannelID, msgID, authorID); err == nil && len(reactions) > 0 {
 		evt.Reactions = make([]*streamv1.ChatReactionCount, len(reactions))
 		for i, r := range reactions {
 			evt.Reactions[i] = &streamv1.ChatReactionCount{
@@ -189,37 +201,37 @@ func (s *Service) buildMessageEvent(ctx context.Context, evtType streamv1.ChatEv
 		}
 	}
 	var zeroUUID gocql.UUID
-	if msg.ReplyToID != zeroUUID {
-		evt.ReplyToId = msg.ReplyToID.String()
+	if replyToID != zeroUUID {
+		evt.ReplyToId = replyToID.String()
 	}
 	if msg.EditedAt != nil {
 		evt.EditedAt = msg.EditedAt.Format(time.RFC3339Nano)
 	}
-	if !msg.CreatedAt.IsZero() {
-		evt.CreatedAt = msg.CreatedAt.Format(time.RFC3339Nano)
+	if !createdAt.IsZero() {
+		evt.CreatedAt = createdAt.Format(time.RFC3339Nano)
 	}
 	if len(atts) > 0 {
 		evt.Attachments = make([]*streamv1.ChatAttachment, len(atts))
 		for i, a := range atts {
 			evt.Attachments[i] = &streamv1.ChatAttachment{
-				Id:          a.ID.String(),
-				Filename:    a.Filename,
-				Url:         a.URL,
-				ContentType: a.ContentType,
-				Size:        a.Size,
+				Id:          uuidValue(a.Id).String(),
+				Filename:    stringValue(a.Filename),
+				Url:         stringValue(a.Url),
+				ContentType: stringValue(a.ContentType),
+				Size:        int64Value(a.Size),
 			}
 		}
 	}
-	if msg.ForwardedFromMessageID != zeroUUID {
+	if forwardedFromMessageID != zeroUUID {
 		evt.ForwardedFrom = &streamv1.ChatForwardedReference{
-			ChannelId: msg.ForwardedFromChannelID.String(),
-			MessageId: msg.ForwardedFromMessageID.String(),
-			AuthorId:  msg.ForwardedFromAuthorID.String(),
+			ChannelId: forwardedFromChannelID.String(),
+			MessageId: forwardedFromMessageID.String(),
+			AuthorId:  forwardedFromAuthorID.String(),
 		}
 	}
-	if len(msg.MentionUserIDs) > 0 {
-		evt.MentionUserIds = make([]string, len(msg.MentionUserIDs))
-		for i, m := range msg.MentionUserIDs {
+	if len(mentions) > 0 {
+		evt.MentionUserIds = make([]string, len(mentions))
+		for i, m := range mentions {
 			evt.MentionUserIds[i] = m.String()
 		}
 	}
@@ -303,15 +315,36 @@ func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, c
 		mentionUUIDs = append(mentionUUIDs, mUUID)
 	}
 
-	msg := &Message{
-		ChannelID:      chUUID,
-		ID:             gocql.TimeUUID(),
-		AuthorID:       authorUUID,
+	msgID := gocql.TimeUUID()
+	createdAt := time.Now()
+	msgType64 := int64(msgType)
+	pinned := false
+	deleted := false
+	var zeroUUID gocql.UUID
+
+	create := &scylladb.CreatemessageParams{
+		ChannelId:      chUUID,
+		Id:             msgID,
+		AuthorId:       authorUUID,
 		Content:        content,
-		Type:           int(msgType),
-		Pinned:         false,
-		CreatedAt:      time.Now(),
-		MentionUserIDs: mentionUUIDs,
+		Type:           msgType64,
+		ReplyToId:      zeroUUID,
+		Pinned:         pinned,
+		CreatedAt:      createdAt,
+		MentionUserIds: mentionUUIDs,
+	}
+
+	msg := &scylladb.Messages{
+		ChannelId:      &create.ChannelId,
+		Id:             &create.Id,
+		AuthorId:       &create.AuthorId,
+		Content:        &create.Content,
+		Type:           &create.Type,
+		ReplyToId:      &create.ReplyToId,
+		Pinned:         &pinned,
+		Deleted:        &deleted,
+		CreatedAt:      &create.CreatedAt,
+		MentionUserIds: &create.MentionUserIds,
 	}
 
 	// Resolve the forward source up front. We copy the source's content
@@ -331,11 +364,18 @@ func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, c
 		if err != nil {
 			return nil, nil, ErrForwardSourceNotFound
 		}
-		msg.ForwardedFromChannelID = src.ChannelID
-		msg.ForwardedFromMessageID = src.ID
-		msg.ForwardedFromAuthorID = src.AuthorID
-		if msg.Content == "" {
-			msg.Content = src.Content
+		srcChannelID := uuidValue(src.ChannelId)
+		srcMessageID := uuidValue(src.Id)
+		srcAuthorID := uuidValue(src.AuthorId)
+		create.ForwardedFromChannelId = srcChannelID
+		create.ForwardedFromMessageId = srcMessageID
+		create.ForwardedFromAuthorId = srcAuthorID
+		msg.ForwardedFromChannelId = &create.ForwardedFromChannelId
+		msg.ForwardedFromMessageId = &create.ForwardedFromMessageId
+		msg.ForwardedFromAuthorId = &create.ForwardedFromAuthorId
+		if stringValue(msg.Content) == "" {
+			create.Content = stringValue(src.Content)
+			msg.Content = &create.Content
 		}
 		// Copy the source's attachments so the forward stands on its own
 		// even if the original is later deleted.
@@ -352,10 +392,11 @@ func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, c
 		if _, err := s.repo.GetMessage(ctx, chUUID, replyUUID); err != nil {
 			return nil, nil, ErrReplyParentNotFound
 		}
-		msg.ReplyToID = replyUUID
+		create.ReplyToId = replyUUID
+		msg.ReplyToId = &create.ReplyToId
 	}
 
-	if err := s.repo.CreateMessage(ctx, msg); err != nil {
+	if err := s.repo.CreateMessage(ctx, create); err != nil {
 		return nil, nil, fmt.Errorf("failed to create message: %w", err)
 	}
 
@@ -374,15 +415,19 @@ func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, c
 			if err != nil {
 				continue
 			}
-			if err := s.repo.AddMessageAttachment(ctx, chUUID, msg.ID, attID, filename, fURL, contentType, size); err != nil {
+			if err := s.repo.AddMessageAttachment(ctx, chUUID, msgID, attID, filename, fURL, contentType, size); err != nil {
 				continue
 			}
+			attFilename := filename
+			attURL := fURL
+			attContentType := contentType
+			attSize := size
 			attachments = append(attachments, Attachment{
-				ID:          attID,
-				Filename:    filename,
-				URL:         fURL,
-				ContentType: contentType,
-				Size:        size,
+				Id:          &attID,
+				Filename:    &attFilename,
+				Url:         &attURL,
+				ContentType: &attContentType,
+				Size:        &attSize,
 			})
 		}
 	}
@@ -394,15 +439,19 @@ func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, c
 		if err != nil {
 			continue
 		}
-		if err := s.repo.AddMessageAttachment(ctx, chUUID, msg.ID, attID, a.Filename, a.URL, a.ContentType, a.Size); err != nil {
+		filename := stringValue(a.Filename)
+		url := stringValue(a.Url)
+		contentType := stringValue(a.ContentType)
+		size := int64Value(a.Size)
+		if err := s.repo.AddMessageAttachment(ctx, chUUID, msgID, attID, filename, url, contentType, size); err != nil {
 			continue
 		}
 		attachments = append(attachments, Attachment{
-			ID:          attID,
-			Filename:    a.Filename,
-			URL:         a.URL,
-			ContentType: a.ContentType,
-			Size:        a.Size,
+			Id:          &attID,
+			Filename:    &filename,
+			Url:         &url,
+			ContentType: &contentType,
+			Size:        &size,
 		})
 	}
 
@@ -456,12 +505,12 @@ func (s *Service) EditMessage(ctx context.Context, userID, channelID, guildID, m
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrMessageNotFound, err)
 	}
-	if existing.AuthorID != authorUUID {
+	if uuidValue(existing.AuthorId) != authorUUID {
 		if guildID == "" || !s.authz.CanManageChannel(ctx, userID, channelID) {
 			return nil, ErrNotMessageAuthor
 		}
 	} else {
-		if time.Since(existing.CreatedAt) > EditWindow {
+		if time.Since(timeValue(existing.CreatedAt)) > EditWindow {
 			return nil, ErrEditWindowExpired
 		}
 	}
@@ -472,9 +521,9 @@ func (s *Service) EditMessage(ctx context.Context, userID, channelID, guildID, m
 	}
 
 	// Save edit history before overwriting
-	_ = s.repo.SaveEditHistory(ctx, chUUID, msgUUID, existing.Content, now)
+	_ = s.repo.SaveEditHistory(ctx, chUUID, msgUUID, stringValue(existing.Content), now)
 
-	existing.Content = content
+	existing.Content = &content
 	existing.EditedAt = &now
 
 	atts := s.loadAttachments(ctx, chUUID, msgUUID)
@@ -502,7 +551,7 @@ func (s *Service) DeleteMessage(ctx context.Context, userID, channelID, guildID,
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrMessageNotFound, err)
 	}
-	if existing.AuthorID != authorUUID {
+	if uuidValue(existing.AuthorId) != authorUUID {
 		if guildID == "" || !s.authz.CanManageChannel(ctx, userID, channelID) {
 			return ErrNotMessageAuthor
 		}
@@ -516,7 +565,8 @@ func (s *Service) DeleteMessage(ctx context.Context, userID, channelID, guildID,
 
 	// Mirror the deleted flag on the in-memory copy we publish so clients
 	// can drop the message without a follow-up fetch.
-	existing.Deleted = true
+	deleted := true
+	existing.Deleted = &deleted
 	s.publishChannelEvent(ctx, guildID, channelID,
 		s.buildMessageEvent(ctx, streamv1.ChatEventType_CHAT_EVENT_DELETE, channelID, guildID, userID, existing, nil))
 
@@ -617,7 +667,7 @@ func (s *Service) setPinned(ctx context.Context, userID, channelID, guildID, mes
 	if err != nil {
 		return nil
 	}
-	msg.Pinned = pinned
+	msg.Pinned = &pinned
 	atts := s.loadAttachments(ctx, chUUID, msgUUID)
 	evtType := streamv1.ChatEventType_CHAT_EVENT_PIN
 	if !pinned {
@@ -853,20 +903,22 @@ func (s *Service) GetUnreadCounts(ctx context.Context, userID string) ([]UnreadI
 	readStates, err := s.repo.GetUserReadStates(ctx, uUID)
 	if err == nil {
 		for _, rs := range readStates {
-			chID := rs.ChannelID.String()
+			channelID := uuidValue(rs.ChannelId)
+			lastReadMessageID := uuidValue(rs.LastReadMessageId)
+			chID := channelID.String()
 			seen[chID] = true
 
-			count, lastMsg, lastTime, err := s.repo.CountUnreadMessages(ctx, rs.ChannelID, rs.LastReadMessageID)
+			count, lastMsg, lastTime, err := s.repo.CountUnreadMessages(ctx, channelID, lastReadMessageID)
 			if err != nil || count == 0 {
 				continue
 			}
 			// Fetch up to 5 recent unread messages for preview
-			recent, _ := s.repo.ListMessagesAfter(ctx, rs.ChannelID, rs.LastReadMessageID, 5)
+			recent, _ := s.repo.ListMessagesAfter(ctx, channelID, lastReadMessageID, 5)
 			results = append(results, UnreadInfo{
 				ChannelID:       chID,
-				LastReadMsgID:   rs.LastReadMessageID.String(),
+				LastReadMsgID:   lastReadMessageID.String(),
 				UnreadCount:     int32(count),
-				MentionCount:    int32(rs.MentionCount),
+				MentionCount:    int32(int64Value(rs.MentionCount)),
 				LastMessageID:   lastMsg.String(),
 				LastMessageTime: lastTime,
 				RecentMessages:  recent,

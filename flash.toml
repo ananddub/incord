@@ -4,7 +4,7 @@
 #   Python: "scylla-driver" (sync) | "cassandra-driver" (async)
 # Add driver = "<name>" inside the [gen.*] block below.
 version = "2"
-schema_dir = "db/scylla/schema"
+schema_dir = "db/scylla/schema/"
 queries = "db/scylla/queries/"
 migrations_path = "db/scylla/migrations"
 export_path = "db/scylla/export"
@@ -16,3 +16,4 @@ url_env = "DATABASE_URL"
 [gen.go]
 enabled = true
 out = "gen/scylladb"
+driver = "gocql"

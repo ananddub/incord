@@ -1,5 +1,5 @@
 -- name: CreateMessage :exec
-INSERT INTO ndiscord.messages (
+INSERT INTO messages (
     channel_id,
     id,
     author_id,
@@ -17,53 +17,25 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: GetMessage :one
 SELECT
-    channel_id,
-    id,
-    author_id,
-    content,
-    type,
-    reply_to_id,
-    pinned,
-    edited_at,
-    created_at,
-    deleted,
-    updated_at,
-    forwarded_from_channel_id,
-    forwarded_from_message_id,
-    forwarded_from_author_id,
-    mention_user_ids
-FROM ndiscord.messages
+ *
+FROM messages
 WHERE channel_id = ?
   AND id = ?;
 
 -- name: UpdateMessageContent :exec
-UPDATE ndiscord.messages
+UPDATE messages
 SET content = ?, edited_at = ?
 WHERE channel_id = ? AND id = ?;
 
 -- name: DeleteMessage :exec
-UPDATE ndiscord.messages
+UPDATE messages
 SET deleted = true, updated_at = ?
 WHERE channel_id = ? AND id = ?;
 
 -- name: ListMessagesBefore :many
 SELECT
-    channel_id,
-    id,
-    author_id,
-    content,
-    type,
-    reply_to_id,
-    pinned,
-    edited_at,
-    created_at,
-    deleted,
-    updated_at,
-    forwarded_from_channel_id,
-    forwarded_from_message_id,
-    forwarded_from_author_id,
-    mention_user_ids
-FROM ndiscord.messages
+    *
+FROM messages
 WHERE channel_id = ?
   AND id < ?
 ORDER BY id DESC
@@ -71,22 +43,8 @@ LIMIT ?;
 
 -- name: ListMessagesAfter :many
 SELECT
-    channel_id,
-    id,
-    author_id,
-    content,
-    type,
-    reply_to_id,
-    pinned,
-    edited_at,
-    created_at,
-    deleted,
-    updated_at,
-    forwarded_from_channel_id,
-    forwarded_from_message_id,
-    forwarded_from_author_id,
-    mention_user_ids
-FROM ndiscord.messages
+    *
+FROM messages
 WHERE channel_id = ?
   AND id > ?
 ORDER BY id ASC
@@ -94,56 +52,28 @@ LIMIT ?;
 
 -- name: ListRecentMessages :many
 SELECT
-    channel_id,
-    id,
-    author_id,
-    content,
-    type,
-    reply_to_id,
-    pinned,
-    edited_at,
-    created_at,
-    deleted,
-    updated_at,
-    forwarded_from_channel_id,
-    forwarded_from_message_id,
-    forwarded_from_author_id,
-    mention_user_ids
-FROM ndiscord.messages
+   *
+FROM messages
 WHERE channel_id = ?
 ORDER BY id DESC
 LIMIT ?;
 
 -- name: SetPinned :exec
-UPDATE ndiscord.messages
+UPDATE messages
 SET pinned = ?
 WHERE channel_id = ?
   AND id = ?;
 
 -- name: GetMessagesSince :many
 SELECT
-    channel_id,
-    id,
-    author_id,
-    content,
-    type,
-    reply_to_id,
-    pinned,
-    edited_at,
-    created_at,
-    deleted,
-    updated_at,
-    forwarded_from_channel_id,
-    forwarded_from_message_id,
-    forwarded_from_author_id,
-    mention_user_ids
-FROM ndiscord.messages
+    *
+FROM messages
 WHERE channel_id = ?
   AND updated_at > ?
 ALLOW FILTERING;
 
 -- name: AddMessageAttachment :exec
-INSERT INTO ndiscord.message_attachments (
+INSERT INTO message_attachments (
     channel_id,
     message_id,
     id,
@@ -156,22 +86,18 @@ VALUES (?, ?, ?, ?, ?, ?, ?);
 
 -- name: GetMessageAttachments :many
 SELECT
-    id,
-    filename,
-    url,
-    content_type,
-    size
-FROM ndiscord.message_attachments
+    *
+FROM message_attachments
 WHERE channel_id = ?
   AND message_id = ?;
 
 -- name: DeleteMessageAttachments :exec
-DELETE FROM ndiscord.message_attachments
+DELETE FROM message_attachments
 WHERE channel_id = ?
   AND message_id = ?;
 
 -- name: AddReaction :exec
-INSERT INTO ndiscord.message_reactions (
+INSERT INTO message_reactions (
     channel_id,
     message_id,
     emoji,
@@ -180,7 +106,7 @@ INSERT INTO ndiscord.message_reactions (
 VALUES (?, ?, ?, ?);
 
 -- name: RemoveReaction :exec
-DELETE FROM ndiscord.message_reactions
+DELETE FROM message_reactions
 WHERE channel_id = ?
   AND message_id = ?
   AND emoji = ?
@@ -190,12 +116,12 @@ WHERE channel_id = ?
 SELECT
     emoji,
     user_id
-FROM ndiscord.message_reactions
+FROM message_reactions
 WHERE channel_id = ?
   AND message_id = ?;
 
 -- name: DeleteMessageReactions :exec
-DELETE FROM ndiscord.message_reactions
+DELETE FROM message_reactions
 WHERE channel_id = ?
   AND message_id = ?;
 
@@ -203,12 +129,12 @@ WHERE channel_id = ?
 SELECT
     mention_count,
     last_read_message_id
-FROM ndiscord.read_states
+FROM read_states
 WHERE user_id = ?
   AND channel_id = ?;
 
 -- name: UpsertReadState :exec
-INSERT INTO ndiscord.read_states (
+INSERT INTO read_states (
     user_id,
     channel_id,
     last_read_message_id,
@@ -217,7 +143,7 @@ INSERT INTO ndiscord.read_states (
 VALUES (?, ?, ?, ?);
 
 -- name: IncrementMentionCount :exec
-INSERT INTO ndiscord.read_states (
+INSERT INTO read_states (
     user_id,
     channel_id,
     last_read_message_id,
@@ -227,34 +153,27 @@ VALUES (?, ?, ?, ?);
 
 -- name: GetUserReadStates :many
 SELECT
-    user_id,
-    channel_id,
-    last_read_message_id,
-    mention_count
-FROM ndiscord.read_states
+    *
+FROM read_states
 WHERE user_id = ?;
 
 -- name: CountUnreadMessages :many
 SELECT
-    id,
-    created_at,
-    deleted
-FROM ndiscord.messages
+   *
+FROM messages
 WHERE channel_id = ?
   AND id > ?
 ORDER BY id DESC;
 
 -- name: CountAllMessages :many
 SELECT
-    id,
-    created_at,
-    deleted
-FROM ndiscord.messages
+   *
+FROM messages
 WHERE channel_id = ?
 ORDER BY id DESC;
 
 -- name: SaveEditHistory :exec
-INSERT INTO ndiscord.message_edit_history (
+INSERT INTO message_edit_history (
     channel_id,
     message_id,
     old_content,
@@ -264,75 +183,44 @@ VALUES (?, ?, ?, ?);
 
 -- name: GetEditHistory :many
 SELECT
-    channel_id,
-    message_id,
-    old_content,
-    edited_at
-FROM ndiscord.message_edit_history
+   *
+FROM message_edit_history
 WHERE channel_id = ?
   AND message_id = ?
 ORDER BY edited_at DESC;
 
 -- name: DeleteEditHistory :exec
-DELETE FROM ndiscord.message_edit_history
+DELETE FROM message_edit_history
 WHERE channel_id = ?
   AND message_id = ?;
 
 -- name: SearchMessagesSource :many
 SELECT
-    channel_id,
-    id,
-    author_id,
-    content,
-    type,
-    reply_to_id,
-    pinned,
-    edited_at,
-    created_at,
-    deleted,
-    updated_at,
-    forwarded_from_channel_id,
-    forwarded_from_message_id,
-    forwarded_from_author_id,
-    mention_user_ids
-FROM ndiscord.messages
+   *
+FROM messages
 WHERE channel_id = ?
 ORDER BY id DESC
 LIMIT ?;
 
 -- name: GetThreadMessagesSource :many
 SELECT
-    channel_id,
-    id,
-    author_id,
-    content,
-    type,
-    reply_to_id,
-    pinned,
-    edited_at,
-    created_at,
-    deleted,
-    updated_at,
-    forwarded_from_channel_id,
-    forwarded_from_message_id,
-    forwarded_from_author_id,
-    mention_user_ids
-FROM ndiscord.messages
+   *
+FROM messages
 WHERE channel_id = ?
 ORDER BY id DESC
 LIMIT ?;
 
 -- name: DeleteMessageAttachmentsCascade :exec
-DELETE FROM ndiscord.message_attachments
+DELETE FROM message_attachments
 WHERE channel_id = ?
   AND message_id = ?;
 
 -- name: DeleteMessageReactionsCascade :exec
-DELETE FROM ndiscord.message_reactions
+DELETE FROM message_reactions
 WHERE channel_id = ?
   AND message_id = ?;
 
 -- name: DeleteMessageEditHistoryCascade :exec
-DELETE FROM ndiscord.message_edit_history
+DELETE FROM message_edit_history
 WHERE channel_id = ?
   AND message_id = ?;

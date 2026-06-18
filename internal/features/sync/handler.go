@@ -185,14 +185,14 @@ func (h *Handler) Sync(ctx context.Context, req *syncv1.SyncRequest) (*syncv1.Sy
 			}
 			for _, m := range msgs {
 				sm := &syncv1.SyncMessage{
-					ChannelId: m.ChannelID.String(),
-					Id:        m.ID.String(),
-					IsDeleted: m.Deleted,
-					AuthorId:  m.AuthorID.String(),
-					Content:   m.Content,
-					Type:      int32(m.Type),
-					ReplyToId: m.ReplyToID.String(),
-					Pinned:    m.Pinned,
+					ChannelId: m.ChannelId.String(),
+					Id:        m.Id.String(),
+					IsDeleted: *m.Deleted,
+					AuthorId:  m.AuthorId.String(),
+					Content:   *m.Content,
+					Type:      int32(*m.Type),
+					ReplyToId: m.ReplyToId.String(),
+					Pinned:    *m.Pinned,
 				}
 				if m.UpdatedAt != nil {
 					sm.UpdatedAt = timestamppb.New(*m.UpdatedAt)

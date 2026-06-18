@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "query_file_checksums": {
+    "db/scylla/queries/message.sql": ""
+  },
+  "schema_checksum": "",
+  "config_checksum": "96e391a4baf8929fcb5fdde918bd8a618b0d9ad2ca67b59a79f539b7983e9aa4",
+  "query_table_deps": {
+    "db/scylla/queries/message.sql": [
+      "messages",
+      "message_attachments",
+      "message_reactions",
+      "read_states",
+      "message_edit_history"
+    ]
+  },
+  "generated_file_checksums": {
+    "gen/scylladb/message.go": "a36bb6f1172448bafd549e272bbf534a00d33efb1d7029e5b16410b94e5f0b10"
+  },
+  "last_generation": "2026-06-18T13:46:39.226768581+05:30",
+  "OutDir": "gen/scylladb"
+}
