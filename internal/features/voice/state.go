@@ -95,8 +95,8 @@ func (s *Service) RemoveParticipant(ctx context.Context, channelID, userID strin
 		return err
 	}
 
-	if guildID != "" && s.nats != nil {
-		_ = s.nats.Publish(realtime.GuildChannelVoice(guildID, channelID),
+	if guildID != "" && s.lpb != nil {
+		_ = realtime.Publish(s.lpb, realtime.GuildChannelVoice(guildID, channelID),
 			&streamv1.VoiceStateEvent{
 				Event:           streamv1.VoiceEvent_VOICE_EVENT_STATE_UPDATE,
 				Action:          streamv1.VoiceAction_VOICE_ACTION_LEAVE,
@@ -266,7 +266,7 @@ func (s *Service) broadcastParticipant(ctx context.Context, activeSince time.Tim
 		Timestamp:       timestamppb.Now(),
 		RoomActiveSince: s.GetActiveSince(ctx, ps.ChannelID),
 	}
-	_ = s.nats.Publish(realtime.GuildChannelVoice(ps.GuildID, ps.ChannelID), evt)
+	_ = realtime.Publish(s.lpb, realtime.GuildChannelVoice(ps.GuildID, ps.ChannelID), evt)
 }
 
 func (s *Service) broadcastChannelState(ctx context.Context, activeSince time.Time, channelID, guildID string) ([]ParticipantState, error) {

@@ -15,11 +15,11 @@ import (
 type Service struct {
 	repo  *Repository
 	authz *authz.Client
-	nats  *realtime.Hub
+	lpb   *realtime.LPubSub
 }
 
-func NewService(repo *Repository, nats *realtime.Hub, authzClient ...*authz.Client) *Service {
-	s := &Service{repo: repo, nats: nats}
+func NewService(repo *Repository, nats *realtime.LPubSub, authzClient ...*authz.Client) *Service {
+	s := &Service{repo: repo, lpb: nats}
 	if len(authzClient) > 0 {
 		s.authz = authzClient[0]
 	}
@@ -101,11 +101,11 @@ func (s *Service) ListChannelOverrides(ctx context.Context, userID, channelID st
 // type since override changes *are* channel changes from the client's
 // perspective.
 func (s *Service) broadcastChannelChange(guildID, channelID, name string, channelType int32) {
-	if s.nats == nil {
+	if s.lpb == nil {
 		return
 	}
 	evt := streamv1.GuildEventType_GUILD_EVENT_CHANNEL_UPDATE
-	_ = s.nats.Publish(realtime.GuildEvents(guildID), streamv1.GuildEvent{
+	realtime.Publish(s.lpb, realtime.GuildEvents(guildID), streamv1.GuildEvent{
 		Event:     evt,
 		Action:    evt,
 		GuildId:   guildID,
@@ -163,7 +163,7 @@ func (s *Service) CreateChannel(ctx context.Context, userID string, guildID, nam
 		return db.Channel{}, fmt.Errorf("failed to create channel: %w", err)
 	}
 
-	_ = s.nats.Publish(realtime.GuildEvents(guildID),
+	_ = realtime.Publish(s.lpb, realtime.GuildEvents(guildID),
 		streamv1.GuildEvent{
 			Event:     streamv1.GuildEventType_GUILD_EVENT_CHANNEL_CREATE,
 			GuildId:   guildID,
@@ -232,7 +232,7 @@ func (s *Service) UpdateChannel(ctx context.Context, userID, channelID string, n
 
 	if ch.GuildID.Valid {
 		gid := uuidToString(ch.GuildID)
-		_ = s.nats.Publish(realtime.GuildEvents(gid), streamv1.GuildEvent{
+		_ = realtime.Publish(s.lpb, realtime.GuildEvents(gid), streamv1.GuildEvent{
 			Event:     streamv1.GuildEventType_GUILD_EVENT_CHANNEL_UPDATE,
 			GuildId:   gid,
 			ChannelId: uuidToString(ch.ID),
@@ -276,7 +276,7 @@ func (s *Service) DeleteChannel(ctx context.Context, userID, channelID string) e
 
 	if ch.GuildID.Valid {
 		gid := uuidToString(ch.GuildID)
-		_ = s.nats.Publish(realtime.GuildEvents(gid), streamv1.GuildEvent{
+		_ = realtime.Publish(s.lpb, realtime.GuildEvents(gid), streamv1.GuildEvent{
 			Event:     streamv1.GuildEventType_GUILD_EVENT_CHANNEL_DELETE,
 			GuildId:   gid,
 			ChannelId: channelID,
@@ -372,7 +372,7 @@ func (s *Service) publishDMChannelCreated(ctx context.Context, ch db.Channel, me
 }
 
 func (s *Service) publishDMChannelEvent(ctx context.Context, eventType streamv1.ChannelLifecycleType, ch db.Channel, memberIDs []string) {
-	if s.nats == nil {
+	if s.lpb == nil {
 		return
 	}
 	var members []*streamv1.DmChannelMember
@@ -400,7 +400,7 @@ func (s *Service) publishDMChannelEvent(ctx context.Context, eventType streamv1.
 		Members:     members,
 	}
 	for _, mid := range memberIDs {
-		_ = s.nats.Publish(realtime.DmChannels(mid), payload)
+		_ = realtime.Publish(s.lpb, realtime.DmChannels(mid), payload)
 	}
 }
 

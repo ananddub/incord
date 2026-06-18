@@ -2,7 +2,6 @@ package stream
 
 import (
 	"context"
-	"encoding/json"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -37,15 +36,15 @@ type ChannelViewer interface {
 
 type Handler struct {
 	streamv1.UnimplementedStreamServiceServer
-	nats          *realtime.Hub
+	lpb           *realtime.LPubSub
 	resolver      UserDataResolver
 	voiceSnapshot VoiceSnapshotProvider
 	presence      PresenceController
 	viewer        ChannelViewer
 }
 
-func NewHandler(nats *realtime.Hub, resolver UserDataResolver) *Handler {
-	return &Handler{nats: nats, resolver: resolver}
+func NewHandler(lpb *realtime.LPubSub, resolver UserDataResolver) *Handler {
+	return &Handler{lpb: lpb, resolver: resolver}
 }
 
 func (h *Handler) SetVoiceSnapshotProvider(v VoiceSnapshotProvider) { h.voiceSnapshot = v }
@@ -57,60 +56,15 @@ func (h *Handler) SetPresenceController(p PresenceController) { h.presence = p }
 // channel's traffic; with it, private channels stay private.
 func (h *Handler) SetChannelViewer(v ChannelViewer) { h.viewer = v }
 
-func streamFromSubjects[T any](h *Handler, ctx context.Context, subjects []string, send func(*T) error) error {
-	return streamFromSubjectsFiltered(h, ctx, subjects, send, nil)
-}
-
-// streamFromSubjectsFiltered is streamFromSubjects plus an optional
-// per-event gate. `eligible` returns true when the decoded event should
-// be forwarded to the client. Used to drop messages from channels the
-// user can't view (private channel privacy) while still letting the
-// same user receive traffic from channels they *can* view on the same
-// wildcard subscription.
-func streamFromSubjectsFiltered[T any](
-	h *Handler, ctx context.Context,
-	subjects []string, send func(*T) error,
-	eligible func(ctx context.Context, evt *T) bool,
-) error {
-	if len(subjects) == 0 {
-		<-ctx.Done()
-		return nil
-	}
-	multi, err := h.nats.SubscribeMulti(subjects)
-	if err != nil {
-		return status.Error(codes.Internal, "failed to subscribe")
-	}
-	defer multi.Unsubscribe()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case msg, ok := <-multi.Ch:
-			if !ok {
-				return nil
-			}
-			var evt T
-			if json.Unmarshal(msg.Data, &evt) != nil {
-				continue
-			}
-			if eligible != nil && !eligible(ctx, &evt) {
-				continue
-			}
-			if err := send(&evt); err != nil {
-				return err
-			}
-		}
-	}
-}
-
 func (h *Handler) StreamDmChat(req *streamv1.StreamDmChatRequest, stream streamv1.StreamService_StreamDmChatServer) error {
 	userID := middleware.UserIDFromContext(stream.Context())
 	if userID == "" {
 		return status.Error(codes.Unauthenticated, "not authenticated")
 	}
 	subjects := []string{realtime.DmAllMessages(userID)}
-	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, func(data *streamv1.DmChatEvent) {
+		stream.Send(data)
+	})
 }
 
 func (h *Handler) StreamDmChannels(req *streamv1.StreamDmChannelsRequest, stream streamv1.StreamService_StreamDmChannelsServer) error {
@@ -119,7 +73,9 @@ func (h *Handler) StreamDmChannels(req *streamv1.StreamDmChannelsRequest, stream
 		return status.Error(codes.Unauthenticated, "not authenticated")
 	}
 	subjects := []string{realtime.DmChannels(userID)}
-	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, func(data *streamv1.DmChannelEvent) {
+		stream.Send(data)
+	})
 }
 
 func (h *Handler) StreamDmCalls(req *streamv1.StreamDmCallsRequest, stream streamv1.StreamService_StreamDmCallsServer) error {
@@ -128,7 +84,9 @@ func (h *Handler) StreamDmCalls(req *streamv1.StreamDmCallsRequest, stream strea
 		return status.Error(codes.Unauthenticated, "not authenticated")
 	}
 	subjects := []string{realtime.DmCall(userID)}
-	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, func(data *streamv1.DmCallEvent) {
+		stream.Send(data)
+	})
 }
 
 func (h *Handler) StreamTextChannels(req *streamv1.StreamTextChannelsRequest, stream streamv1.StreamService_StreamTextChannelsServer) error {
@@ -144,10 +102,15 @@ func (h *Handler) StreamTextChannels(req *streamv1.StreamTextChannelsRequest, st
 	for _, gid := range guildIDs {
 		subjects = append(subjects, realtime.GuildAllMessages(gid))
 	}
-	return streamFromSubjectsFiltered(h, stream.Context(), subjects, stream.Send,
-		func(ctx context.Context, e *streamv1.TextChannelEvent) bool {
-			return h.canSeeChannel(ctx, userID, e.GetChannelId())
-		})
+	// return streamFromSubjectsFiltered(h, stream.Context(), subjects, stream.Send,
+	// func(ctx context.Context, e *streamv1.TextChannelEvent) bool {
+	// 	return h.canSeeChannel(ctx, userID, e.GetChannelId())
+	// })
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, func(data *streamv1.TextChannelEvent) {
+		if h.canSeeChannel(stream.Context(), userID, data.GetChannelId()) {
+			stream.Send(data)
+		}
+	})
 }
 
 func (h *Handler) StreamVoiceChat(req *streamv1.StreamVoiceChatRequest, stream streamv1.StreamService_StreamVoiceChatServer) error {
@@ -163,10 +126,15 @@ func (h *Handler) StreamVoiceChat(req *streamv1.StreamVoiceChatRequest, stream s
 	for _, gid := range guildIDs {
 		subjects = append(subjects, realtime.GuildAllVoiceChat(gid))
 	}
-	return streamFromSubjectsFiltered(h, stream.Context(), subjects, stream.Send,
-		func(ctx context.Context, e *streamv1.VoiceChatEvent) bool {
-			return h.canSeeChannel(ctx, userID, e.GetChannelId())
-		})
+	// return streamFromSubjectsFiltered(h, stream.Context(), subjects, stream.Send,
+	// 	func(ctx context.Context, e *streamv1.VoiceChatEvent) bool {
+	// 		return h.canSeeChannel(ctx, userID, e.GetChannelId())
+	// 	})
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, func(data *streamv1.VoiceChatEvent) {
+		if h.canSeeChannel(stream.Context(), userID, data.GetChannelId()) {
+			stream.Send(data)
+		}
+	})
 }
 
 // canSeeChannel is the per-event viewer gate used by every channel-scoped
@@ -194,7 +162,10 @@ func (h *Handler) StreamGuildEvents(req *streamv1.StreamGuildEventsRequest, stre
 	for _, gid := range guildIDs {
 		subjects = append(subjects, realtime.GuildEvents(gid))
 	}
-	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
+	// return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, func(data *streamv1.GuildEvent) {
+		stream.Send(data)
+	})
 }
 
 func (h *Handler) StreamVoiceState(req *streamv1.StreamVoiceStateRequest, stream streamv1.StreamService_StreamVoiceStateServer) error {
@@ -235,10 +206,11 @@ func (h *Handler) StreamVoiceState(req *streamv1.StreamVoiceStateRequest, stream
 	for _, gid := range guildIDs {
 		subjects = append(subjects, realtime.GuildAllVoice(gid))
 	}
-	return streamFromSubjectsFiltered(h, stream.Context(), subjects, stream.Send,
-		func(ctx context.Context, e *streamv1.VoiceStateEvent) bool {
-			return h.canSeeChannel(ctx, userID, e.GetChannelId())
-		})
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, func(data *streamv1.VoiceStateEvent) {
+		if h.canSeeChannel(stream.Context(), userID, data.GetChannelId()) {
+			stream.Send(data)
+		}
+	})
 }
 
 func (h *Handler) StreamTyping(req *streamv1.StreamTypingRequest, stream streamv1.StreamService_StreamTypingServer) error {
@@ -252,15 +224,12 @@ func (h *Handler) StreamTyping(req *streamv1.StreamTypingRequest, stream streamv
 	for _, gid := range guildIDs {
 		subjects = append(subjects, realtime.GuildAllTyping(gid))
 	}
-	return streamFromSubjectsFiltered(h, stream.Context(), subjects, stream.Send,
-		func(ctx context.Context, e *streamv1.TypingEvent) bool {
-			// DM typing (guild_id == "") is already routed to the
-			// per-user subject — only guild typing needs a viewer check.
-			if e.GetGuildId() == "" {
-				return true
-			}
-			return h.canSeeChannel(ctx, userID, e.GetChannelId())
-		})
+
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, func(data *streamv1.TypingEvent) {
+		if data.GetGuildId() == "" || h.canSeeChannel(stream.Context(), userID, data.GetChannelId()) {
+			stream.Send(data)
+		}
+	})
 }
 
 func (h *Handler) StreamFriendActivity(req *streamv1.StreamFriendActivityRequest, stream streamv1.StreamService_StreamFriendActivityServer) error {
@@ -286,5 +255,7 @@ func (h *Handler) StreamFriendActivity(req *streamv1.StreamFriendActivityRequest
 		}
 	}
 
-	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, func(data *streamv1.FriendActivityEvent) {
+		stream.Send(data)
+	})
 }

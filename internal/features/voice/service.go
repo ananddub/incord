@@ -37,16 +37,16 @@ type Service struct {
 	cfg        config.LiveKitConfig
 	roomClient *lksdk.RoomServiceClient
 	authz      *authz.Client
-	nats       *realtime.Hub
+	lpb        *realtime.LPubSub
 	redis      *redis.Client
 	dm         DMMembershipResolver
 	profile    UserProfileResolver
 }
 
-func NewService(cfg config.LiveKitConfig, nats *realtime.Hub, rdb *redis.Client, authzClient ...*authz.Client) *Service {
+func NewService(cfg config.LiveKitConfig, lpb *realtime.LPubSub, rdb *redis.Client, authzClient ...*authz.Client) *Service {
 	s := &Service{
 		cfg:   cfg,
-		nats:  nats,
+		lpb:   lpb,
 		redis: rdb,
 	}
 	if cfg.HTTPURL != "" && cfg.APIKey != "" && cfg.APISecret != "" {
@@ -425,7 +425,8 @@ func (s *Service) StartDMCall(ctx context.Context, callerID, channelID string, v
 		Timestamp: timestamppb.Now(),
 	}
 	for _, mid := range members {
-		_ = s.nats.Publish(realtime.DmCall(mid), payload)
+		// _ = s.lpb.Publish(realtime.DmCall(mid), payload)
+		realtime.Publish(s.lpb, realtime.DmCall(mid), payload)
 	}
 
 	return &JoinChannelResult{
@@ -480,7 +481,8 @@ func (s *Service) JoinDMCall(ctx context.Context, userID, channelID string, vide
 		Timestamp:     timestamppb.Now(),
 	}
 	for _, mid := range members {
-		_ = s.nats.Publish(realtime.DmCall(mid), payload)
+		// _ = s.lpb.Publish(realtime.DmCall(mid), payload)
+		realtime.Publish(s.lpb, realtime.DmCall(mid), payload)
 	}
 
 	return &JoinChannelResult{
@@ -513,7 +515,8 @@ func (s *Service) RejectDMCall(ctx context.Context, userID, channelID string) er
 		Timestamp:     timestamppb.Now(),
 	}
 	for _, mid := range members {
-		_ = s.nats.Publish(realtime.DmCall(mid), payload)
+		// _ = s.lpb.Publish(realtime.DmCall(mid), payload)
+		realtime.Publish(s.lpb, realtime.DmCall(mid), payload)
 	}
 	return nil
 }
@@ -548,7 +551,8 @@ func (s *Service) LeaveDMCall(ctx context.Context, userID, channelID string) err
 		Timestamp:     timestamppb.Now(),
 	}
 	for _, mid := range members {
-		_ = s.nats.Publish(realtime.DmCall(mid), leftPayload)
+		// _ = s.lpb.Publish(realtime.DmCall(mid), leftPayload)
+		realtime.Publish(s.lpb, realtime.DmCall(mid), leftPayload)
 	}
 
 	// If the room is now empty, emit a terminal "call_ended" event so
@@ -563,7 +567,8 @@ func (s *Service) LeaveDMCall(ctx context.Context, userID, channelID string) err
 			Timestamp: timestamppb.Now(),
 		}
 		for _, mid := range members {
-			_ = s.nats.Publish(realtime.DmCall(mid), endPayload)
+			// _ = s.lpb.Publish(realtime.DmCall(mid), endPayload)
+			realtime.Publish(s.lpb, realtime.DmCall(mid), endPayload)
 		}
 	}
 

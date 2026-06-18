@@ -40,7 +40,7 @@ func main() {
 	handlers := app.NewHandlers(infra, cfg)
 
 	// LiveKit webhook receiver — needs voiceSvc for Redis state sync.
-	webhookH := voice.NewWebhookHandler(cfg.LiveKit, infra.NATS, handlers.VoiceSvc)
+	webhookH := voice.NewWebhookHandler(cfg.LiveKit, infra.LPubSub, handlers.VoiceSvc)
 	go app.StartMetricsServer(map[string]http.Handler{
 		"/livekit/webhook": webhookH,
 	})

@@ -46,15 +46,15 @@ type Service struct {
 	repo          *Repository
 	redis         *redis.Client
 	authz         *authz.Client
-	nats          *realtime.Hub
+	lpb           *realtime.LPubSub
 	dmResolver    DMChannelResolver
 	blockChecker  BlockChecker
 	dmChannelList DMChannelLister
 	media         MediaResolver
 }
 
-func NewService(repo *Repository, redis *redis.Client, nats *realtime.Hub, authzClient ...*authz.Client) *Service {
-	s := &Service{repo: repo, redis: redis, nats: nats}
+func NewService(repo *Repository, redis *redis.Client, lpb *realtime.LPubSub, authzClient ...*authz.Client) *Service {
+	s := &Service{repo: repo, redis: redis, lpb: lpb}
 	if len(authzClient) > 0 {
 		s.authz = authzClient[0]
 	}
@@ -245,11 +245,11 @@ func (s *Service) buildMessageEvent(ctx context.Context, evtType streamv1.ChatEv
 // field names overlap fully with DmChatEvent, so the same payload round-trips
 // cleanly into a DmChatEvent on the DM stream path (guild_id is ignored).
 func (s *Service) publishChannelEvent(ctx context.Context, guildID, channelID string, payload *streamv1.TextChannelEvent) {
-	if s.nats == nil || payload == nil {
+	if s.lpb == nil || payload == nil {
 		return
 	}
 	if guildID != "" {
-		_ = s.nats.Publish(realtime.GuildChannelMessage(guildID, channelID), payload)
+		_ = realtime.Publish(s.lpb, realtime.GuildChannelMessage(guildID, channelID), payload)
 		return
 	}
 	if s.dmChannelList == nil {
@@ -257,7 +257,7 @@ func (s *Service) publishChannelEvent(ctx context.Context, guildID, channelID st
 	}
 	members, _ := s.dmChannelList.GetDMChannelMemberIDs(ctx, channelID)
 	for _, memberID := range members {
-		_ = s.nats.Publish(realtime.DmMessage(memberID, channelID), payload)
+		_ = realtime.Publish(s.lpb, realtime.DmMessage(memberID, channelID), payload)
 	}
 }
 
@@ -798,12 +798,12 @@ func (s *Service) StartTyping(ctx context.Context, name, userID, channelID, guil
 		Timestamp: timestamppb.Now(),
 	}
 	if guildID != "" {
-		_ = s.nats.Publish(realtime.GuildChannelTyping(guildID, channelID), typingEvt)
+		_ = realtime.Publish(s.lpb, realtime.GuildChannelTyping(guildID, channelID), typingEvt)
 	} else if s.dmChannelList != nil {
 		members, _ := s.dmChannelList.GetDMChannelMemberIDs(ctx, channelID)
 		for _, memberID := range members {
 			if memberID != userID {
-				_ = s.nats.Publish(realtime.DmTyping(memberID, channelID), typingEvt)
+				_ = realtime.Publish(s.lpb, realtime.DmTyping(memberID, channelID), typingEvt)
 			}
 		}
 	}

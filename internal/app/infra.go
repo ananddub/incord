@@ -6,6 +6,7 @@ import (
 	"github.com/gocql/gocql"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/minio/minio-go/v7"
+	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/ananddub/ndiscord_backend/internal/shared/authz"
@@ -16,13 +17,14 @@ import (
 
 // Infra holds all infrastructure connections.
 type Infra struct {
-	Pool         *pgxpool.Pool
-	Redis        *redis.Client
-	Scylla       *gocql.Session
-	MinIO        *minio.Client
-	MinIOSigner  *minio.Client
-	NATS         *realtime.Hub
-	Authz        *authz.Client
+	Pool        *pgxpool.Pool
+	Redis       *redis.Client
+	Scylla      *gocql.Session
+	MinIO       *minio.Client
+	MinIOSigner *minio.Client
+	LPubSub     *realtime.LPubSub
+	NATS        *nats.Conn
+	Authz       *authz.Client
 }
 
 // NewInfra connects to all databases and services.
@@ -60,8 +62,14 @@ func NewInfra(ctx context.Context, cfg *config.Config) (*Infra, error) {
 		scylla.Close()
 		return nil, err
 	}
-
-	natsHub, err := realtime.NewHub(cfg.NATS)
+	nats, err := db.NewNATSClient(cfg.NATS)
+	if err != nil {
+		pool.Close()
+		rdb.Close()
+		scylla.Close()
+		return nil, err
+	}
+	natsHub, err := realtime.NewLPubSub(nats, rdb)
 	if err != nil {
 		pool.Close()
 		rdb.Close()
@@ -69,9 +77,6 @@ func NewInfra(ctx context.Context, cfg *config.Config) (*Infra, error) {
 		return nil, err
 	}
 
-	// Authz is a thin Postgres wrapper now — share the same pool that
-	// feature services already use, no separate dial / health gate
-	// / env block needed.
 	authzClient := authz.NewClient(pool)
 
 	return &Infra{
@@ -80,7 +85,8 @@ func NewInfra(ctx context.Context, cfg *config.Config) (*Infra, error) {
 		Scylla:      scylla,
 		MinIO:       minioClient,
 		MinIOSigner: minioSigner,
-		NATS:        natsHub,
+		LPubSub:     natsHub,
+		NATS:        nats,
 		Authz:       authzClient,
 	}, nil
 }

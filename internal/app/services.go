@@ -43,21 +43,21 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 
 	// User
 	userRepo := user.NewRepository(infra.Pool, infra.Redis)
-	userSvc := user.NewService(userRepo, infra.NATS)
+	userSvc := user.NewService(userRepo, infra.LPubSub)
 	userSvc.SetStorage(infra.MinIO, infra.MinIOSigner, cfg.MinIO.Bucket)
 	userHandler := user.NewHandler(userSvc)
 	userHandler.SetBlockChecker(user.NewBlockChecker(userRepo))
 
 	// Guild
 	guildRepo := guild.NewRepository(infra.Pool, infra.Redis)
-	guildSvc := guild.NewService(guildRepo, infra.NATS, infra.Authz)
+	guildSvc := guild.NewService(guildRepo, infra.LPubSub, infra.Authz)
 	guildSvc.SetStorage(infra.MinIO, infra.MinIOSigner, cfg.MinIO.Bucket)
 	guildSvc.SetInviteBaseURL(cfg.InviteBaseURL)
 	guildHandler := guild.NewHandler(guildSvc)
 
 	// Channel
 	channelRepo := channel.NewRepository(infra.Pool)
-	channelSvc := channel.NewService(channelRepo, infra.NATS, infra.Authz)
+	channelSvc := channel.NewService(channelRepo, infra.LPubSub, infra.Authz)
 	channelHandler := channel.NewHandler(channelSvc)
 
 	// Wire the DM-opener into user service so accepting a friend request
@@ -66,7 +66,7 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 
 	// Message
 	messageRepo := message.NewRepository(infra.Scylla)
-	messageSvc := message.NewService(messageRepo, infra.Redis, infra.NATS, infra.Authz)
+	messageSvc := message.NewService(messageRepo, infra.Redis, infra.LPubSub, infra.Authz)
 	messageSvc.SetDMResolver(channel.NewDMResolver(channelSvc))
 	messageSvc.SetBlockChecker(user.NewBlockChecker(userRepo))
 	messageSvc.SetDMChannelLister(channel.NewDMChannelMembersResolver(channelRepo))
@@ -75,7 +75,7 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 
 	// Stream + Sync
 	streamResolver := stream.NewResolver(queries)
-	streamHandler := stream.NewHandler(infra.NATS, streamResolver)
+	streamHandler := stream.NewHandler(infra.LPubSub, streamResolver)
 	// Per-channel fan-out filtering — drops events for channels the
 	// subscriber can't view (private-channel privacy).
 	if infra.Authz != nil {
@@ -84,7 +84,7 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 	syncHandler := sync.NewHandler(queries, messageRepo)
 
 	// Presence
-	presenceSvc := presence.NewService(infra.Redis, infra.NATS)
+	presenceSvc := presence.NewService(infra.Redis, infra.LPubSub)
 	presenceSvc.SetUserResolver(userSvc)
 	presenceHandler := presence.NewHandler(presenceSvc)
 
@@ -116,7 +116,7 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 	messageSvc.SetMediaResolver(mediaSvc)
 
 	// Voice (LiveKit SFU)
-	voiceSvc := voice.NewService(cfg.LiveKit, infra.NATS, infra.Redis, infra.Authz)
+	voiceSvc := voice.NewService(cfg.LiveKit, infra.LPubSub, infra.Redis, infra.Authz)
 	voiceSvc.SetDMResolver(channel.NewDMResolver(channelSvc))
 	voiceSvc.SetProfileResolver(userSvc)
 	voiceHandler := voice.NewHandler(voiceSvc)

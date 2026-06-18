@@ -36,7 +36,7 @@ type PresenceReader interface {
 
 type Service struct {
 	repo     *Repository
-	nats     *realtime.Hub
+	nats     *realtime.LPubSub
 	dm       DMOpener
 	presence PresenceReader
 	minio    *minio.Client
@@ -44,7 +44,7 @@ type Service struct {
 	bucket   string
 }
 
-func NewService(repo *Repository, nats *realtime.Hub) *Service {
+func NewService(repo *Repository, nats *realtime.LPubSub) *Service {
 	return &Service{repo: repo, nats: nats}
 }
 
@@ -81,10 +81,6 @@ func presenceStatusFromString(s string) streamv1.PresenceStatus {
 	return streamv1.PresenceStatus_PRESENCE_STATUS_UNSPECIFIED
 }
 
-// publishFriendActivity publishes a typed FriendActivityEvent to the given
-// user's realtime subject. Nil-safe: does nothing if NATS is not wired.
-// The caller supplies the already-enriched proto (username/status/etc);
-// this helper stamps the event name and timestamp.
 func (s *Service) publishFriendActivity(toUserID string, event streamv1.FriendEventType, evt *streamv1.FriendActivityEvent) {
 	if s.nats == nil {
 		return
@@ -96,7 +92,7 @@ func (s *Service) publishFriendActivity(toUserID string, event streamv1.FriendEv
 	if evt.Timestamp == nil {
 		evt.Timestamp = timestamppb.Now()
 	}
-	_ = s.nats.Publish(realtime.FriendActivity(toUserID), evt)
+	_ = realtime.Publish(s.nats, realtime.FriendActivity(toUserID), evt)
 }
 
 // LookupBasicProfile returns the username and resolved avatar URL for the
@@ -174,8 +170,8 @@ func (s *Service) SetStorage(client, signer *minio.Client, bucket string) {
 }
 
 const (
-	maxAvatarSize       = 5 * 1024 * 1024
-	avatarDownloadTTL   = 7 * 24 * time.Hour
+	maxAvatarSize     = 5 * 1024 * 1024
+	avatarDownloadTTL = 7 * 24 * time.Hour
 )
 
 var allowedAvatarContentTypes = map[string]bool{

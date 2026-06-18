@@ -23,7 +23,7 @@ import (
 type Service struct {
 	repo          *Repository
 	authz         *authz.Client
-	nats          *realtime.Hub
+	lpb           *realtime.LPubSub
 	minio         *minio.Client
 	signer        *minio.Client
 	bucket        string
@@ -43,8 +43,8 @@ func (s *Service) BuildInviteURL(code string) string {
 	return s.inviteBaseURL + "/" + code
 }
 
-func NewService(repo *Repository, nats *realtime.Hub, authzClient ...*authz.Client) *Service {
-	s := &Service{repo: repo, nats: nats}
+func NewService(repo *Repository, lpb *realtime.LPubSub, authzClient ...*authz.Client) *Service {
+	s := &Service{repo: repo, lpb: lpb}
 	if len(authzClient) > 0 {
 		s.authz = authzClient[0]
 	}
@@ -225,7 +225,7 @@ func (s *Service) publishGuildEvent(ctx context.Context, guildID pgtype.UUID, ac
 			evt.Topic = v
 		}
 	}
-	_ = s.nats.Publish(realtime.GuildEvents(gid), evt)
+	_ = realtime.Publish(s.lpb, realtime.GuildEvents(gid), evt)
 }
 
 // publishRoleEvent broadcasts a role-scoped change on the guild events
@@ -263,7 +263,7 @@ func (s *Service) publishRoleEvent(
 			evt.Reason = v
 		}
 	}
-	_ = s.nats.Publish(realtime.GuildEvents(gid), evt)
+	_ = realtime.Publish(s.lpb, realtime.GuildEvents(gid), evt)
 }
 
 func (s *Service) CreateGuild(ctx context.Context, ownerID pgtype.UUID, name, description, iconURL string) (db.Guild, error) {

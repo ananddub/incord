@@ -28,15 +28,15 @@ type UserInfoResolver interface {
 // Service contains the business logic for the presence feature.
 type Service struct {
 	redis    *redis.Client
-	nats     *realtime.Hub
+	lpb      *realtime.LPubSub
 	resolver UserInfoResolver
 }
 
 // NewService creates a new presence Service.
-func NewService(rdb *redis.Client, nats *realtime.Hub) *Service {
+func NewService(rdb *redis.Client, lpb *realtime.LPubSub) *Service {
 	return &Service{
 		redis: rdb,
-		nats:  nats,
+		lpb:   lpb,
 	}
 }
 
@@ -66,7 +66,7 @@ var statusToStream = map[presencev1.Status]streamv1.PresenceStatus{
 // subject. StreamFriendActivity subscribers on this subject (the user's
 // friends) will receive it.
 func (s *Service) publishPresence(ctx context.Context, userID string, status presencev1.Status, customStatus string) {
-	if s.nats == nil {
+	if s.lpb == nil {
 		return
 	}
 	payload := &streamv1.FriendActivityEvent{
@@ -81,7 +81,7 @@ func (s *Service) publishPresence(ctx context.Context, userID string, status pre
 		payload.Username = username
 		payload.AvatarUrl = avatarURL
 	}
-	_ = s.nats.Publish(realtime.FriendActivity(userID), payload)
+	_ = realtime.Publish(s.lpb, realtime.FriendActivity(userID), payload)
 }
 
 func (s *Service) UpdatePresence(ctx context.Context, userID string, st presencev1.Status, customStatus string) (*presencev1.Presence, error) {
