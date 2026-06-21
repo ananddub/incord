@@ -29,9 +29,10 @@ var (
 const EditWindow = 24 * time.Hour
 
 type ReactionCount struct {
-	Emoji string
-	Count int32
-	Me    bool
+	user_id []string
+	Emoji   string
+	Count   int32
+	Me      bool
 }
 
 type Message = scylladb.Messages

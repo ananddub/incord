@@ -4896,6 +4896,12 @@
     "v1ChatReactionCount": {
       "type": "object",
       "properties": {
+        "user": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "emoji": {
           "type": "string"
         },
@@ -5300,6 +5306,12 @@
           "type": "string"
         },
         "friendId": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "avatarUrl": {
           "type": "string"
         },
         "status": {
@@ -6148,6 +6160,12 @@
     "v1Reaction": {
       "type": "object",
       "properties": {
+        "userId": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "emoji": {
           "type": "string"
         },
@@ -6453,6 +6471,15 @@
           "type": "string"
         },
         "friendId": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "avatarUrl": {
+          "type": "string"
+        },
+        "dmId": {
           "type": "string"
         },
         "isDeleted": {
@@ -7030,8 +7057,7 @@
           "type": "string"
         },
         "username": {
-          "type": "string",
-          "description": "Unique identity handle in \"name#1234\" format. Changeable but must stay unique."
+          "type": "string"
         },
         "email": {
           "type": "string"

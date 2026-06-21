@@ -46,8 +46,10 @@
               golangci-lint
               gcc
               pgcli
+              iredis
               nil
               sqlc
+              go-tools
               goose
               buf
               proto

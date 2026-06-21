@@ -13,6 +13,7 @@ import (
 	"github.com/ananddub/ndiscord_backend/gen/db"
 	userv1 "github.com/ananddub/ndiscord_backend/gen/user/v1"
 	"github.com/ananddub/ndiscord_backend/internal/shared/middleware"
+	"github.com/ananddub/ndiscord_backend/internal/shared/util"
 )
 
 type Handler struct {
@@ -34,7 +35,6 @@ func (h *Handler) GetUser(ctx context.Context, req *userv1.GetUserRequest) (*use
 		return nil, status.Error(codes.InvalidArgument, "invalid user_id")
 	}
 
-	// If the target user has blocked the caller, pretend the user doesn't exist.
 	if callerID := middleware.UserIDFromContext(ctx); callerID != "" && callerID != req.GetUserId() {
 		if h.blockChecker != nil && h.blockChecker.IsBlocked(ctx, req.GetUserId(), callerID) {
 			return nil, status.Error(codes.NotFound, "user not found")
@@ -50,7 +50,7 @@ func (h *Handler) GetUser(ctx context.Context, req *userv1.GetUserRequest) (*use
 	}
 
 	return &userv1.GetUserResponse{
-		User: h.toProto(ctx, user),
+		User: h.toProto(ctx, *user),
 	}, nil
 }
 
@@ -158,7 +158,6 @@ func (h *Handler) GetUserByUsername(ctx context.Context, req *userv1.GetUserByUs
 		return nil, status.Error(codes.Internal, "failed to get user")
 	}
 
-	// If the target user has blocked the caller, pretend the user doesn't exist.
 	targetID := user.ID.String()
 	if callerID := middleware.UserIDFromContext(ctx); callerID != "" && callerID != targetID {
 		if h.blockChecker != nil && h.blockChecker.IsBlocked(ctx, targetID, callerID) {
@@ -167,7 +166,7 @@ func (h *Handler) GetUserByUsername(ctx context.Context, req *userv1.GetUserByUs
 	}
 
 	return &userv1.GetUserByUsernameResponse{
-		User: h.toProto(ctx, user),
+		User: h.toProto(ctx, *user),
 	}, nil
 }
 
@@ -404,8 +403,8 @@ func (h *Handler) ListFriends(ctx context.Context, req *userv1.ListFriendsReques
 		return nil, status.Error(codes.Internal, "failed to list friends")
 	}
 
-	protoUsers := make([]*userv1.User, len(friends))
-	for i, u := range friends {
+	protoUsers := make([]*userv1.User, len(*friends))
+	for i, u := range *friends {
 		protoUsers[i] = h.toProto(ctx, u)
 	}
 
@@ -432,12 +431,34 @@ func (h *Handler) ListPendingRequests(ctx context.Context, req *userv1.ListPendi
 
 	protoIncoming := make([]*userv1.Friendship, len(incoming))
 	for i, f := range incoming {
-		protoIncoming[i] = dbFriendshipToProto(f)
+		protoIncoming[i] = statusUpdate(&userv1.Friendship{
+			FriendId:  f.FriendID.String(),
+			UserId:    f.UserID.String(),
+			AvatarUrl: util.GetBaseURl(f.AvatarUrl),
+			Username:  f.Username,
+		}, db.Friendship{
+			UserID:    f.UserID,
+			FriendID:  f.FriendID,
+			Status:    f.Status,
+			CreatedAt: f.CreatedAt_2,
+			UpdatedAt: f.UpdatedAt_2,
+		})
 	}
 
 	protoOutgoing := make([]*userv1.Friendship, len(outgoing))
 	for i, f := range outgoing {
-		protoOutgoing[i] = dbFriendshipToProto(f)
+		protoOutgoing[i] = statusUpdate(&userv1.Friendship{
+			FriendId:  f.FriendID.String(),
+			UserId:    f.UserID.String(),
+			AvatarUrl: util.GetBaseURl(f.AvatarUrl),
+			Username:  f.Username,
+		}, db.Friendship{
+			UserID:    f.UserID,
+			FriendID:  f.FriendID,
+			Status:    f.Status,
+			CreatedAt: f.CreatedAt_2,
+			UpdatedAt: f.UpdatedAt_2,
+		})
 	}
 
 	return &userv1.ListPendingRequestsResponse{
@@ -472,8 +493,6 @@ func (h *Handler) ListBlocked(ctx context.Context, req *userv1.ListBlockedReques
 	}, nil
 }
 
-// helpers
-
 func parseUUID(s string) (pgtype.UUID, error) {
 	parsed, err := uuid.Parse(s)
 	if err != nil {
@@ -502,8 +521,6 @@ func dbUserToProto(u db.User) *userv1.User {
 	return pu
 }
 
-// toProto resolves the stored avatar object key into a fresh presigned URL
-// before returning the user to the client.
 func (h *Handler) toProto(ctx context.Context, u db.User) *userv1.User {
 	pu := dbUserToProto(u)
 	pu.AvatarUrl = h.svc.ResolveAvatarURL(ctx, u.AvatarUrl)
@@ -536,6 +553,23 @@ func dbFriendshipToProto(f db.Friendship) *userv1.Friendship {
 		UserId:   f.UserID.String(),
 		FriendId: f.FriendID.String(),
 	}
+	switch f.Status {
+	case "pending":
+		pf.Status = userv1.FriendshipStatus_FRIENDSHIP_STATUS_PENDING
+	case "accepted":
+		pf.Status = userv1.FriendshipStatus_FRIENDSHIP_STATUS_ACCEPTED
+	case "blocked":
+		pf.Status = userv1.FriendshipStatus_FRIENDSHIP_STATUS_BLOCKED
+	default:
+		pf.Status = userv1.FriendshipStatus_FRIENDSHIP_STATUS_UNSPECIFIED
+	}
+	if f.CreatedAt.Valid {
+		pf.CreatedAt = timestamppb.New(f.CreatedAt.Time)
+	}
+	return pf
+}
+
+func statusUpdate(pf *userv1.Friendship, f db.Friendship) *userv1.Friendship {
 	switch f.Status {
 	case "pending":
 		pf.Status = userv1.FriendshipStatus_FRIENDSHIP_STATUS_PENDING

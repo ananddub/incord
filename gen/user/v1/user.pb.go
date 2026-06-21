@@ -77,9 +77,8 @@ func (FriendshipStatus) EnumDescriptor() ([]byte, []int) {
 }
 
 type User struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// Unique identity handle in "name#1234" format. Changeable but must stay unique.
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Username        string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
 	Email           string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
 	AvatarUrl       string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
@@ -973,8 +972,10 @@ type Friendship struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	FriendId      string                 `protobuf:"bytes,2,opt,name=friend_id,json=friendId,proto3" json:"friend_id,omitempty"`
-	Status        FriendshipStatus       `protobuf:"varint,3,opt,name=status,proto3,enum=user.v1.FriendshipStatus" json:"status,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	AvatarUrl     string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	Status        FriendshipStatus       `protobuf:"varint,5,opt,name=status,proto3,enum=user.v1.FriendshipStatus" json:"status,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1019,6 +1020,20 @@ func (x *Friendship) GetUserId() string {
 func (x *Friendship) GetFriendId() string {
 	if x != nil {
 		return x.FriendId
+	}
+	return ""
+}
+
+func (x *Friendship) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *Friendship) GetAvatarUrl() string {
+	if x != nil {
+		return x.AvatarUrl
 	}
 	return ""
 }
@@ -1932,14 +1947,17 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\x06offset\x18\x03 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x06offset\"P\n" +
 	"\x13SearchUsersResponse\x12#\n" +
 	"\x05users\x18\x01 \x03(\v2\r.user.v1.UserR\x05users\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x05R\x05total\"\xb0\x01\n" +
+	"\x05total\x18\x02 \x01(\x05R\x05total\"\xeb\x01\n" +
 	"\n" +
 	"Friendship\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
-	"\tfriend_id\x18\x02 \x01(\tR\bfriendId\x121\n" +
-	"\x06status\x18\x03 \x01(\x0e2\x19.user.v1.FriendshipStatusR\x06status\x129\n" +
+	"\tfriend_id\x18\x02 \x01(\tR\bfriendId\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"^\n" +
+	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x121\n" +
+	"\x06status\x18\x05 \x01(\x0e2\x19.user.v1.FriendshipStatusR\x06status\x129\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"^\n" +
 	"\x18SendFriendRequestRequest\x12B\n" +
 	"\x0ftarget_username\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^.{2,32}#[0-9]{4}$R\x0etargetUsername\"P\n" +
 	"\x19SendFriendRequestResponse\x123\n" +

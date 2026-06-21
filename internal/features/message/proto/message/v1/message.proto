@@ -101,9 +101,10 @@ message Attachment {
 }
 
 message Reaction {
-  string emoji = 1;
-  int32 count = 2;
-  bool me = 3;
+  repeated string user_id = 1;
+  string emoji = 2;
+  int32 count = 3;
+  bool me = 4;
 }
 
 message Message {

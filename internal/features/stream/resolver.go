@@ -9,12 +9,10 @@ import (
 	"github.com/ananddub/ndiscord_backend/gen/db"
 )
 
-// Resolver implements UserDataResolver using sqlc-generated queries.
 type Resolver struct {
 	q *db.Queries
 }
 
-// NewResolver creates a Resolver backed by the given sqlc Queries.
 func NewResolver(q *db.Queries) *Resolver {
 	return &Resolver{q: q}
 }
@@ -51,7 +49,6 @@ func (r *Resolver) GetUserFriendIDs(ctx context.Context, userID string) ([]strin
 	return ids, nil
 }
 
-// parseUUID converts a string to pgtype.UUID.
 func parseUUID(s string) (pgtype.UUID, error) {
 	var u pgtype.UUID
 	if err := u.Scan(s); err != nil {
@@ -60,7 +57,6 @@ func parseUUID(s string) (pgtype.UUID, error) {
 	return u, nil
 }
 
-// uuidToString converts a pgtype.UUID to string.
 func uuidToString(u pgtype.UUID) string {
 	if !u.Valid {
 		return ""

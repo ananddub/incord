@@ -14,6 +14,7 @@ import (
 	"github.com/ananddub/ndiscord_backend/internal/features/voice"
 	"github.com/ananddub/ndiscord_backend/internal/shared/config"
 	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
+	"github.com/rs/zerolog"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
@@ -23,7 +24,7 @@ import (
 
 func main() {
 	cfg := config.Load()
-	logger.Init("debug")
+	logger.Init(zerolog.LevelDebugValue)
 	log := logger.Log
 	ctx := context.Background()
 
@@ -77,10 +78,6 @@ func main() {
 	}
 	publicHTTP := app.NewPublicHTTPHandler(gwMux)
 
-	// Single-port dispatch: HTTP/2 clients sending `application/grpc` go to
-	// the gRPC server; everything else (HTTP/1.1 JSON, browser SSE, Swagger
-	// UI) goes to the REST mux. h2c lets us speak HTTP/2 plaintext so no
-	// TLS is required locally.
 	dispatcher := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if app.IsGRPCRequest(r) {
 			srv.ServeHTTP(w, r)
@@ -115,5 +112,5 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	httpServer.Shutdown(shutdownCtx)
-	srv.GracefulStop()
+	srv.Stop()
 }

@@ -154,9 +154,10 @@ func (x *Attachment) GetSize() int64 {
 
 type Reaction struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Emoji         string                 `protobuf:"bytes,1,opt,name=emoji,proto3" json:"emoji,omitempty"`
-	Count         int32                  `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
-	Me            bool                   `protobuf:"varint,3,opt,name=me,proto3" json:"me,omitempty"`
+	UserId        []string               `protobuf:"bytes,1,rep,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Emoji         string                 `protobuf:"bytes,2,opt,name=emoji,proto3" json:"emoji,omitempty"`
+	Count         int32                  `protobuf:"varint,3,opt,name=count,proto3" json:"count,omitempty"`
+	Me            bool                   `protobuf:"varint,4,opt,name=me,proto3" json:"me,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -189,6 +190,13 @@ func (x *Reaction) ProtoReflect() protoreflect.Message {
 // Deprecated: Use Reaction.ProtoReflect.Descriptor instead.
 func (*Reaction) Descriptor() ([]byte, []int) {
 	return file_message_v1_message_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Reaction) GetUserId() []string {
+	if x != nil {
+		return x.UserId
+	}
+	return nil
 }
 
 func (x *Reaction) GetEmoji() string {
@@ -2372,11 +2380,12 @@ const file_message_v1_message_proto_rawDesc = "" +
 	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x10\n" +
 	"\x03url\x18\x03 \x01(\tR\x03url\x12!\n" +
 	"\fcontent_type\x18\x04 \x01(\tR\vcontentType\x12\x12\n" +
-	"\x04size\x18\x05 \x01(\x03R\x04size\"F\n" +
-	"\bReaction\x12\x14\n" +
-	"\x05emoji\x18\x01 \x01(\tR\x05emoji\x12\x14\n" +
-	"\x05count\x18\x02 \x01(\x05R\x05count\x12\x0e\n" +
-	"\x02me\x18\x03 \x01(\bR\x02me\"\xa7\x04\n" +
+	"\x04size\x18\x05 \x01(\x03R\x04size\"_\n" +
+	"\bReaction\x12\x17\n" +
+	"\auser_id\x18\x01 \x03(\tR\x06userId\x12\x14\n" +
+	"\x05emoji\x18\x02 \x01(\tR\x05emoji\x12\x14\n" +
+	"\x05count\x18\x03 \x01(\x05R\x05count\x12\x0e\n" +
+	"\x02me\x18\x04 \x01(\bR\x02me\"\xa7\x04\n" +
 	"\aMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +

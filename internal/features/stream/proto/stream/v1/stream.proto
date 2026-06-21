@@ -154,9 +154,10 @@ message ChatAttachment {
 }
 
 message ChatReactionCount {
-  string emoji = 1;
-  int32 count = 2;
-  bool me = 3;
+  repeated string user = 1;
+  string emoji = 2;
+  int32 count = 3;
+  bool me = 4;
 }
 
 

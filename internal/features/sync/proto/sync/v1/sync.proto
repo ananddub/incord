@@ -97,9 +97,12 @@ message SyncGuildMember {
 message SyncFriendship {
   string user_id = 1;
   string friend_id = 2;
-  bool is_deleted = 3;
-  google.protobuf.Timestamp updated_at = 4;
-  string status = 5;  
+  string username = 3;
+  string avatar_url = 4;
+  string dm_id = 5;
+  bool is_deleted = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  string status = 8;  
 }
 
 message SyncMessage {

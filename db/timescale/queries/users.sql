@@ -4,13 +4,16 @@ VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetUserByID :one
-SELECT * FROM users WHERE id = $1;
+SELECT *
+ FROM users WHERE id = $1;
 
 -- name: GetUserByEmail :one
-SELECT * FROM users WHERE email = $1 AND deleted = FALSE;
+SELECT *
+ FROM users WHERE email = $1 AND deleted = FALSE;
 
 -- name: GetUserByUsername :one
-SELECT * FROM users WHERE username = $1 AND deleted = FALSE;
+SELECT *
+ FROM users WHERE username = $1 AND deleted = FALSE;
 
 -- name: UpdateUser :one
 UPDATE users SET
@@ -28,7 +31,9 @@ RETURNING *;
 UPDATE users SET deleted = TRUE, updated_at = NOW() WHERE id = $1;
 
 -- name: SearchUsers :many
-SELECT * FROM users
+SELECT *,
+sqlc.arg(base_url) || avatar_url AS full_url
+ FROM users
 WHERE username ILIKE '%' || $1 || '%'
   AND deleted = FALSE
 ORDER BY username

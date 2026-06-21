@@ -138,12 +138,6 @@ func (s *Service) OnUserDisconnect(ctx context.Context, userID string) {
 	_ = s.SetOffline(ctx, userID)
 }
 
-// GetLiveStatus returns the user's currently-broadcast status from Redis
-// as plain strings ("online"/"idle"/"dnd"/"offline") plus any custom
-// status. Empty status means the caller should fall back to their own
-// default — we do *not* default to "offline" here because absence of a
-// Redis entry is ambiguous (could be a brand-new user who hasn't yet
-// opened the activity stream on any device).
 func (s *Service) GetLiveStatus(ctx context.Context, userID string) (status, customStatus string) {
 	if s.redis == nil {
 		return "", ""

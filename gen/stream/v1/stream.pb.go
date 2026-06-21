@@ -650,9 +650,10 @@ func (x *ChatAttachment) GetSize() int64 {
 
 type ChatReactionCount struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Emoji         string                 `protobuf:"bytes,1,opt,name=emoji,proto3" json:"emoji,omitempty"`
-	Count         int32                  `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
-	Me            bool                   `protobuf:"varint,3,opt,name=me,proto3" json:"me,omitempty"`
+	User          []string               `protobuf:"bytes,1,rep,name=user,proto3" json:"user,omitempty"`
+	Emoji         string                 `protobuf:"bytes,2,opt,name=emoji,proto3" json:"emoji,omitempty"`
+	Count         int32                  `protobuf:"varint,3,opt,name=count,proto3" json:"count,omitempty"`
+	Me            bool                   `protobuf:"varint,4,opt,name=me,proto3" json:"me,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -685,6 +686,13 @@ func (x *ChatReactionCount) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ChatReactionCount.ProtoReflect.Descriptor instead.
 func (*ChatReactionCount) Descriptor() ([]byte, []int) {
 	return file_stream_v1_stream_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ChatReactionCount) GetUser() []string {
+	if x != nil {
+		return x.User
+	}
+	return nil
 }
 
 func (x *ChatReactionCount) GetEmoji() string {
@@ -2436,11 +2444,12 @@ const file_stream_v1_stream_proto_rawDesc = "" +
 	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x10\n" +
 	"\x03url\x18\x03 \x01(\tR\x03url\x12!\n" +
 	"\fcontent_type\x18\x04 \x01(\tR\vcontentType\x12\x12\n" +
-	"\x04size\x18\x05 \x01(\x03R\x04size\"O\n" +
-	"\x11ChatReactionCount\x12\x14\n" +
-	"\x05emoji\x18\x01 \x01(\tR\x05emoji\x12\x14\n" +
-	"\x05count\x18\x02 \x01(\x05R\x05count\x12\x0e\n" +
-	"\x02me\x18\x03 \x01(\bR\x02me\"s\n" +
+	"\x04size\x18\x05 \x01(\x03R\x04size\"c\n" +
+	"\x11ChatReactionCount\x12\x12\n" +
+	"\x04user\x18\x01 \x03(\tR\x04user\x12\x14\n" +
+	"\x05emoji\x18\x02 \x01(\tR\x05emoji\x12\x14\n" +
+	"\x05count\x18\x03 \x01(\x05R\x05count\x12\x0e\n" +
+	"\x02me\x18\x04 \x01(\bR\x02me\"s\n" +
 	"\x16ChatForwardedReference\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12\x1d\n" +

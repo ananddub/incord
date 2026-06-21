@@ -86,7 +86,7 @@ func (r *Repository) DeleteUser(ctx context.Context, id pgtype.UUID) error {
 	return r.queries.DeleteUser(ctx, id)
 }
 
-func (r *Repository) SearchUsers(ctx context.Context, params db.SearchUsersParams) ([]db.User, error) {
+func (r *Repository) SearchUsers(ctx context.Context, params db.SearchUsersParams) ([]db.SearchUsersRow, error) {
 	return r.queries.SearchUsers(ctx, params)
 }
 
@@ -110,16 +110,20 @@ func (r *Repository) GetFriendship(ctx context.Context, params db.GetFriendshipP
 	return r.queries.GetFriendship(ctx, params)
 }
 
-func (r *Repository) ListFriends(ctx context.Context, userID pgtype.UUID) ([]db.User, error) {
-	return r.queries.ListFriends(ctx, userID)
+func (r *Repository) ListFriends(ctx context.Context, userID pgtype.UUID) ([]db.ListFriendsRow, error) {
+	return r.queries.ListFriends(ctx,
+		userID,
+	)
 }
 
-func (r *Repository) ListPendingIncoming(ctx context.Context, friendID pgtype.UUID) ([]db.Friendship, error) {
+func (r *Repository) ListPendingIncoming(ctx context.Context, friendID pgtype.UUID) ([]db.ListPendingIncomingRow, error) {
 	return r.queries.ListPendingIncoming(ctx, friendID)
 }
 
-func (r *Repository) ListPendingOutgoing(ctx context.Context, userID pgtype.UUID) ([]db.Friendship, error) {
-	return r.queries.ListPendingOutgoing(ctx, userID)
+func (r *Repository) ListPendingOutgoing(ctx context.Context, userID pgtype.UUID) ([]db.ListPendingOutgoingRow, error) {
+	return r.queries.ListPendingOutgoing(ctx,
+		userID,
+	)
 }
 
 func (r *Repository) ListBlocked(ctx context.Context, userID pgtype.UUID) ([]db.User, error) {

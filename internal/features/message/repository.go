@@ -159,16 +159,20 @@ func (r *Repository) GetReactions(ctx context.Context, channelID, messageID gocq
 	var result []ReactionCount
 	for e, users := range emojiUsers {
 		me := false
+
+		users_str := make([]string, len(users))
 		for _, u := range users {
+			users_str = append(users_str, u.String())
 			if u == currentUserID {
 				me = true
 				break
 			}
 		}
 		result = append(result, ReactionCount{
-			Emoji: e,
-			Count: int32(len(users)),
-			Me:    me,
+			user_id: users_str,
+			Emoji:   e,
+			Count:   int32(len(users)),
+			Me:      me,
 		})
 	}
 	return result, nil

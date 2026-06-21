@@ -131,13 +131,19 @@ func (h *Handler) Sync(ctx context.Context, req *syncv1.SyncRequest) (*syncv1.Sy
 		}
 	}
 
-	// Friendships
-	friendships, err := h.q.SyncFriendships(ctx, db.SyncFriendshipsParams{UserID: pgUID, UpdatedAt: pgLastSync})
+	friendships, err := h.q.SyncFriendships(ctx, pgUID) // UpdatedAt: pgLastSync,
+
 	if err == nil {
 		for _, f := range friendships {
 			resp.Friendships = append(resp.Friendships, &syncv1.SyncFriendship{
-				UserId: ustr(f.UserID), FriendId: ustr(f.FriendID), IsDeleted: f.Deleted,
-				UpdatedAt: ts(f.UpdatedAt), Status: f.Status,
+				UserId:    ustr(f.UserID),
+				FriendId:  ustr(f.FriendID),
+				Status:    f.Status,
+				Username:  *f.Username,
+				AvatarUrl: *f.AvatarUrl,
+				DmId:      f.ChannelID.String(),
+				UpdatedAt: ts(f.UpdatedAt),
+				IsDeleted: f.Deleted,
 			})
 		}
 	}

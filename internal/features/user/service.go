@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"net/url"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,6 +14,7 @@ import (
 	"github.com/ananddub/ndiscord_backend/gen/db"
 	streamv1 "github.com/ananddub/ndiscord_backend/gen/stream/v1"
 	"github.com/ananddub/ndiscord_backend/internal/shared/realtime"
+	"github.com/ananddub/ndiscord_backend/internal/shared/util"
 )
 
 // DMOpener creates (or returns the existing) DM channel between two users.
@@ -63,6 +63,11 @@ func (s *Service) SetPresenceReader(p PresenceReader) {
 // pgIDToStr converts a pgtype.UUID to its canonical hex-dashed string form.
 func pgIDToStr(id pgtype.UUID) string {
 	return uuid.UUID(id.Bytes).String()
+}
+
+// ConvertUUIDToString converts a pgtype.UUID to its string representation.
+func (s *Service) ConvertUUIDToString(id pgtype.UUID) string {
+	return pgIDToStr(id)
 }
 
 // presenceStatusFromString maps the persisted status column into the
@@ -131,12 +136,6 @@ func (s *Service) GetStatusIntent(ctx context.Context, userID string) (status, c
 	return u.Status, u.Status
 }
 
-// friendPayload loads the given user and returns a typed FriendActivityEvent
-// with the actor's profile fields populated. Used to enrich outgoing
-// friend/presence events so the recipient doesn't just see a bare UUID.
-// Status reflects *live* presence (Redis) when a PresenceReader is wired,
-// falling back to the DB intent otherwise — the DB intent is what the user
-// *chose*, not whether they are currently connected.
 func (s *Service) friendPayload(ctx context.Context, actorID pgtype.UUID) *streamv1.FriendActivityEvent {
 	u, err := s.repo.GetUserByID(ctx, actorID)
 	if err != nil {
@@ -160,9 +159,6 @@ func (s *Service) friendPayload(ctx context.Context, actorID pgtype.UUID) *strea
 	}
 }
 
-// SetStorage wires the MinIO clients for avatar uploads.
-// `client` is used to upload bytes; `signer` signs presigned GET URLs
-// with a public-reachable hostname.
 func (s *Service) SetStorage(client, signer *minio.Client, bucket string) {
 	s.minio = client
 	s.signer = signer
@@ -181,27 +177,10 @@ var allowedAvatarContentTypes = map[string]bool{
 	"image/webp": true,
 }
 
-// ResolveAvatarURL turns a stored object key into a fresh presigned URL.
-// Empty keys return empty string; legacy full URLs are returned as-is.
 func (s *Service) ResolveAvatarURL(ctx context.Context, key string) string {
-	if key == "" {
-		return ""
-	}
-	if len(key) >= 7 && (key[:7] == "http://" || (len(key) >= 8 && key[:8] == "https://")) {
-		return key
-	}
-	if s.signer == nil {
-		return ""
-	}
-	u, err := s.signer.PresignedGetObject(ctx, s.bucket, key, avatarDownloadTTL, url.Values{})
-	if err != nil {
-		return ""
-	}
-	return u.String()
+	return util.GetMinioBaseURL() + key
 }
 
-// UploadAvatar stores raw bytes in object storage and updates users.avatar_url
-// with the object key. The caller is expected to be authenticated.
 func (s *Service) UploadAvatar(ctx context.Context, userID pgtype.UUID, filename, contentType string, data []byte) (db.User, string, error) {
 	if s.minio == nil {
 		return db.User{}, "", fmt.Errorf("storage not configured")
@@ -245,26 +224,24 @@ func (s *Service) UploadAvatar(ctx context.Context, userID pgtype.UUID, filename
 	return updated, avatarURL, nil
 }
 
-func (s *Service) GetUser(ctx context.Context, id pgtype.UUID) (db.User, error) {
+func (s *Service) GetUser(ctx context.Context, id pgtype.UUID) (*db.User, error) {
 	user, err := s.repo.GetUserByID(ctx, id)
 	if err != nil {
-		return db.User{}, fmt.Errorf("%w: %v", ErrUserNotFound, err)
+		return nil, fmt.Errorf("%w: %v", ErrUserNotFound, err)
 	}
-	return user, nil
+	user.AvatarUrl = s.ResolveAvatarURL(ctx, user.AvatarUrl)
+	return util.SimilarValuesCopy(user, db.User{}), nil
 }
 
-func (s *Service) GetUserByUsername(ctx context.Context, username string) (db.User, error) {
+func (s *Service) GetUserByUsername(ctx context.Context, username string) (*db.User, error) {
 	user, err := s.repo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return db.User{}, fmt.Errorf("%w: %v", ErrUserNotFound, err)
+		return nil, fmt.Errorf("%w: %v", ErrUserNotFound, err)
 	}
-	return user, nil
+	user.AvatarUrl = s.ResolveAvatarURL(ctx, user.AvatarUrl)
+	return util.SimilarValuesCopy(user, db.User{}), nil
 }
 
-// UpdateUsername is a one-shot set of the caller's username handle. It only
-// succeeds if the user currently has no username set; otherwise it returns
-// ErrUsernameAlreadySet. The repo appends a random 4-digit discriminator and
-// mirrors the base name into display_name.
 func (s *Service) UpdateUsername(ctx context.Context, id pgtype.UUID, username string) (db.User, error) {
 	user, err := s.repo.UpdateUsername(ctx, id, username)
 	if err != nil {
@@ -286,9 +263,6 @@ func (s *Service) UpdateUser(ctx context.Context, params db.UpdateUserParams) (d
 	if err != nil {
 		return db.User{}, fmt.Errorf("failed to update user: %w", err)
 	}
-
-	// Broadcast profile update to the user's own subject; friends subscribe
-	// to this subject via StreamFriendActivity.
 	s.publishFriendActivity(pgIDToStr(user.ID), streamv1.FriendEventType_FRIEND_EVENT_PROFILE_UPDATE, &streamv1.FriendActivityEvent{
 		UserId:       pgIDToStr(user.ID),
 		Username:     user.Username,
@@ -301,10 +275,6 @@ func (s *Service) UpdateUser(ctx context.Context, params db.UpdateUserParams) (d
 	return user, nil
 }
 
-// UpdateStatus persists a new status string and emits a dedicated
-// "presence_update" event on the user's FriendActivity subject so friends
-// can update their presence UI without interpreting a generic profile
-// update.
 func (s *Service) UpdateStatus(ctx context.Context, id pgtype.UUID, newStatus string) (db.User, error) {
 	user, err := s.repo.UpdateUser(ctx, db.UpdateUserParams{
 		ID:     id,
@@ -347,8 +317,12 @@ func (s *Service) SearchUsers(ctx context.Context, query string, limit, offset i
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to search users: %w", err)
 	}
-
-	return users, count, nil
+	var dbUsers []db.User
+	for _, u := range users {
+		u.AvatarUrl = s.ResolveAvatarURL(ctx, u.AvatarUrl)
+		dbUsers = append(dbUsers, *util.SimilarValuesCopy(u, db.User{}))
+	}
+	return dbUsers, count, nil
 }
 
 func (s *Service) SendFriendRequest(ctx context.Context, userID, targetID pgtype.UUID) (db.Friendship, error) {
@@ -380,7 +354,6 @@ func (s *Service) SendFriendRequest(ctx context.Context, userID, targetID pgtype
 		return db.Friendship{}, fmt.Errorf("failed to create friend request: %w", err)
 	}
 
-	// Notify the target: "X sent you a friend request".
 	s.publishFriendActivity(pgIDToStr(targetID), streamv1.FriendEventType_FRIEND_EVENT_REQUEST, s.friendPayload(ctx, userID))
 
 	return friendship, nil
@@ -397,7 +370,6 @@ func (s *Service) AcceptFriendRequest(ctx context.Context, userID, requesterID p
 	if existing.Status != "pending" {
 		return db.Friendship{}, ErrNoFriendRequest
 	}
-	// Ensure the current user is the recipient (friend_id), not the sender
 	if existing.UserID != requesterID || existing.FriendID != userID {
 		return db.Friendship{}, ErrNoFriendRequest
 	}
@@ -411,8 +383,6 @@ func (s *Service) AcceptFriendRequest(ctx context.Context, userID, requesterID p
 		return db.Friendship{}, fmt.Errorf("failed to accept friend request: %w", err)
 	}
 
-	// Auto-open a DM channel between the two users. If one already exists,
-	// GetOrCreateDMChannel returns it — no duplicates.
 	dmChannelID := ""
 	if s.dm != nil {
 		if id, err := s.dm.GetOrCreateDMChannel(ctx, pgIDToStr(userID), []string{pgIDToStr(requesterID)}); err == nil {
@@ -420,14 +390,10 @@ func (s *Service) AcceptFriendRequest(ctx context.Context, userID, requesterID p
 		}
 	}
 
-	// Notify the requester: "X accepted your friend request" with the DM
-	// channel id so the client can jump straight into the conversation.
 	payloadForRequester := s.friendPayload(ctx, userID)
 	payloadForRequester.ChannelId = dmChannelID
 	s.publishFriendActivity(pgIDToStr(requesterID), streamv1.FriendEventType_FRIEND_EVENT_ACCEPTED, payloadForRequester)
 
-	// Also notify the accepter so both ends get the channel id for an
-	// instant UI transition.
 	payloadForAccepter := s.friendPayload(ctx, requesterID)
 	payloadForAccepter.ChannelId = dmChannelID
 	s.publishFriendActivity(pgIDToStr(userID), streamv1.FriendEventType_FRIEND_EVENT_ACCEPTED, payloadForAccepter)
@@ -454,15 +420,11 @@ func (s *Service) DeclineFriendRequest(ctx context.Context, userID, requesterID 
 		return err
 	}
 
-	// Notify the requester: "X declined your friend request".
 	s.publishFriendActivity(pgIDToStr(requesterID), streamv1.FriendEventType_FRIEND_EVENT_DECLINED, s.friendPayload(ctx, userID))
 
 	return nil
 }
 
-// CancelFriendRequest is called by the sender (userID) to withdraw their
-// own pending outgoing request to targetID. The row must still be pending
-// and the caller must be the original sender.
 func (s *Service) CancelFriendRequest(ctx context.Context, userID, targetID pgtype.UUID) error {
 	existing, err := s.repo.GetFriendship(ctx, db.GetFriendshipParams{
 		UserID:   userID,
@@ -471,7 +433,6 @@ func (s *Service) CancelFriendRequest(ctx context.Context, userID, targetID pgty
 	if err != nil {
 		return ErrNoFriendRequest
 	}
-	// Must still be pending and owned by the caller (userID) as the sender.
 	if existing.Status != "pending" || existing.UserID != userID {
 		return ErrNoFriendRequest
 	}
@@ -483,8 +444,6 @@ func (s *Service) CancelFriendRequest(ctx context.Context, userID, targetID pgty
 		return err
 	}
 
-	// Notify the target so their incoming-requests list updates in realtime:
-	// "X cancelled the request they sent you".
 	s.publishFriendActivity(pgIDToStr(targetID), streamv1.FriendEventType_FRIEND_EVENT_REQUEST_CANCELLED, s.friendPayload(ctx, userID))
 
 	return nil
@@ -509,7 +468,6 @@ func (s *Service) RemoveFriend(ctx context.Context, userID, friendID pgtype.UUID
 		return err
 	}
 
-	// Notify the removed friend: "X removed you".
 	s.publishFriendActivity(pgIDToStr(friendID), streamv1.FriendEventType_FRIEND_EVENT_REMOVED, s.friendPayload(ctx, userID))
 
 	return nil
@@ -520,7 +478,6 @@ func (s *Service) BlockUser(ctx context.Context, userID, targetID pgtype.UUID) e
 		return ErrCannotFriendSelf
 	}
 
-	// Delete any existing friendship first
 	_ = s.repo.DeleteFriendship(ctx, db.DeleteFriendshipParams{
 		UserID:   userID,
 		FriendID: targetID,
@@ -556,11 +513,25 @@ func (s *Service) UnblockUser(ctx context.Context, userID, targetID pgtype.UUID)
 	})
 }
 
-func (s *Service) ListFriends(ctx context.Context, userID pgtype.UUID) ([]db.User, error) {
-	return s.repo.ListFriends(ctx, userID)
+func (s *Service) ListFriends(ctx context.Context, userID pgtype.UUID) (*[]db.User, error) {
+	u, err := s.repo.ListFriends(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list friends: %w", err)
+	}
+	var friends []db.User
+	for _, f := range u {
+		friends = append(friends, db.User{
+			ID:          f.ID,
+			Username:    f.Username,
+			DisplayName: f.DisplayName,
+			Status:      f.Status,
+			AvatarUrl:   s.ResolveAvatarURL(ctx, f.AvatarUrl),
+		})
+	}
+	return &friends, nil
 }
 
-func (s *Service) ListPendingRequests(ctx context.Context, userID pgtype.UUID) ([]db.Friendship, []db.Friendship, error) {
+func (s *Service) ListPendingRequests(ctx context.Context, userID pgtype.UUID) ([]db.ListPendingIncomingRow, []db.ListPendingOutgoingRow, error) {
 	incoming, err := s.repo.ListPendingIncoming(ctx, userID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to list incoming requests: %w", err)

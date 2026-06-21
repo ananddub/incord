@@ -3,7 +3,10 @@ package realtime
 import (
 	"context"
 	"encoding/json"
+	"strings"
+	"time"
 
+	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
 	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
 )
@@ -17,16 +20,17 @@ func NewLPubSub(nc *nats.Conn, redis *redis.Client) (*LPubSub, error) {
 	return &LPubSub{nc: nc, redis: redis}, nil
 }
 
-func Publish[T any](live *LPubSub, subj string, data T) error {
-	b, err := json.Marshal(data)
+func Publish[T any](lsp *LPubSub, subj string, data T) error {
+	b, err := json.Marshal(&data)
 	if err != nil {
 		return err
 	}
-	return live.nc.Publish(subj, b)
+	logger.Log.Info().Str("pub:subject", subj).RawJSON("raw:data", b).Msg("nats publish")
+	return lsp.nc.Publish(subj, b)
 }
 
-func Subscribe[T any](live *LPubSub, ctx context.Context, subj string, handler func(data T)) error {
-	sub, err := live.nc.Subscribe(subj, func(msg *nats.Msg) {
+func Subscribe[T any](lsp *LPubSub, ctx context.Context, subj string, handler func(data T)) error {
+	sub, err := lsp.nc.Subscribe(subj, func(msg *nats.Msg) {
 		var value T
 		if err := json.Unmarshal(msg.Data, &value); err != nil {
 			return
@@ -38,23 +42,42 @@ func Subscribe[T any](live *LPubSub, ctx context.Context, subj string, handler f
 	}
 	defer sub.Unsubscribe()
 	<-ctx.Done()
-	return nil
+	return ctx.Err()
+}
+
+func to_string(subjects []string) string {
+	return "nats:subscribe:" + strings.Join(subjects, ":")
 }
 
 func MultiSubscribe[T any](
-	live *LPubSub,
+	lps *LPubSub,
 	ctx context.Context,
 	subjects []string,
+	isChache bool,
 	handler func(data T),
 ) error {
 	subs := make([]*nats.Subscription, 0, len(subjects))
+	if isChache {
+		data, err := lps.redis.Get(ctx, to_string(subjects)).Bytes()
+		if err == nil {
+			var value T
+			if err := json.Unmarshal(data, &value); err == nil {
+				handler(value)
+			}
+		}
+	}
 	for _, subject := range subjects {
-		sub, err := live.nc.Subscribe(subject, func(msg *nats.Msg) {
+		sub, err := lps.nc.Subscribe(subject, func(msg *nats.Msg) {
 			var value T
 			if err := json.Unmarshal(msg.Data, &value); err != nil {
 				return
 			}
 			handler(value)
+
+			if isChache {
+				logger.Log.Info().RawJSON(subject, msg.Data)
+				lps.redis.Set(ctx, to_string(subjects), msg.Data, 5*time.Minute)
+			}
 		})
 		if err != nil {
 			for _, s := range subs {

@@ -19,19 +19,27 @@ WHERE ((user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1))
   AND deleted = FALSE;
 
 -- name: ListFriends :many
-SELECT u.* FROM users u
-JOIN friendships f ON (f.friend_id = u.id AND f.user_id = $1) OR (f.user_id = u.id AND f.friend_id = $1)
+SELECT u.*,d.channel_id
+ FROM users u
+LEFT JOIN  dm_channel_members d on u.id = d.user_id
+LEFT JOIN friendships f ON (f.friend_id = u.id AND f.user_id = $1) OR (f.user_id = u.id AND f.friend_id = $1)
+
 WHERE f.status = 'accepted' AND f.deleted = FALSE;
 
 -- name: ListPendingIncoming :many
-SELECT * FROM friendships
-WHERE friend_id = $1 AND status = 'pending' AND deleted = FALSE;
+SELECT *
+ FROM friendships f 
+JOIN users u ON u.id = f.user_id
+WHERE f.friend_id = $1 AND f.status = 'pending' AND f.deleted = FALSE;
 
 -- name: ListPendingOutgoing :many
-SELECT * FROM friendships
-WHERE user_id = $1 AND status = 'pending' AND deleted = FALSE;
+SELECT *
+ FROM friendships f
+JOIN users u ON u.id = f.friend_id
+WHERE f.user_id = $1 AND f.status = 'pending' AND f.deleted = FALSE;
 
 -- name: ListBlocked :many
-SELECT u.* FROM users u
+SELECT u.* 
+FROM users u
 JOIN friendships f ON f.friend_id = u.id
 WHERE f.user_id = $1 AND f.status = 'blocked' AND f.deleted = FALSE;

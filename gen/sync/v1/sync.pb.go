@@ -663,9 +663,12 @@ type SyncFriendship struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	FriendId      string                 `protobuf:"bytes,2,opt,name=friend_id,json=friendId,proto3" json:"friend_id,omitempty"`
-	IsDeleted     bool                   `protobuf:"varint,3,opt,name=is_deleted,json=isDeleted,proto3" json:"is_deleted,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	AvatarUrl     string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	DmId          string                 `protobuf:"bytes,5,opt,name=dm_id,json=dmId,proto3" json:"dm_id,omitempty"`
+	IsDeleted     bool                   `protobuf:"varint,6,opt,name=is_deleted,json=isDeleted,proto3" json:"is_deleted,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Status        string                 `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -710,6 +713,27 @@ func (x *SyncFriendship) GetUserId() string {
 func (x *SyncFriendship) GetFriendId() string {
 	if x != nil {
 		return x.FriendId
+	}
+	return ""
+}
+
+func (x *SyncFriendship) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *SyncFriendship) GetAvatarUrl() string {
+	if x != nil {
+		return x.AvatarUrl
+	}
+	return ""
+}
+
+func (x *SyncFriendship) GetDmId() string {
+	if x != nil {
+		return x.DmId
 	}
 	return ""
 }
@@ -984,15 +1008,19 @@ const file_sync_v1_sync_proto_rawDesc = "" +
 	"is_deleted\x18\x03 \x01(\bR\tisDeleted\x129\n" +
 	"\n" +
 	"updated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1a\n" +
-	"\bnickname\x18\x05 \x01(\tR\bnickname\"\xb8\x01\n" +
+	"\bnickname\x18\x05 \x01(\tR\bnickname\"\x88\x02\n" +
 	"\x0eSyncFriendship\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
-	"\tfriend_id\x18\x02 \x01(\tR\bfriendId\x12\x1d\n" +
+	"\tfriend_id\x18\x02 \x01(\tR\bfriendId\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\x12\x1d\n" +
 	"\n" +
-	"is_deleted\x18\x03 \x01(\bR\tisDeleted\x129\n" +
+	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12\x13\n" +
+	"\x05dm_id\x18\x05 \x01(\tR\x04dmId\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x16\n" +
-	"\x06status\x18\x05 \x01(\tR\x06status\"\x99\x02\n" +
+	"is_deleted\x18\x06 \x01(\bR\tisDeleted\x129\n" +
+	"\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x16\n" +
+	"\x06status\x18\b \x01(\tR\x06status\"\x99\x02\n" +
 	"\vSyncMessage\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12\x0e\n" +

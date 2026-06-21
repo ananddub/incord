@@ -78,7 +78,6 @@ service UserService {
 
 message User {
   string id = 1;
-  // Unique identity handle in "name#1234" format. Changeable but must stay unique.
   string username = 2;
   string email = 3;
   string avatar_url = 4;
@@ -174,8 +173,10 @@ enum FriendshipStatus {
 message Friendship {
   string user_id = 1;
   string friend_id = 2;
-  FriendshipStatus status = 3;
-  google.protobuf.Timestamp created_at = 4;
+  string username = 3;
+  string avatar_url = 4;
+  FriendshipStatus status = 5;
+  google.protobuf.Timestamp created_at = 6;
 }
 
 message SendFriendRequestRequest {
