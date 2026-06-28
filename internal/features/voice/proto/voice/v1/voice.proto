@@ -5,52 +5,88 @@ package voice.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/voice/v1;voicev1";
 
 import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
 import "buf/validate/validate.proto";
 
-// VoiceService issues LiveKit access tokens so clients can connect directly
-// to the LiveKit SFU over WebRTC. The backend itself never handles media —
-// it only handles auth, room metadata, and participant bookkeeping.
+// URL conventions:
+//   /v1/channels/{channel_id}/voice/*   guild voice channel ops
+//   /v1/channels/{channel_id}/calls/*   DM / group-DM calls
+//   /v1/channels/{channel_id}/voice/me/{flag}  self-state toggles (PUT=on, DELETE=off)
+//   /v1/channels/{channel_id}/voice/participants/{user_id}/{flag}  moderator ops
 service VoiceService {
-  // JoinChannel returns a LiveKit URL + short-lived JWT. The client is
-  // expected to feed these into a LiveKit client SDK (web/iOS/Android/Flutter)
-  // and let it negotiate DTLS-SRTP/WebRTC directly with the SFU.
-  rpc JoinChannel(JoinChannelRequest) returns (JoinChannelResponse);
-  rpc LeaveChannel(LeaveChannelRequest) returns (LeaveChannelResponse);
-  rpc GetChannelParticipants(GetChannelParticipantsRequest) returns (GetChannelParticipantsResponse);
+  rpc JoinChannel(JoinChannelRequest) returns (JoinChannelResponse) {
+    option (google.api.http) = { post: "/v1/channels/{channel_id}/voice/join" body: "*" };
+  }
+  rpc LeaveChannel(LeaveChannelRequest) returns (LeaveChannelResponse) {
+    option (google.api.http) = { delete: "/v1/channels/{channel_id}/voice/me" };
+  }
+  rpc GetChannelParticipants(GetChannelParticipantsRequest) returns (GetChannelParticipantsResponse) {
+    option (google.api.http) = { get: "/v1/channels/{channel_id}/voice/participants" };
+  }
 
-  // === DM calls ===
-  // StartDMCall initiates a voice/video call inside an existing DM channel.
-  // The caller immediately gets a LiveKit token; all other members receive
-  // a "call_incoming" push on their StreamDmCalls stream.
-  rpc StartDMCall(StartDMCallRequest) returns (StartDMCallResponse);
-  // JoinDMCall is called by a ringing recipient to accept the call and
-  // obtain their own LiveKit token. Other members get a "call_accepted" push.
-  rpc JoinDMCall(JoinDMCallRequest) returns (JoinDMCallResponse);
-  // RejectDMCall is called by a recipient to decline — the caller gets a
-  // "call_rejected" push. No LiveKit token is minted.
-  rpc RejectDMCall(RejectDMCallRequest) returns (RejectDMCallResponse);
-  // LeaveDMCall is called when a participant hangs up. When the last
-  // participant leaves, a "call_ended" push is fanned out to all members.
-  rpc LeaveDMCall(LeaveDMCallRequest) returns (LeaveDMCallResponse);
+  // DM / group-DM calls. StartDMCall is the caller-initiated action;
+  // JoinDMCall is the callee accepting. Both return a LiveKit token.
+  rpc StartDMCall(StartDMCallRequest) returns (StartDMCallResponse) {
+    option (google.api.http) = { post: "/v1/channels/{channel_id}/calls" body: "*" };
+  }
+  rpc JoinDMCall(JoinDMCallRequest) returns (JoinDMCallResponse) {
+    option (google.api.http) = { post: "/v1/channels/{channel_id}/calls/join" body: "*" };
+  }
+  rpc RejectDMCall(RejectDMCallRequest) returns (RejectDMCallResponse) {
+    option (google.api.http) = { post: "/v1/channels/{channel_id}/calls/reject" body: "*" };
+  }
+  rpc LeaveDMCall(LeaveDMCallRequest) returns (LeaveDMCallResponse) {
+    option (google.api.http) = { delete: "/v1/channels/{channel_id}/calls/me" };
+  }
 
-  // Self voice controls — each toggle is a separate RPC. Server updates
-  // Redis and broadcasts the full participant list to StreamVoiceState.
-  rpc Mute(VoiceChannelRequest) returns (VoiceParticipantsResponse);
-  rpc Unmute(VoiceChannelRequest) returns (VoiceParticipantsResponse);
-  rpc Deafen(VoiceChannelRequest) returns (VoiceParticipantsResponse);
-  rpc Undeafen(VoiceChannelRequest) returns (VoiceParticipantsResponse);
-  rpc EnableVideo(VoiceChannelRequest) returns (VoiceParticipantsResponse);
-  rpc DisableVideo(VoiceChannelRequest) returns (VoiceParticipantsResponse);
-  rpc StartScreenShare(VoiceChannelRequest) returns (VoiceParticipantsResponse);
-  rpc StopScreenShare(VoiceChannelRequest) returns (VoiceParticipantsResponse);
-
-  // Admin controls — guild owner/moderator can force state on other participants.
-  rpc ServerMuteUser(ServerMuteUserRequest) returns (ServerMuteUserResponse);
-  rpc ServerDeafenUser(ServerDeafenUserRequest) returns (ServerDeafenUserResponse);
-  rpc DisconnectUser(DisconnectUserRequest) returns (DisconnectUserResponse);
+  // Self-state toggles. PUT = flag on (mute/deaf/video/screen), DELETE = off.
+  // Returns updated participant list so callers can refresh UI in one round trip.
+  rpc Mute(VoiceChannelRequest) returns (VoiceParticipantsResponse) {
+    option (google.api.http) = { put: "/v1/channels/{channel_id}/voice/me/mute" body: "*" };
+  }
+  rpc Unmute(VoiceChannelRequest) returns (VoiceParticipantsResponse) {
+    option (google.api.http) = { delete: "/v1/channels/{channel_id}/voice/me/mute" };
+  }
+  rpc Deafen(VoiceChannelRequest) returns (VoiceParticipantsResponse) {
+    option (google.api.http) = { put: "/v1/channels/{channel_id}/voice/me/deaf" body: "*" };
+  }
+  rpc Undeafen(VoiceChannelRequest) returns (VoiceParticipantsResponse) {
+    option (google.api.http) = { delete: "/v1/channels/{channel_id}/voice/me/deaf" };
+  }
+  rpc EnableVideo(VoiceChannelRequest) returns (VoiceParticipantsResponse) {
+    option (google.api.http) = { put: "/v1/channels/{channel_id}/voice/me/video" body: "*" };
+  }
+  rpc DisableVideo(VoiceChannelRequest) returns (VoiceParticipantsResponse) {
+    option (google.api.http) = { delete: "/v1/channels/{channel_id}/voice/me/video" };
+  }
+  rpc StartScreenShare(VoiceChannelRequest) returns (VoiceParticipantsResponse) {
+    option (google.api.http) = { put: "/v1/channels/{channel_id}/voice/me/screen" body: "*" };
+  }
+  rpc StopScreenShare(VoiceChannelRequest) returns (VoiceParticipantsResponse) {
+    option (google.api.http) = { delete: "/v1/channels/{channel_id}/voice/me/screen" };
+  }
+  // Moderator-level ops: act on a specific participant. PUT body carries
+  // the boolean because the action is "set muted=true/false", not strictly
+  // idempotent toggle (admin may force-mute regardless of current state).
+  rpc ServerMuteUser(ServerMuteUserRequest) returns (ServerMuteUserResponse) {
+    option (google.api.http) = {
+      put: "/v1/channels/{channel_id}/voice/participants/{target_user_id}/mute"
+      body: "*"
+    };
+  }
+  rpc ServerDeafenUser(ServerDeafenUserRequest) returns (ServerDeafenUserResponse) {
+    option (google.api.http) = {
+      put: "/v1/channels/{channel_id}/voice/participants/{target_user_id}/deaf"
+      body: "*"
+    };
+  }
+  rpc DisconnectUser(DisconnectUserRequest) returns (DisconnectUserResponse) {
+    option (google.api.http) = {
+      delete: "/v1/channels/{channel_id}/voice/participants/{target_user_id}"
+    };
+  }
 }
 
-// === Admin voice control messages ===
 
 message ServerMuteUserRequest {
   string channel_id = 1 [(buf.validate.field).string.uuid = true];
@@ -78,13 +114,9 @@ message JoinChannelRequest {
 }
 
 message JoinChannelResponse {
-  // WebSocket URL of the LiveKit SFU (e.g. "ws://192.168.1.2:7880").
   string url = 1;
-  // Short-lived JWT access token — pass into LiveKit client SDK.
   string token = 2;
-  // Room name (one LiveKit room per voice channel).
   string room = 3;
-  // Seconds until the token expires.
   int32 expires_in = 4;
 }
 
@@ -117,11 +149,9 @@ message GetChannelParticipantsResponse {
   repeated VoiceParticipant participants = 1;
 }
 
-// === DM call messages ===
 
 message StartDMCallRequest {
   string channel_id = 1 [(buf.validate.field).string.uuid = true];
-  // If true, the caller intends to publish video; audio is always on.
   bool video = 2;
 }
 
@@ -156,14 +186,11 @@ message LeaveDMCallRequest {
 
 message LeaveDMCallResponse {}
 
-// === Voice state sync ===
 
-// Shared request for all self voice controls — just needs channel_id.
 message VoiceChannelRequest {
   string channel_id = 1 [(buf.validate.field).string.uuid = true];
 }
 
-// Returns the full channel participant list after the state change.
 message VoiceParticipantsResponse {
   repeated VoiceParticipant participants = 1;
 }

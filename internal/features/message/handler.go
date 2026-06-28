@@ -13,7 +13,6 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// ChannelGuildResolver resolves which guild a channel belongs to.
 type ChannelGuildResolver interface {
 	GetChannelGuildID(ctx context.Context, channelID string) string
 }
@@ -28,10 +27,8 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-// SetGuildResolver sets the channel-to-guild resolver.
 func (h *Handler) SetGuildResolver(r ChannelGuildResolver) { h.guildResolver = r }
 
-// resolveGuildID looks up which guild a channel belongs to. Returns "" for DMs or if no resolver set.
 func (h *Handler) resolveGuildID(ctx context.Context, channelID string) string {
 	if h.guildResolver != nil {
 		return h.guildResolver.GetChannelGuildID(ctx, channelID)
@@ -45,7 +42,6 @@ func (h *Handler) SendMessage(ctx context.Context, req *messagev1.SendMessageReq
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
 
-	// Content can be empty if attachments are attached (Discord-style).
 	if req.Content == "" && len(req.AttachmentIds) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "content or attachments required")
 	}
@@ -215,49 +211,55 @@ func (h *Handler) StartTyping(ctx context.Context, req *messagev1.StartTypingReq
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
 
-	if err := h.svc.StartTyping(ctx, userID, req.ChannelId, h.resolveGuildID(ctx, req.ChannelId)); err != nil {
+	if err := h.svc.StartTyping(ctx, req.UserName, userID, req.ChannelId, h.resolveGuildID(ctx, req.ChannelId)); err != nil {
 		return nil, mapError(err)
 	}
 
 	return &messagev1.StartTypingResponse{}, nil
 }
 
-// messageToProto converts an internal Message to the proto Message, including
-// reactions and attachments so a single call is enough to render it.
 func (h *Handler) messageToProto(ctx context.Context, msg *Message, currentUserID string) (*messagev1.Message, error) {
 	var zeroUUID [16]byte
+	msgID := uuidValue(msg.Id)
+	channelID := uuidValue(msg.ChannelId)
+	authorID := uuidValue(msg.AuthorId)
+	replyToID := uuidValue(msg.ReplyToId)
+	forwardedFromChannelID := uuidValue(msg.ForwardedFromChannelId)
+	forwardedFromMessageID := uuidValue(msg.ForwardedFromMessageId)
+	forwardedFromAuthorID := uuidValue(msg.ForwardedFromAuthorId)
+	mentions := uuidSliceValue(msg.MentionUserIds)
+
 	pb := &messagev1.Message{
-		Id:        msg.ID.String(),
-		ChannelId: msg.ChannelID.String(),
-		AuthorId:  msg.AuthorID.String(),
-		Content:   msg.Content,
-		Type:      messagev1.MessageType(msg.Type),
-		Pinned:    msg.Pinned,
-		CreatedAt: timestamppb.New(msg.CreatedAt),
+		Id:        msgID.String(),
+		ChannelId: channelID.String(),
+		AuthorId:  authorID.String(),
+		Content:   stringValue(msg.Content),
+		Type:      messagev1.MessageType(int64Value(msg.Type)),
+		Pinned:    boolValue(msg.Pinned),
+		CreatedAt: timestamppb.New(timeValue(msg.CreatedAt)),
 	}
 
-	if msg.ReplyToID != gocql.UUID(zeroUUID) {
-		pb.ReplyToId = msg.ReplyToID.String()
+	if replyToID != gocql.UUID(zeroUUID) {
+		pb.ReplyToId = replyToID.String()
 	}
 	if msg.EditedAt != nil {
 		pb.EditedAt = timestamppb.New(*msg.EditedAt)
 	}
-	if msg.ForwardedFromMessageID != gocql.UUID(zeroUUID) {
+	if forwardedFromMessageID != gocql.UUID(zeroUUID) {
 		pb.ForwardedFrom = &messagev1.ForwardedReference{
-			ChannelId: msg.ForwardedFromChannelID.String(),
-			MessageId: msg.ForwardedFromMessageID.String(),
-			AuthorId:  msg.ForwardedFromAuthorID.String(),
+			ChannelId: forwardedFromChannelID.String(),
+			MessageId: forwardedFromMessageID.String(),
+			AuthorId:  forwardedFromAuthorID.String(),
 		}
 	}
-	if len(msg.MentionUserIDs) > 0 {
-		pb.MentionUserIds = make([]string, len(msg.MentionUserIDs))
-		for i, m := range msg.MentionUserIDs {
+	if len(mentions) > 0 {
+		pb.MentionUserIds = make([]string, len(mentions))
+		for i, m := range mentions {
 			pb.MentionUserIds[i] = m.String()
 		}
 	}
 
-	// Fetch reactions
-	reactions, err := h.svc.GetReactions(ctx, msg.ChannelID.String(), msg.ID.String(), currentUserID)
+	reactions, err := h.svc.GetReactions(ctx, channelID.String(), msgID.String(), currentUserID)
 	if err == nil && len(reactions) > 0 {
 		pb.Reactions = make([]*messagev1.Reaction, len(reactions))
 		for i, r := range reactions {
@@ -269,8 +271,7 @@ func (h *Handler) messageToProto(ctx context.Context, msg *Message, currentUserI
 		}
 	}
 
-	// Hydrate attachments from the mirrored Scylla rows.
-	atts, err := h.svc.GetAttachments(ctx, msg.ChannelID.String(), msg.ID.String())
+	atts, err := h.svc.GetAttachments(ctx, channelID.String(), msgID.String())
 	if err == nil {
 		pb.Attachments = attachmentsToProto(atts)
 	}
@@ -285,11 +286,11 @@ func attachmentsToProto(atts []Attachment) []*messagev1.Attachment {
 	out := make([]*messagev1.Attachment, len(atts))
 	for i, a := range atts {
 		out[i] = &messagev1.Attachment{
-			Id:          a.ID.String(),
-			Filename:    a.Filename,
-			Url:         a.URL,
-			ContentType: a.ContentType,
-			Size:        a.Size,
+			Id:          uuidValue(a.Id).String(),
+			Filename:    stringValue(a.Filename),
+			Url:         stringValue(a.Url),
+			ContentType: stringValue(a.ContentType),
+			Size:        int64Value(a.Size),
 		}
 	}
 	return out
@@ -332,7 +333,6 @@ func (h *Handler) GetUnreadCounts(ctx context.Context, req *messagev1.GetUnreadC
 	var chMsgs []*messagev1.UnreadChannelMessage
 
 	for _, u := range unreads {
-		// Build recent messages list
 		var pbMsgs []*messagev1.Message
 		for _, m := range u.RecentMessages {
 			pb, _ := h.messageToProto(ctx, m, userID)
@@ -375,45 +375,66 @@ func (h *Handler) GetUnreadCounts(ctx context.Context, req *messagev1.GetUnreadC
 
 func (h *Handler) SearchMessages(ctx context.Context, req *messagev1.SearchMessagesRequest) (*messagev1.SearchMessagesResponse, error) {
 	userID := middleware.UserIDFromContext(ctx)
-	if userID == "" { return nil, status.Error(codes.Unauthenticated, "not authenticated") }
+	if userID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
 	msgs, err := h.svc.SearchMessages(ctx, req.ChannelId, req.Query, req.Limit)
-	if err != nil { return nil, mapError(err) }
+	if err != nil {
+		return nil, mapError(err)
+	}
 	var pb []*messagev1.Message
-	for _, m := range msgs { p, _ := h.messageToProto(ctx, m, userID); pb = append(pb, p) }
+	for _, m := range msgs {
+		p, _ := h.messageToProto(ctx, m, userID)
+		pb = append(pb, p)
+	}
 	return &messagev1.SearchMessagesResponse{Messages: pb, Total: int32(len(pb))}, nil
 }
 
 func (h *Handler) GetThreadMessages(ctx context.Context, req *messagev1.GetThreadMessagesRequest) (*messagev1.GetThreadMessagesResponse, error) {
 	userID := middleware.UserIDFromContext(ctx)
-	if userID == "" { return nil, status.Error(codes.Unauthenticated, "not authenticated") }
+	if userID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
 	msgs, err := h.svc.GetThreadMessages(ctx, req.ChannelId, req.ParentMessageId, req.Limit)
-	if err != nil { return nil, mapError(err) }
+	if err != nil {
+		return nil, mapError(err)
+	}
 	var pb []*messagev1.Message
-	for _, m := range msgs { p, _ := h.messageToProto(ctx, m, userID); pb = append(pb, p) }
+	for _, m := range msgs {
+		p, _ := h.messageToProto(ctx, m, userID)
+		pb = append(pb, p)
+	}
 	return &messagev1.GetThreadMessagesResponse{Messages: pb}, nil
 }
 
 func (h *Handler) BulkDeleteMessages(ctx context.Context, req *messagev1.BulkDeleteMessagesRequest) (*messagev1.BulkDeleteMessagesResponse, error) {
 	userID := middleware.UserIDFromContext(ctx)
-	if userID == "" { return nil, status.Error(codes.Unauthenticated, "not authenticated") }
+	if userID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
 	count, err := h.svc.BulkDeleteMessages(ctx, userID, req.ChannelId, "", req.MessageIds)
-	if err != nil { return nil, mapError(err) }
+	if err != nil {
+		return nil, mapError(err)
+	}
 	return &messagev1.BulkDeleteMessagesResponse{DeletedCount: int32(count)}, nil
 }
 
 func (h *Handler) GetEditHistory(ctx context.Context, req *messagev1.GetEditHistoryRequest) (*messagev1.GetEditHistoryResponse, error) {
 	userID := middleware.UserIDFromContext(ctx)
-	if userID == "" { return nil, status.Error(codes.Unauthenticated, "not authenticated") }
+	if userID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
 	edits, err := h.svc.GetEditHistory(ctx, req.ChannelId, req.MessageId)
-	if err != nil { return nil, mapError(err) }
+	if err != nil {
+		return nil, mapError(err)
+	}
 	var pb []*messagev1.MessageEdit
 	for _, e := range edits {
-		pb = append(pb, &messagev1.MessageEdit{Content: e.OldContent, EditedAt: timestamppb.New(e.EditedAt)})
+		pb = append(pb, &messagev1.MessageEdit{Content: stringValue(e.OldContent), EditedAt: timestamppb.New(timeValue(e.EditedAt))})
 	}
 	return &messagev1.GetEditHistoryResponse{Edits: pb}, nil
 }
 
-// mapError converts domain errors to gRPC status errors.
 func mapError(err error) error {
 	switch {
 	case errors.Is(err, ErrMessageNotFound):

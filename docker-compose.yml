@@ -1,5 +1,5 @@
 services:
-  # Auto-init: PG migrations + ScyllaDB tables + OpenFGA setup (Go binary)
+  # Auto-init: PG migrations + ScyllaDB tables (Go binary)
   init:
     build:
       context: .
@@ -14,14 +14,11 @@ services:
       DB_SSLMODE: disable
       SCYLLA_HOST: scylladb:9042
       SCYLLA_KEYSPACE: ndiscord
-      OPENFGA_API_URL: http://openfga:8080
     depends_on:
       timescaledb:
         condition: service_healthy
       scylladb:
         condition: service_healthy
-      openfga:
-        condition: service_started
     restart: "no"
 
   server:
@@ -50,19 +47,18 @@ services:
       SCYLLA_HOST: scylladb:9042
       SCYLLA_KEYSPACE: ndiscord
       MINIO_ENDPOINT: rustfs:9000
-      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-192.168.1.5:9000}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-10.0.2.2:7000}
       MINIO_ACCESS_KEY: ndiscord
       MINIO_SECRET_KEY: ndiscord123
       MINIO_BUCKET: ndiscord
       MINIO_USE_SSL: "false"
-      OPENFGA_API_URL: http://openfga:8080
       JWT_SECRET: dev-secret-change-in-production
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       SMTP_FROM: noreply@ndiscord.local
       NATS_URL: nats://nats:4222
       INVITE_BASE_URL: ${INVITE_BASE_URL:-https://ndiscord.app/invite}
-      LIVEKIT_URL: ${LIVEKIT_URL:-ws://192.168.1.5:7880}
+      LIVEKIT_URL: ${LIVEKIT_URL:-ws://10.0.2.2:7880}
       LIVEKIT_HTTP_URL: http://livekit:7880
       LIVEKIT_API_KEY: devkey
       LIVEKIT_API_SECRET: secret
@@ -88,7 +84,7 @@ services:
           path: ./go.mod
 
   timescaledb:
-    image: timescale/timescaledb:latest-pg16
+    image: timescale/timescaledb:latest-pg17
     container_name: ndiscord-timescaledb
     ports:
       - "5433:5432"
@@ -136,7 +132,7 @@ services:
     image: rustfs/rustfs:latest
     container_name: ndiscord-rustfs
     ports:
-      - "9000:9000"
+      - "7000:9000"
       - "9001:9001"
     environment:
       RUSTFS_ACCESS_KEY: ndiscord
@@ -151,21 +147,6 @@ services:
       timeout: 5s
       retries: 5
 
-  openfga:
-    image: openfga/openfga:latest
-    container_name: ndiscord-openfga
-    ports:
-      - "8090:8080"
-      - "8091:8081"
-      - "3000:3000"
-    command: run
-    environment:
-      OPENFGA_DATASTORE_ENGINE: postgres
-      OPENFGA_DATASTORE_URI: postgres://ndiscord:ndiscord@timescaledb:5432/ndiscord?sslmode=disable
-      OPENFGA_PLAYGROUND_ENABLED: "true"
-    depends_on:
-      timescaledb:
-        condition: service_healthy
 
   grafana:
     image: grafana/grafana:latest
@@ -238,17 +219,6 @@ services:
       nats:
         condition: service_healthy
 
-  nui:
-    image: ghcr.io/nats-nui/nui:latest
-    container_name: ndiscord-nui
-    ports:
-      - "31311:31311"
-    volumes:
-      - nui_data:/db
-    depends_on:
-      nats:
-        condition: service_started
-    restart: unless-stopped
 
   livekit:
     image: livekit/livekit-server:latest
@@ -282,6 +252,5 @@ volumes:
   prometheus_data:
   loki_data:
   promtail_data:
-  nui_data:
   go_mod_cache:
   go_build_cache:

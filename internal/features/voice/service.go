@@ -37,16 +37,16 @@ type Service struct {
 	cfg        config.LiveKitConfig
 	roomClient *lksdk.RoomServiceClient
 	authz      *authz.Client
-	nats       *realtime.Hub
+	lpb        *realtime.LPubSub
 	redis      *redis.Client
 	dm         DMMembershipResolver
 	profile    UserProfileResolver
 }
 
-func NewService(cfg config.LiveKitConfig, nats *realtime.Hub, rdb *redis.Client, authzClient ...*authz.Client) *Service {
+func NewService(cfg config.LiveKitConfig, lpb *realtime.LPubSub, rdb *redis.Client, authzClient ...*authz.Client) *Service {
 	s := &Service{
 		cfg:   cfg,
-		nats:  nats,
+		lpb:   lpb,
 		redis: rdb,
 	}
 	if cfg.HTTPURL != "" && cfg.APIKey != "" && cfg.APISecret != "" {
@@ -71,8 +71,13 @@ func (s *Service) JoinChannel(ctx context.Context, userID, guildID, channelID st
 	if s.roomClient == nil {
 		return nil, ErrLiveKitUnavailable
 	}
-	if guildID != "" && s.authz != nil && !s.authz.CanViewChannel(ctx, userID, channelID) {
-		return nil, ErrInsufficientPermissions
+	// Voice joins gate on CONNECT (Discord's dedicated voice-join perm)
+	// rather than the channel-level "viewer" relation, so a role can
+	// see a voice channel without being allowed to join it.
+	if guildID != "" && s.authz != nil {
+		if !s.authz.CanViewChannel(ctx, userID, channelID) || !s.authz.CanConnect(ctx, userID, guildID) {
+			return nil, ErrInsufficientPermissions
+		}
 	}
 
 	roomName := channelID
@@ -167,12 +172,8 @@ type UserProfileResolver interface {
 	LookupBasicProfile(ctx context.Context, userID string) (username, avatarURL string)
 }
 
-// SetProfileResolver wires the user profile resolver.
 func (s *Service) SetProfileResolver(r UserProfileResolver) { s.profile = r }
 
-// buildToken returns a signed JWT granting the user publish+subscribe rights
-// in the given room for the configured TTL. User metadata (profile JSON) is
-// embedded so other participants see it immediately on join.
 func (s *Service) buildToken(room, identity string) (string, error) {
 	at := auth.NewAccessToken(s.cfg.APIKey, s.cfg.APISecret)
 	grant := &auth.VideoGrant{
@@ -185,9 +186,6 @@ func (s *Service) buildToken(room, identity string) (string, error) {
 		SetIdentity(identity).
 		SetValidFor(tokenTTL)
 
-	// Embed user profile as participant metadata — LiveKit stores it and
-	// the webhook relays it, so every client sees username + avatar
-	// without extra lookups.
 	if s.profile != nil {
 		username, avatarURL := s.profile.LookupBasicProfile(context.Background(), identity)
 		meta := fmt.Sprintf(`{"userId":"%s","username":"%s","avatarUrl":"%s"}`, identity, username, avatarURL)
@@ -420,7 +418,8 @@ func (s *Service) StartDMCall(ctx context.Context, callerID, channelID string, v
 		Timestamp: timestamppb.Now(),
 	}
 	for _, mid := range members {
-		_ = s.nats.Publish(realtime.DmCall(mid), payload)
+		// _ = s.lpb.Publish(realtime.DmCall(mid), payload)
+		realtime.Publish(s.lpb, realtime.DmCall(mid), payload)
 	}
 
 	return &JoinChannelResult{
@@ -451,8 +450,6 @@ func (s *Service) JoinDMCall(ctx context.Context, userID, channelID string, vide
 	}
 
 	roomName := channelID
-	// CreateRoom is idempotent — caller may have already created it but the
-	// room could also have been reaped if empty, so re-create defensively.
 	if _, err := s.roomClient.CreateRoom(ctx, &livekit.CreateRoomRequest{
 		Name:            roomName,
 		EmptyTimeout:    60,
@@ -475,7 +472,7 @@ func (s *Service) JoinDMCall(ctx context.Context, userID, channelID string, vide
 		Timestamp:     timestamppb.Now(),
 	}
 	for _, mid := range members {
-		_ = s.nats.Publish(realtime.DmCall(mid), payload)
+		realtime.Publish(s.lpb, realtime.DmCall(mid), payload)
 	}
 
 	return &JoinChannelResult{
@@ -508,7 +505,8 @@ func (s *Service) RejectDMCall(ctx context.Context, userID, channelID string) er
 		Timestamp:     timestamppb.Now(),
 	}
 	for _, mid := range members {
-		_ = s.nats.Publish(realtime.DmCall(mid), payload)
+		// _ = s.lpb.Publish(realtime.DmCall(mid), payload)
+		realtime.Publish(s.lpb, realtime.DmCall(mid), payload)
 	}
 	return nil
 }
@@ -543,7 +541,8 @@ func (s *Service) LeaveDMCall(ctx context.Context, userID, channelID string) err
 		Timestamp:     timestamppb.Now(),
 	}
 	for _, mid := range members {
-		_ = s.nats.Publish(realtime.DmCall(mid), leftPayload)
+		// _ = s.lpb.Publish(realtime.DmCall(mid), leftPayload)
+		realtime.Publish(s.lpb, realtime.DmCall(mid), leftPayload)
 	}
 
 	// If the room is now empty, emit a terminal "call_ended" event so
@@ -558,7 +557,8 @@ func (s *Service) LeaveDMCall(ctx context.Context, userID, channelID string) err
 			Timestamp: timestamppb.Now(),
 		}
 		for _, mid := range members {
-			_ = s.nats.Publish(realtime.DmCall(mid), endPayload)
+			// _ = s.lpb.Publish(realtime.DmCall(mid), endPayload)
+			realtime.Publish(s.lpb, realtime.DmCall(mid), endPayload)
 		}
 	}
 

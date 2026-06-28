@@ -2,12 +2,14 @@ package voice
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	voicev1 "github.com/ananddub/ndiscord_backend/gen/voice/v1"
+	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
 	"github.com/ananddub/ndiscord_backend/internal/shared/middleware"
 )
 
@@ -33,13 +35,14 @@ func (h *Handler) JoinChannel(ctx context.Context, req *voicev1.JoinChannelReque
 		}
 		return nil, status.Errorf(codes.Internal, "failed to join channel: %v", err)
 	}
-
-	return &voicev1.JoinChannelResponse{
+	value := &voicev1.JoinChannelResponse{
 		Url:       result.URL,
 		Token:     result.Token,
 		Room:      result.Room,
 		ExpiresIn: result.ExpiresIn,
-	}, nil
+	}
+
+	return value, nil
 }
 
 func (h *Handler) LeaveChannel(ctx context.Context, req *voicev1.LeaveChannelRequest) (*voicev1.LeaveChannelResponse, error) {
@@ -66,12 +69,18 @@ func (h *Handler) StartDMCall(ctx context.Context, req *voicev1.StartDMCallReque
 	if err != nil {
 		return nil, mapDMCallError(err)
 	}
-	return &voicev1.StartDMCallResponse{
+	value := &voicev1.StartDMCallResponse{
 		Url:       result.URL,
 		Token:     result.Token,
 		Room:      result.Room,
 		ExpiresIn: result.ExpiresIn,
-	}, nil
+	}
+	v, err := json.Marshal(value)
+	if err != nil {
+		return value, nil
+	}
+	logger.Log.Info().Str("Start Dm Channel", "livikit").RawJSON("json:", v).Str("url", value.Url)
+	return value, nil
 }
 
 // JoinDMCall accepts a ringing DM call.
@@ -85,12 +94,18 @@ func (h *Handler) JoinDMCall(ctx context.Context, req *voicev1.JoinDMCallRequest
 	if err != nil {
 		return nil, mapDMCallError(err)
 	}
-	return &voicev1.JoinDMCallResponse{
+	value, err := &voicev1.JoinDMCallResponse{
 		Url:       result.URL,
 		Token:     result.Token,
 		Room:      result.Room,
 		ExpiresIn: result.ExpiresIn,
 	}, nil
+	v, err := json.Marshal(value)
+	if err != nil {
+		return value, nil
+	}
+	logger.Log.Info().Str("JoinDmCall", "livikit").RawJSON("json:", v).Str("url", value.Url)
+	return value, nil
 }
 
 // RejectDMCall declines a ringing DM call.

@@ -17,18 +17,17 @@ const UserIDKey contextKey = "user_id"
 
 // Public methods that don't require auth
 var publicMethods = map[string]bool{
-	"/auth.v1.AuthService/Register":      true,
-	"/auth.v1.AuthService/VerifyOTP":     true,
-	"/auth.v1.AuthService/ResendOTP":     true,
-	"/auth.v1.AuthService/Login":         true,
-	"/auth.v1.AuthService/RefreshToken":  true,
-	"/auth.v1.AuthService/ValidateToken": true,
+	"/auth.v1.AuthService/Register":        true,
+	"/auth.v1.AuthService/VerifyOTP":       true,
+	"/auth.v1.AuthService/ResendOTP":       true,
+	"/auth.v1.AuthService/Login":           true,
+	"/auth.v1.AuthService/RefreshToken":    true,
+	"/auth.v1.AuthService/ValidateToken":   true,
 	"/guild.v1.GuildService/PreviewInvite": true,
 }
 
 func AuthInterceptor(secret string) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		// Skip auth for public methods and gRPC reflection
 		if publicMethods[info.FullMethod] || strings.HasPrefix(info.FullMethod, "/grpc.reflection.") || strings.HasPrefix(info.FullMethod, "/grpc.health.") {
 			return handler(ctx, req)
 		}

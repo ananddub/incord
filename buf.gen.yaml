@@ -1,10 +1,31 @@
 version: v2
 plugins:
+  # Core Go types for every proto message.
   - remote: buf.build/protocolbuffers/go
     out: gen
     opt:
       - paths=source_relative
+
+  # gRPC server/client stubs.
   - remote: buf.build/grpc/go
     out: gen
     opt:
       - paths=source_relative
+
+  # REST reverse-proxy generator: produces a <service>.pb.gw.go per
+  # proto that maps HTTP requests to gRPC calls. Requires explicit
+  # google.api.http annotations on every RPC (no unbound-method
+  # fallback — we choose proper REST verbs + URL shapes by hand).
+  - remote: buf.build/grpc-ecosystem/gateway
+    out: gen
+    opt:
+      - paths=source_relative
+
+  # OpenAPI / Swagger spec generator. Merged into a single api.swagger.json
+  # so a single `/swagger.json` endpoint + Swagger UI can serve them all.
+  - remote: buf.build/grpc-ecosystem/openapiv2
+    out: gen/openapi
+    opt:
+      - allow_merge=true
+      - merge_file_name=api
+      - json_names_for_fields=true

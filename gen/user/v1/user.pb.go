@@ -8,6 +8,7 @@ package userv1
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -76,22 +77,19 @@ func (FriendshipStatus) EnumDescriptor() ([]byte, []int) {
 }
 
 type User struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// Unique identity handle in "name#1234" format. Changeable but must stay unique.
-	Username  string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
-	Email     string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
-	AvatarUrl string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	Bio       string                 `protobuf:"bytes,5,opt,name=bio,proto3" json:"bio,omitempty"`
-	Status    string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
-	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	// Hex color (e.g. "#5865F2") used as the profile/card background.
-	BackgroundColor string `protobuf:"bytes,9,opt,name=background_color,json=backgroundColor,proto3" json:"background_color,omitempty"`
-	// Freely changeable display name shown in UI. Not unique.
-	DisplayName   string `protobuf:"bytes,10,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Username        string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	Email           string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
+	AvatarUrl       string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	Bio             string                 `protobuf:"bytes,5,opt,name=bio,proto3" json:"bio,omitempty"`
+	Status          string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
+	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	BackgroundColor string                 `protobuf:"bytes,9,opt,name=background_color,json=backgroundColor,proto3" json:"background_color,omitempty"`
+	DisplayName     string                 `protobuf:"bytes,10,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *User) Reset() {
@@ -283,13 +281,12 @@ func (x *GetUserResponse) GetUser() *User {
 }
 
 type UpdateUserRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	AvatarUrl *string                `protobuf:"bytes,2,opt,name=avatar_url,json=avatarUrl,proto3,oneof" json:"avatar_url,omitempty"`
-	Bio       *string                `protobuf:"bytes,3,opt,name=bio,proto3,oneof" json:"bio,omitempty"`
-	Status    *string                `protobuf:"bytes,4,opt,name=status,proto3,oneof" json:"status,omitempty"`
-	// Hex color like "#5865F2". Must be 4 or 7 chars starting with '#'.
-	BackgroundColor *string `protobuf:"bytes,5,opt,name=background_color,json=backgroundColor,proto3,oneof" json:"background_color,omitempty"`
-	DisplayName     *string `protobuf:"bytes,6,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	AvatarUrl       *string                `protobuf:"bytes,2,opt,name=avatar_url,json=avatarUrl,proto3,oneof" json:"avatar_url,omitempty"`
+	Bio             *string                `protobuf:"bytes,3,opt,name=bio,proto3,oneof" json:"bio,omitempty"`
+	Status          *string                `protobuf:"bytes,4,opt,name=status,proto3,oneof" json:"status,omitempty"`
+	BackgroundColor *string                `protobuf:"bytes,5,opt,name=background_color,json=backgroundColor,proto3,oneof" json:"background_color,omitempty"`
+	DisplayName     *string                `protobuf:"bytes,6,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -404,9 +401,8 @@ func (x *UpdateUserResponse) GetUser() *User {
 }
 
 type UpdateUsernameRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Base name only. Server appends a random 4-digit discriminator.
-	Username      string `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -773,9 +769,8 @@ func (*DeleteUserResponse) Descriptor() ([]byte, []int) {
 }
 
 type GetUserByUsernameRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Full handle in "name#1234" format.
-	Username      string `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -977,8 +972,10 @@ type Friendship struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	FriendId      string                 `protobuf:"bytes,2,opt,name=friend_id,json=friendId,proto3" json:"friend_id,omitempty"`
-	Status        FriendshipStatus       `protobuf:"varint,3,opt,name=status,proto3,enum=user.v1.FriendshipStatus" json:"status,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	AvatarUrl     string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	Status        FriendshipStatus       `protobuf:"varint,5,opt,name=status,proto3,enum=user.v1.FriendshipStatus" json:"status,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1023,6 +1020,20 @@ func (x *Friendship) GetUserId() string {
 func (x *Friendship) GetFriendId() string {
 	if x != nil {
 		return x.FriendId
+	}
+	return ""
+}
+
+func (x *Friendship) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *Friendship) GetAvatarUrl() string {
+	if x != nil {
+		return x.AvatarUrl
 	}
 	return ""
 }
@@ -1299,9 +1310,8 @@ func (*DeclineFriendRequestResponse) Descriptor() ([]byte, []int) {
 }
 
 type CancelFriendRequestRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// The user the pending request was sent to.
-	TargetUserId  string `protobuf:"bytes,1,opt,name=target_user_id,json=targetUserId,proto3" json:"target_user_id,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TargetUserId  string                 `protobuf:"bytes,1,opt,name=target_user_id,json=targetUserId,proto3" json:"target_user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1871,7 +1881,7 @@ var File_user_v1_user_proto protoreflect.FileDescriptor
 
 const file_user_v1_user_proto_rawDesc = "" +
 	"\n" +
-	"\x12user/v1/user.proto\x12\auser.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bbuf/validate/validate.proto\"\xd5\x02\n" +
+	"\x12user/v1/user.proto\x12\auser.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1bbuf/validate/validate.proto\"\xd5\x02\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x14\n" +
@@ -1937,14 +1947,17 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\x06offset\x18\x03 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x06offset\"P\n" +
 	"\x13SearchUsersResponse\x12#\n" +
 	"\x05users\x18\x01 \x03(\v2\r.user.v1.UserR\x05users\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x05R\x05total\"\xb0\x01\n" +
+	"\x05total\x18\x02 \x01(\x05R\x05total\"\xeb\x01\n" +
 	"\n" +
 	"Friendship\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
-	"\tfriend_id\x18\x02 \x01(\tR\bfriendId\x121\n" +
-	"\x06status\x18\x03 \x01(\x0e2\x19.user.v1.FriendshipStatusR\x06status\x129\n" +
+	"\tfriend_id\x18\x02 \x01(\tR\bfriendId\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"^\n" +
+	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x121\n" +
+	"\x06status\x18\x05 \x01(\x0e2\x19.user.v1.FriendshipStatusR\x06status\x129\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"^\n" +
 	"\x18SendFriendRequestRequest\x12B\n" +
 	"\x0ftarget_username\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^.{2,32}#[0-9]{4}$R\x0etargetUsername\"P\n" +
 	"\x19SendFriendRequestResponse\x123\n" +
@@ -1986,28 +1999,29 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\x1dFRIENDSHIP_STATUS_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19FRIENDSHIP_STATUS_PENDING\x10\x01\x12\x1e\n" +
 	"\x1aFRIENDSHIP_STATUS_ACCEPTED\x10\x02\x12\x1d\n" +
-	"\x19FRIENDSHIP_STATUS_BLOCKED\x10\x032\xce\v\n" +
-	"\vUserService\x12<\n" +
-	"\aGetUser\x12\x17.user.v1.GetUserRequest\x1a\x18.user.v1.GetUserResponse\x12E\n" +
+	"\x19FRIENDSHIP_STATUS_BLOCKED\x10\x032\xb0\x10\n" +
+	"\vUserService\x12Y\n" +
+	"\aGetUser\x12\x17.user.v1.GetUserRequest\x1a\x18.user.v1.GetUserResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/users/{user_id}\x12^\n" +
 	"\n" +
-	"UpdateUser\x12\x1a.user.v1.UpdateUserRequest\x1a\x1b.user.v1.UpdateUserResponse\x12Q\n" +
-	"\x0eUpdateUsername\x12\x1e.user.v1.UpdateUsernameRequest\x1a\x1f.user.v1.UpdateUsernameResponse\x12K\n" +
-	"\fUpdateStatus\x12\x1c.user.v1.UpdateStatusRequest\x1a\x1d.user.v1.UpdateStatusResponse\x12W\n" +
-	"\x10UploadUserAvatar\x12 .user.v1.UploadUserAvatarRequest\x1a!.user.v1.UploadUserAvatarResponse\x12E\n" +
+	"UpdateUser\x12\x1a.user.v1.UpdateUserRequest\x1a\x1b.user.v1.UpdateUserResponse\"\x17\x82\xd3\xe4\x93\x02\x11:\x01*2\f/v1/users/me\x12s\n" +
+	"\x0eUpdateUsername\x12\x1e.user.v1.UpdateUsernameRequest\x1a\x1f.user.v1.UpdateUsernameResponse\" \x82\xd3\xe4\x93\x02\x1a:\x01*2\x15/v1/users/me/username\x12k\n" +
+	"\fUpdateStatus\x12\x1c.user.v1.UpdateStatusRequest\x1a\x1d.user.v1.UpdateStatusResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*2\x13/v1/users/me/status\x12w\n" +
+	"\x10UploadUserAvatar\x12 .user.v1.UploadUserAvatarRequest\x1a!.user.v1.UploadUserAvatarResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/v1/users/me/avatar\x12[\n" +
 	"\n" +
-	"DeleteUser\x12\x1a.user.v1.DeleteUserRequest\x1a\x1b.user.v1.DeleteUserResponse\x12Z\n" +
-	"\x11GetUserByUsername\x12!.user.v1.GetUserByUsernameRequest\x1a\".user.v1.GetUserByUsernameResponse\x12H\n" +
-	"\vSearchUsers\x12\x1b.user.v1.SearchUsersRequest\x1a\x1c.user.v1.SearchUsersResponse\x12Z\n" +
-	"\x11SendFriendRequest\x12!.user.v1.SendFriendRequestRequest\x1a\".user.v1.SendFriendRequestResponse\x12`\n" +
-	"\x13AcceptFriendRequest\x12#.user.v1.AcceptFriendRequestRequest\x1a$.user.v1.AcceptFriendRequestResponse\x12c\n" +
-	"\x14DeclineFriendRequest\x12$.user.v1.DeclineFriendRequestRequest\x1a%.user.v1.DeclineFriendRequestResponse\x12`\n" +
-	"\x13CancelFriendRequest\x12#.user.v1.CancelFriendRequestRequest\x1a$.user.v1.CancelFriendRequestResponse\x12K\n" +
-	"\fRemoveFriend\x12\x1c.user.v1.RemoveFriendRequest\x1a\x1d.user.v1.RemoveFriendResponse\x12B\n" +
-	"\tBlockUser\x12\x19.user.v1.BlockUserRequest\x1a\x1a.user.v1.BlockUserResponse\x12H\n" +
-	"\vUnblockUser\x12\x1b.user.v1.UnblockUserRequest\x1a\x1c.user.v1.UnblockUserResponse\x12H\n" +
-	"\vListFriends\x12\x1b.user.v1.ListFriendsRequest\x1a\x1c.user.v1.ListFriendsResponse\x12`\n" +
-	"\x13ListPendingRequests\x12#.user.v1.ListPendingRequestsRequest\x1a$.user.v1.ListPendingRequestsResponse\x12H\n" +
-	"\vListBlocked\x12\x1b.user.v1.ListBlockedRequest\x1a\x1c.user.v1.ListBlockedResponseB9Z7github.com/ananddub/ndiscord_backend/gen/user/v1;userv1b\x06proto3"
+	"DeleteUser\x12\x1a.user.v1.DeleteUserRequest\x1a\x1b.user.v1.DeleteUserResponse\"\x14\x82\xd3\xe4\x93\x02\x0e*\f/v1/users/me\x12\x84\x01\n" +
+	"\x11GetUserByUsername\x12!.user.v1.GetUserByUsernameRequest\x1a\".user.v1.GetUserByUsernameResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /v1/users/by-username/{username}\x12b\n" +
+	"\vSearchUsers\x12\x1b.user.v1.SearchUsersRequest\x1a\x1c.user.v1.SearchUsersResponse\"\x18\x82\xd3\xe4\x93\x02\x12\x12\x10/v1/users/search\x12{\n" +
+	"\x11SendFriendRequest\x12!.user.v1.SendFriendRequestRequest\x1a\".user.v1.SendFriendRequestResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/v1/friends/requests\x12\x93\x01\n" +
+	"\x13AcceptFriendRequest\x12#.user.v1.AcceptFriendRequestRequest\x1a$.user.v1.AcceptFriendRequestResponse\"1\x82\xd3\xe4\x93\x02+:\x01*\"&/v1/friends/{requester_user_id}/accept\x12\x97\x01\n" +
+	"\x14DeclineFriendRequest\x12$.user.v1.DeclineFriendRequestRequest\x1a%.user.v1.DeclineFriendRequestResponse\"2\x82\xd3\xe4\x93\x02,:\x01*\"'/v1/friends/{requester_user_id}/decline\x12\x90\x01\n" +
+	"\x13CancelFriendRequest\x12#.user.v1.CancelFriendRequestRequest\x1a$.user.v1.CancelFriendRequestResponse\".\x82\xd3\xe4\x93\x02(:\x01*\"#/v1/friends/{target_user_id}/cancel\x12l\n" +
+	"\fRemoveFriend\x12\x1c.user.v1.RemoveFriendRequest\x1a\x1d.user.v1.RemoveFriendResponse\"\x1f\x82\xd3\xe4\x93\x02\x19*\x17/v1/friends/{friend_id}\x12j\n" +
+	"\tBlockUser\x12\x19.user.v1.BlockUserRequest\x1a\x1a.user.v1.BlockUserResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\x1a\x1b/v1/blocks/{target_user_id}\x12m\n" +
+	"\vUnblockUser\x12\x1b.user.v1.UnblockUserRequest\x1a\x1c.user.v1.UnblockUserResponse\"#\x82\xd3\xe4\x93\x02\x1d*\x1b/v1/blocks/{target_user_id}\x12]\n" +
+	"\vListFriends\x12\x1b.user.v1.ListFriendsRequest\x1a\x1c.user.v1.ListFriendsResponse\"\x13\x82\xd3\xe4\x93\x02\r\x12\v/v1/friends\x12}\n" +
+	"\x13ListPendingRequests\x12#.user.v1.ListPendingRequestsRequest\x1a$.user.v1.ListPendingRequestsResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/friends/pending\x12\\\n" +
+	"\vListBlocked\x12\x1b.user.v1.ListBlockedRequest\x1a\x1c.user.v1.ListBlockedResponse\"\x12\x82\xd3\xe4\x93\x02\f\x12\n" +
+	"/v1/blocksB9Z7github.com/ananddub/ndiscord_backend/gen/user/v1;userv1b\x06proto3"
 
 var (
 	file_user_v1_user_proto_rawDescOnce sync.Once

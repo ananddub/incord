@@ -18,23 +18,25 @@ const presenceKeyPrefix = "presence:"
 
 // UserInfoResolver returns the basic profile of a user (username + avatar URL)
 // so presence events can be enriched without a hard dependency on the user
-// feature package.
+// feature package. GetStatusIntent is the user's persisted status (their
+// last-known preference) used to restore broadcast state on reconnect.
 type UserInfoResolver interface {
 	LookupBasicProfile(ctx context.Context, userID string) (username, avatarURL string)
+	GetStatusIntent(ctx context.Context, userID string) (status, customStatus string)
 }
 
 // Service contains the business logic for the presence feature.
 type Service struct {
 	redis    *redis.Client
-	nats     *realtime.Hub
+	lpb      *realtime.LPubSub
 	resolver UserInfoResolver
 }
 
 // NewService creates a new presence Service.
-func NewService(rdb *redis.Client, nats *realtime.Hub) *Service {
+func NewService(rdb *redis.Client, lpb *realtime.LPubSub) *Service {
 	return &Service{
 		redis: rdb,
-		nats:  nats,
+		lpb:   lpb,
 	}
 }
 
@@ -64,7 +66,7 @@ var statusToStream = map[presencev1.Status]streamv1.PresenceStatus{
 // subject. StreamFriendActivity subscribers on this subject (the user's
 // friends) will receive it.
 func (s *Service) publishPresence(ctx context.Context, userID string, status presencev1.Status, customStatus string) {
-	if s.nats == nil {
+	if s.lpb == nil {
 		return
 	}
 	payload := &streamv1.FriendActivityEvent{
@@ -79,11 +81,9 @@ func (s *Service) publishPresence(ctx context.Context, userID string, status pre
 		payload.Username = username
 		payload.AvatarUrl = avatarURL
 	}
-	_ = s.nats.Publish(realtime.FriendActivity(userID), payload)
+	_ = realtime.Publish(s.lpb, realtime.FriendActivity(userID), payload)
 }
 
-// UpdatePresence sets the presence for a user in Redis and broadcasts the
-// event on the user's FriendActivity subject.
 func (s *Service) UpdatePresence(ctx context.Context, userID string, st presencev1.Status, customStatus string) (*presencev1.Presence, error) {
 	key := presenceKeyPrefix + userID
 	now := time.Now()
@@ -110,13 +110,45 @@ func (s *Service) UpdatePresence(ctx context.Context, userID string, st presence
 	return p, nil
 }
 
-// SetOffline sets the user's presence to OFFLINE and publishes the event.
 func (s *Service) SetOffline(ctx context.Context, userID string) error {
 	_, err := s.UpdatePresence(ctx, userID, presencev1.Status_STATUS_OFFLINE, "")
 	return err
 }
 
-// GetPresence retrieves the presence for a single user from Redis.
+var stringToStatus = map[string]presencev1.Status{
+	"online":  presencev1.Status_STATUS_ONLINE,
+	"idle":    presencev1.Status_STATUS_IDLE,
+	"dnd":     presencev1.Status_STATUS_DND,
+	"offline": presencev1.Status_STATUS_OFFLINE,
+}
+
+func (s *Service) OnUserConnect(ctx context.Context, userID string) {
+	if s.resolver == nil {
+		return
+	}
+	status, custom := s.resolver.GetStatusIntent(ctx, userID)
+	st, ok := stringToStatus[status]
+	if !ok {
+		st = presencev1.Status_STATUS_ONLINE
+	}
+	_, _ = s.UpdatePresence(ctx, userID, st, custom)
+}
+
+func (s *Service) OnUserDisconnect(ctx context.Context, userID string) {
+	_ = s.SetOffline(ctx, userID)
+}
+
+func (s *Service) GetLiveStatus(ctx context.Context, userID string) (status, customStatus string) {
+	if s.redis == nil {
+		return "", ""
+	}
+	vals, err := s.redis.HGetAll(ctx, presenceKeyPrefix+userID).Result()
+	if err != nil || len(vals) == 0 {
+		return "offline", ""
+	}
+	return vals["status"], vals["custom_status"]
+}
+
 func (s *Service) GetPresence(ctx context.Context, userID string) (*presencev1.Presence, error) {
 	key := presenceKeyPrefix + userID
 
@@ -125,7 +157,6 @@ func (s *Service) GetPresence(ctx context.Context, userID string) (*presencev1.P
 		return nil, fmt.Errorf("failed to get presence: %w", err)
 	}
 
-	// If no data found, return offline status
 	if len(vals) == 0 {
 		return &presencev1.Presence{
 			UserId: userID,
@@ -136,7 +167,6 @@ func (s *Service) GetPresence(ctx context.Context, userID string) (*presencev1.P
 	return parsePresence(userID, vals), nil
 }
 
-// GetBulkPresence retrieves presence for multiple users.
 func (s *Service) GetBulkPresence(ctx context.Context, userIDs []string) ([]*presencev1.Presence, error) {
 	presences := make([]*presencev1.Presence, 0, len(userIDs))
 
@@ -166,7 +196,6 @@ func (s *Service) GetBulkPresence(ctx context.Context, userIDs []string) ([]*pre
 	return presences, nil
 }
 
-// parsePresence converts a Redis hash map into a Presence proto message.
 func parsePresence(userID string, vals map[string]string) *presencev1.Presence {
 	p := &presencev1.Presence{
 		UserId: userID,
@@ -182,7 +211,7 @@ func parsePresence(userID string, vals map[string]string) *presencev1.Presence {
 		if st, found := strToStatus[statusVal]; found {
 			p.Status = st
 		} else if v, err := strconv.ParseInt(statusVal, 10, 32); err == nil {
-			p.Status = presencev1.Status(v) // backwards compat with old int format
+			p.Status = presencev1.Status(v)
 		}
 	}
 

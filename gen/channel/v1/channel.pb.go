@@ -8,6 +8,7 @@ package channelv1
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -22,6 +23,104 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
+
+type OverrideTargetType int32
+
+const (
+	OverrideTargetType_OVERRIDE_TARGET_UNSPECIFIED OverrideTargetType = 0
+	OverrideTargetType_OVERRIDE_TARGET_ROLE        OverrideTargetType = 1
+	OverrideTargetType_OVERRIDE_TARGET_USER        OverrideTargetType = 2
+)
+
+// Enum value maps for OverrideTargetType.
+var (
+	OverrideTargetType_name = map[int32]string{
+		0: "OVERRIDE_TARGET_UNSPECIFIED",
+		1: "OVERRIDE_TARGET_ROLE",
+		2: "OVERRIDE_TARGET_USER",
+	}
+	OverrideTargetType_value = map[string]int32{
+		"OVERRIDE_TARGET_UNSPECIFIED": 0,
+		"OVERRIDE_TARGET_ROLE":        1,
+		"OVERRIDE_TARGET_USER":        2,
+	}
+)
+
+func (x OverrideTargetType) Enum() *OverrideTargetType {
+	p := new(OverrideTargetType)
+	*p = x
+	return p
+}
+
+func (x OverrideTargetType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (OverrideTargetType) Descriptor() protoreflect.EnumDescriptor {
+	return file_channel_v1_channel_proto_enumTypes[0].Descriptor()
+}
+
+func (OverrideTargetType) Type() protoreflect.EnumType {
+	return &file_channel_v1_channel_proto_enumTypes[0]
+}
+
+func (x OverrideTargetType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use OverrideTargetType.Descriptor instead.
+func (OverrideTargetType) EnumDescriptor() ([]byte, []int) {
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{0}
+}
+
+type OverrideEffect int32
+
+const (
+	OverrideEffect_OVERRIDE_EFFECT_UNSPECIFIED OverrideEffect = 0
+	OverrideEffect_OVERRIDE_EFFECT_ALLOW       OverrideEffect = 1
+	OverrideEffect_OVERRIDE_EFFECT_DENY        OverrideEffect = 2
+)
+
+// Enum value maps for OverrideEffect.
+var (
+	OverrideEffect_name = map[int32]string{
+		0: "OVERRIDE_EFFECT_UNSPECIFIED",
+		1: "OVERRIDE_EFFECT_ALLOW",
+		2: "OVERRIDE_EFFECT_DENY",
+	}
+	OverrideEffect_value = map[string]int32{
+		"OVERRIDE_EFFECT_UNSPECIFIED": 0,
+		"OVERRIDE_EFFECT_ALLOW":       1,
+		"OVERRIDE_EFFECT_DENY":        2,
+	}
+)
+
+func (x OverrideEffect) Enum() *OverrideEffect {
+	p := new(OverrideEffect)
+	*p = x
+	return p
+}
+
+func (x OverrideEffect) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (OverrideEffect) Descriptor() protoreflect.EnumDescriptor {
+	return file_channel_v1_channel_proto_enumTypes[1].Descriptor()
+}
+
+func (OverrideEffect) Type() protoreflect.EnumType {
+	return &file_channel_v1_channel_proto_enumTypes[1]
+}
+
+func (x OverrideEffect) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use OverrideEffect.Descriptor instead.
+func (OverrideEffect) EnumDescriptor() ([]byte, []int) {
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{1}
+}
 
 type ChannelType int32
 
@@ -77,11 +176,11 @@ func (x ChannelType) String() string {
 }
 
 func (ChannelType) Descriptor() protoreflect.EnumDescriptor {
-	return file_channel_v1_channel_proto_enumTypes[0].Descriptor()
+	return file_channel_v1_channel_proto_enumTypes[2].Descriptor()
 }
 
 func (ChannelType) Type() protoreflect.EnumType {
-	return &file_channel_v1_channel_proto_enumTypes[0]
+	return &file_channel_v1_channel_proto_enumTypes[2]
 }
 
 func (x ChannelType) Number() protoreflect.EnumNumber {
@@ -90,7 +189,75 @@ func (x ChannelType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ChannelType.Descriptor instead.
 func (ChannelType) EnumDescriptor() ([]byte, []int) {
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{2}
+}
+
+type ChannelOverride struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TargetType    string                 `protobuf:"bytes,1,opt,name=target_type,json=targetType,proto3" json:"target_type,omitempty"` // "role" or "user"
+	TargetId      string                 `protobuf:"bytes,2,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	Permission    string                 `protobuf:"bytes,3,opt,name=permission,proto3" json:"permission,omitempty"` // Discord name, e.g. "SEND_MESSAGES"
+	Effect        string                 `protobuf:"bytes,4,opt,name=effect,proto3" json:"effect,omitempty"`         // "allow" or "deny"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChannelOverride) Reset() {
+	*x = ChannelOverride{}
+	mi := &file_channel_v1_channel_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChannelOverride) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChannelOverride) ProtoMessage() {}
+
+func (x *ChannelOverride) ProtoReflect() protoreflect.Message {
+	mi := &file_channel_v1_channel_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChannelOverride.ProtoReflect.Descriptor instead.
+func (*ChannelOverride) Descriptor() ([]byte, []int) {
 	return file_channel_v1_channel_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ChannelOverride) GetTargetType() string {
+	if x != nil {
+		return x.TargetType
+	}
+	return ""
+}
+
+func (x *ChannelOverride) GetTargetId() string {
+	if x != nil {
+		return x.TargetId
+	}
+	return ""
+}
+
+func (x *ChannelOverride) GetPermission() string {
+	if x != nil {
+		return x.Permission
+	}
+	return ""
+}
+
+func (x *ChannelOverride) GetEffect() string {
+	if x != nil {
+		return x.Effect
+	}
+	return ""
 }
 
 type Channel struct {
@@ -109,7 +276,7 @@ type Channel struct {
 
 func (x *Channel) Reset() {
 	*x = Channel{}
-	mi := &file_channel_v1_channel_proto_msgTypes[0]
+	mi := &file_channel_v1_channel_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -121,7 +288,7 @@ func (x *Channel) String() string {
 func (*Channel) ProtoMessage() {}
 
 func (x *Channel) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[0]
+	mi := &file_channel_v1_channel_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -134,7 +301,7 @@ func (x *Channel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Channel.ProtoReflect.Descriptor instead.
 func (*Channel) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{0}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Channel) GetId() string {
@@ -193,6 +360,310 @@ func (x *Channel) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+type SetChannelOverrideRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	TargetType    string                 `protobuf:"bytes,2,opt,name=target_type,json=targetType,proto3" json:"target_type,omitempty"`
+	TargetId      string                 `protobuf:"bytes,3,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	Permission    string                 `protobuf:"bytes,4,opt,name=permission,proto3" json:"permission,omitempty"`
+	Effect        string                 `protobuf:"bytes,5,opt,name=effect,proto3" json:"effect,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetChannelOverrideRequest) Reset() {
+	*x = SetChannelOverrideRequest{}
+	mi := &file_channel_v1_channel_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetChannelOverrideRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetChannelOverrideRequest) ProtoMessage() {}
+
+func (x *SetChannelOverrideRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_channel_v1_channel_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetChannelOverrideRequest.ProtoReflect.Descriptor instead.
+func (*SetChannelOverrideRequest) Descriptor() ([]byte, []int) {
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *SetChannelOverrideRequest) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+func (x *SetChannelOverrideRequest) GetTargetType() string {
+	if x != nil {
+		return x.TargetType
+	}
+	return ""
+}
+
+func (x *SetChannelOverrideRequest) GetTargetId() string {
+	if x != nil {
+		return x.TargetId
+	}
+	return ""
+}
+
+func (x *SetChannelOverrideRequest) GetPermission() string {
+	if x != nil {
+		return x.Permission
+	}
+	return ""
+}
+
+func (x *SetChannelOverrideRequest) GetEffect() string {
+	if x != nil {
+		return x.Effect
+	}
+	return ""
+}
+
+type SetChannelOverrideResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetChannelOverrideResponse) Reset() {
+	*x = SetChannelOverrideResponse{}
+	mi := &file_channel_v1_channel_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetChannelOverrideResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetChannelOverrideResponse) ProtoMessage() {}
+
+func (x *SetChannelOverrideResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_channel_v1_channel_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetChannelOverrideResponse.ProtoReflect.Descriptor instead.
+func (*SetChannelOverrideResponse) Descriptor() ([]byte, []int) {
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{3}
+}
+
+type DeleteChannelOverrideRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	TargetType    string                 `protobuf:"bytes,2,opt,name=target_type,json=targetType,proto3" json:"target_type,omitempty"`
+	TargetId      string                 `protobuf:"bytes,3,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	Permission    string                 `protobuf:"bytes,4,opt,name=permission,proto3" json:"permission,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteChannelOverrideRequest) Reset() {
+	*x = DeleteChannelOverrideRequest{}
+	mi := &file_channel_v1_channel_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteChannelOverrideRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteChannelOverrideRequest) ProtoMessage() {}
+
+func (x *DeleteChannelOverrideRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_channel_v1_channel_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteChannelOverrideRequest.ProtoReflect.Descriptor instead.
+func (*DeleteChannelOverrideRequest) Descriptor() ([]byte, []int) {
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *DeleteChannelOverrideRequest) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+func (x *DeleteChannelOverrideRequest) GetTargetType() string {
+	if x != nil {
+		return x.TargetType
+	}
+	return ""
+}
+
+func (x *DeleteChannelOverrideRequest) GetTargetId() string {
+	if x != nil {
+		return x.TargetId
+	}
+	return ""
+}
+
+func (x *DeleteChannelOverrideRequest) GetPermission() string {
+	if x != nil {
+		return x.Permission
+	}
+	return ""
+}
+
+type DeleteChannelOverrideResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteChannelOverrideResponse) Reset() {
+	*x = DeleteChannelOverrideResponse{}
+	mi := &file_channel_v1_channel_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteChannelOverrideResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteChannelOverrideResponse) ProtoMessage() {}
+
+func (x *DeleteChannelOverrideResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_channel_v1_channel_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteChannelOverrideResponse.ProtoReflect.Descriptor instead.
+func (*DeleteChannelOverrideResponse) Descriptor() ([]byte, []int) {
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{5}
+}
+
+type ListChannelOverridesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListChannelOverridesRequest) Reset() {
+	*x = ListChannelOverridesRequest{}
+	mi := &file_channel_v1_channel_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListChannelOverridesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListChannelOverridesRequest) ProtoMessage() {}
+
+func (x *ListChannelOverridesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_channel_v1_channel_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListChannelOverridesRequest.ProtoReflect.Descriptor instead.
+func (*ListChannelOverridesRequest) Descriptor() ([]byte, []int) {
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ListChannelOverridesRequest) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+type ListChannelOverridesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Overrides     []*ChannelOverride     `protobuf:"bytes,1,rep,name=overrides,proto3" json:"overrides,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListChannelOverridesResponse) Reset() {
+	*x = ListChannelOverridesResponse{}
+	mi := &file_channel_v1_channel_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListChannelOverridesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListChannelOverridesResponse) ProtoMessage() {}
+
+func (x *ListChannelOverridesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_channel_v1_channel_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListChannelOverridesResponse.ProtoReflect.Descriptor instead.
+func (*ListChannelOverridesResponse) Descriptor() ([]byte, []int) {
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ListChannelOverridesResponse) GetOverrides() []*ChannelOverride {
+	if x != nil {
+		return x.Overrides
+	}
+	return nil
+}
+
 type CreateChannelRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	GuildId       string                 `protobuf:"bytes,1,opt,name=guild_id,json=guildId,proto3" json:"guild_id,omitempty"`
@@ -206,7 +677,7 @@ type CreateChannelRequest struct {
 
 func (x *CreateChannelRequest) Reset() {
 	*x = CreateChannelRequest{}
-	mi := &file_channel_v1_channel_proto_msgTypes[1]
+	mi := &file_channel_v1_channel_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -218,7 +689,7 @@ func (x *CreateChannelRequest) String() string {
 func (*CreateChannelRequest) ProtoMessage() {}
 
 func (x *CreateChannelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[1]
+	mi := &file_channel_v1_channel_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -231,7 +702,7 @@ func (x *CreateChannelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateChannelRequest.ProtoReflect.Descriptor instead.
 func (*CreateChannelRequest) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{1}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CreateChannelRequest) GetGuildId() string {
@@ -278,7 +749,7 @@ type CreateChannelResponse struct {
 
 func (x *CreateChannelResponse) Reset() {
 	*x = CreateChannelResponse{}
-	mi := &file_channel_v1_channel_proto_msgTypes[2]
+	mi := &file_channel_v1_channel_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -290,7 +761,7 @@ func (x *CreateChannelResponse) String() string {
 func (*CreateChannelResponse) ProtoMessage() {}
 
 func (x *CreateChannelResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[2]
+	mi := &file_channel_v1_channel_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -303,7 +774,7 @@ func (x *CreateChannelResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateChannelResponse.ProtoReflect.Descriptor instead.
 func (*CreateChannelResponse) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{2}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CreateChannelResponse) GetChannel() *Channel {
@@ -322,7 +793,7 @@ type GetChannelRequest struct {
 
 func (x *GetChannelRequest) Reset() {
 	*x = GetChannelRequest{}
-	mi := &file_channel_v1_channel_proto_msgTypes[3]
+	mi := &file_channel_v1_channel_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -334,7 +805,7 @@ func (x *GetChannelRequest) String() string {
 func (*GetChannelRequest) ProtoMessage() {}
 
 func (x *GetChannelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[3]
+	mi := &file_channel_v1_channel_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -347,7 +818,7 @@ func (x *GetChannelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetChannelRequest.ProtoReflect.Descriptor instead.
 func (*GetChannelRequest) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{3}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetChannelRequest) GetChannelId() string {
@@ -366,7 +837,7 @@ type GetChannelResponse struct {
 
 func (x *GetChannelResponse) Reset() {
 	*x = GetChannelResponse{}
-	mi := &file_channel_v1_channel_proto_msgTypes[4]
+	mi := &file_channel_v1_channel_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -378,7 +849,7 @@ func (x *GetChannelResponse) String() string {
 func (*GetChannelResponse) ProtoMessage() {}
 
 func (x *GetChannelResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[4]
+	mi := &file_channel_v1_channel_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -391,7 +862,7 @@ func (x *GetChannelResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetChannelResponse.ProtoReflect.Descriptor instead.
 func (*GetChannelResponse) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{4}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetChannelResponse) GetChannel() *Channel {
@@ -414,7 +885,7 @@ type UpdateChannelRequest struct {
 
 func (x *UpdateChannelRequest) Reset() {
 	*x = UpdateChannelRequest{}
-	mi := &file_channel_v1_channel_proto_msgTypes[5]
+	mi := &file_channel_v1_channel_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -426,7 +897,7 @@ func (x *UpdateChannelRequest) String() string {
 func (*UpdateChannelRequest) ProtoMessage() {}
 
 func (x *UpdateChannelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[5]
+	mi := &file_channel_v1_channel_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -439,7 +910,7 @@ func (x *UpdateChannelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateChannelRequest.ProtoReflect.Descriptor instead.
 func (*UpdateChannelRequest) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{5}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *UpdateChannelRequest) GetChannelId() string {
@@ -486,7 +957,7 @@ type UpdateChannelResponse struct {
 
 func (x *UpdateChannelResponse) Reset() {
 	*x = UpdateChannelResponse{}
-	mi := &file_channel_v1_channel_proto_msgTypes[6]
+	mi := &file_channel_v1_channel_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -498,7 +969,7 @@ func (x *UpdateChannelResponse) String() string {
 func (*UpdateChannelResponse) ProtoMessage() {}
 
 func (x *UpdateChannelResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[6]
+	mi := &file_channel_v1_channel_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -511,7 +982,7 @@ func (x *UpdateChannelResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateChannelResponse.ProtoReflect.Descriptor instead.
 func (*UpdateChannelResponse) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{6}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UpdateChannelResponse) GetChannel() *Channel {
@@ -530,7 +1001,7 @@ type DeleteChannelRequest struct {
 
 func (x *DeleteChannelRequest) Reset() {
 	*x = DeleteChannelRequest{}
-	mi := &file_channel_v1_channel_proto_msgTypes[7]
+	mi := &file_channel_v1_channel_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -542,7 +1013,7 @@ func (x *DeleteChannelRequest) String() string {
 func (*DeleteChannelRequest) ProtoMessage() {}
 
 func (x *DeleteChannelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[7]
+	mi := &file_channel_v1_channel_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -555,7 +1026,7 @@ func (x *DeleteChannelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteChannelRequest.ProtoReflect.Descriptor instead.
 func (*DeleteChannelRequest) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{7}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DeleteChannelRequest) GetChannelId() string {
@@ -573,7 +1044,7 @@ type DeleteChannelResponse struct {
 
 func (x *DeleteChannelResponse) Reset() {
 	*x = DeleteChannelResponse{}
-	mi := &file_channel_v1_channel_proto_msgTypes[8]
+	mi := &file_channel_v1_channel_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -585,7 +1056,7 @@ func (x *DeleteChannelResponse) String() string {
 func (*DeleteChannelResponse) ProtoMessage() {}
 
 func (x *DeleteChannelResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[8]
+	mi := &file_channel_v1_channel_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -598,7 +1069,7 @@ func (x *DeleteChannelResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteChannelResponse.ProtoReflect.Descriptor instead.
 func (*DeleteChannelResponse) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{8}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{15}
 }
 
 type ListGuildChannelsRequest struct {
@@ -610,7 +1081,7 @@ type ListGuildChannelsRequest struct {
 
 func (x *ListGuildChannelsRequest) Reset() {
 	*x = ListGuildChannelsRequest{}
-	mi := &file_channel_v1_channel_proto_msgTypes[9]
+	mi := &file_channel_v1_channel_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -622,7 +1093,7 @@ func (x *ListGuildChannelsRequest) String() string {
 func (*ListGuildChannelsRequest) ProtoMessage() {}
 
 func (x *ListGuildChannelsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[9]
+	mi := &file_channel_v1_channel_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -635,7 +1106,7 @@ func (x *ListGuildChannelsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGuildChannelsRequest.ProtoReflect.Descriptor instead.
 func (*ListGuildChannelsRequest) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{9}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListGuildChannelsRequest) GetGuildId() string {
@@ -654,7 +1125,7 @@ type ListGuildChannelsResponse struct {
 
 func (x *ListGuildChannelsResponse) Reset() {
 	*x = ListGuildChannelsResponse{}
-	mi := &file_channel_v1_channel_proto_msgTypes[10]
+	mi := &file_channel_v1_channel_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -666,7 +1137,7 @@ func (x *ListGuildChannelsResponse) String() string {
 func (*ListGuildChannelsResponse) ProtoMessage() {}
 
 func (x *ListGuildChannelsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[10]
+	mi := &file_channel_v1_channel_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -679,7 +1150,7 @@ func (x *ListGuildChannelsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGuildChannelsResponse.ProtoReflect.Descriptor instead.
 func (*ListGuildChannelsResponse) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{10}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ListGuildChannelsResponse) GetChannels() []*Channel {
@@ -698,7 +1169,7 @@ type CreateDMChannelRequest struct {
 
 func (x *CreateDMChannelRequest) Reset() {
 	*x = CreateDMChannelRequest{}
-	mi := &file_channel_v1_channel_proto_msgTypes[11]
+	mi := &file_channel_v1_channel_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -710,7 +1181,7 @@ func (x *CreateDMChannelRequest) String() string {
 func (*CreateDMChannelRequest) ProtoMessage() {}
 
 func (x *CreateDMChannelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[11]
+	mi := &file_channel_v1_channel_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -723,7 +1194,7 @@ func (x *CreateDMChannelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateDMChannelRequest.ProtoReflect.Descriptor instead.
 func (*CreateDMChannelRequest) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{11}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *CreateDMChannelRequest) GetRecipientIds() []string {
@@ -742,7 +1213,7 @@ type CreateDMChannelResponse struct {
 
 func (x *CreateDMChannelResponse) Reset() {
 	*x = CreateDMChannelResponse{}
-	mi := &file_channel_v1_channel_proto_msgTypes[12]
+	mi := &file_channel_v1_channel_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -754,7 +1225,7 @@ func (x *CreateDMChannelResponse) String() string {
 func (*CreateDMChannelResponse) ProtoMessage() {}
 
 func (x *CreateDMChannelResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[12]
+	mi := &file_channel_v1_channel_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -767,7 +1238,7 @@ func (x *CreateDMChannelResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateDMChannelResponse.ProtoReflect.Descriptor instead.
 func (*CreateDMChannelResponse) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{12}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *CreateDMChannelResponse) GetChannel() *Channel {
@@ -785,7 +1256,7 @@ type ListDMChannelsRequest struct {
 
 func (x *ListDMChannelsRequest) Reset() {
 	*x = ListDMChannelsRequest{}
-	mi := &file_channel_v1_channel_proto_msgTypes[13]
+	mi := &file_channel_v1_channel_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -797,7 +1268,7 @@ func (x *ListDMChannelsRequest) String() string {
 func (*ListDMChannelsRequest) ProtoMessage() {}
 
 func (x *ListDMChannelsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[13]
+	mi := &file_channel_v1_channel_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -810,7 +1281,7 @@ func (x *ListDMChannelsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDMChannelsRequest.ProtoReflect.Descriptor instead.
 func (*ListDMChannelsRequest) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{13}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{20}
 }
 
 type ListDMChannelsResponse struct {
@@ -822,7 +1293,7 @@ type ListDMChannelsResponse struct {
 
 func (x *ListDMChannelsResponse) Reset() {
 	*x = ListDMChannelsResponse{}
-	mi := &file_channel_v1_channel_proto_msgTypes[14]
+	mi := &file_channel_v1_channel_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -834,7 +1305,7 @@ func (x *ListDMChannelsResponse) String() string {
 func (*ListDMChannelsResponse) ProtoMessage() {}
 
 func (x *ListDMChannelsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[14]
+	mi := &file_channel_v1_channel_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -847,7 +1318,7 @@ func (x *ListDMChannelsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDMChannelsResponse.ProtoReflect.Descriptor instead.
 func (*ListDMChannelsResponse) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{14}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ListDMChannelsResponse) GetChannels() []*Channel {
@@ -872,7 +1343,7 @@ type DMMember struct {
 
 func (x *DMMember) Reset() {
 	*x = DMMember{}
-	mi := &file_channel_v1_channel_proto_msgTypes[15]
+	mi := &file_channel_v1_channel_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -884,7 +1355,7 @@ func (x *DMMember) String() string {
 func (*DMMember) ProtoMessage() {}
 
 func (x *DMMember) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[15]
+	mi := &file_channel_v1_channel_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -897,7 +1368,7 @@ func (x *DMMember) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DMMember.ProtoReflect.Descriptor instead.
 func (*DMMember) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{15}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *DMMember) GetId() string {
@@ -944,7 +1415,7 @@ type ListDMChannelMembersRequest struct {
 
 func (x *ListDMChannelMembersRequest) Reset() {
 	*x = ListDMChannelMembersRequest{}
-	mi := &file_channel_v1_channel_proto_msgTypes[16]
+	mi := &file_channel_v1_channel_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -956,7 +1427,7 @@ func (x *ListDMChannelMembersRequest) String() string {
 func (*ListDMChannelMembersRequest) ProtoMessage() {}
 
 func (x *ListDMChannelMembersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[16]
+	mi := &file_channel_v1_channel_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -969,7 +1440,7 @@ func (x *ListDMChannelMembersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDMChannelMembersRequest.ProtoReflect.Descriptor instead.
 func (*ListDMChannelMembersRequest) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{16}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ListDMChannelMembersRequest) GetChannelId() string {
@@ -988,7 +1459,7 @@ type ListDMChannelMembersResponse struct {
 
 func (x *ListDMChannelMembersResponse) Reset() {
 	*x = ListDMChannelMembersResponse{}
-	mi := &file_channel_v1_channel_proto_msgTypes[17]
+	mi := &file_channel_v1_channel_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1000,7 +1471,7 @@ func (x *ListDMChannelMembersResponse) String() string {
 func (*ListDMChannelMembersResponse) ProtoMessage() {}
 
 func (x *ListDMChannelMembersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[17]
+	mi := &file_channel_v1_channel_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1013,7 +1484,7 @@ func (x *ListDMChannelMembersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDMChannelMembersResponse.ProtoReflect.Descriptor instead.
 func (*ListDMChannelMembersResponse) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{17}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ListDMChannelMembersResponse) GetMembers() []*DMMember {
@@ -1040,7 +1511,7 @@ type DMChannelWithMembers struct {
 
 func (x *DMChannelWithMembers) Reset() {
 	*x = DMChannelWithMembers{}
-	mi := &file_channel_v1_channel_proto_msgTypes[18]
+	mi := &file_channel_v1_channel_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1052,7 +1523,7 @@ func (x *DMChannelWithMembers) String() string {
 func (*DMChannelWithMembers) ProtoMessage() {}
 
 func (x *DMChannelWithMembers) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[18]
+	mi := &file_channel_v1_channel_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1065,7 +1536,7 @@ func (x *DMChannelWithMembers) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DMChannelWithMembers.ProtoReflect.Descriptor instead.
 func (*DMChannelWithMembers) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{18}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *DMChannelWithMembers) GetId() string {
@@ -1139,7 +1610,7 @@ type ListDMChannelsWithMembersRequest struct {
 
 func (x *ListDMChannelsWithMembersRequest) Reset() {
 	*x = ListDMChannelsWithMembersRequest{}
-	mi := &file_channel_v1_channel_proto_msgTypes[19]
+	mi := &file_channel_v1_channel_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1151,7 +1622,7 @@ func (x *ListDMChannelsWithMembersRequest) String() string {
 func (*ListDMChannelsWithMembersRequest) ProtoMessage() {}
 
 func (x *ListDMChannelsWithMembersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[19]
+	mi := &file_channel_v1_channel_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1164,7 +1635,7 @@ func (x *ListDMChannelsWithMembersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDMChannelsWithMembersRequest.ProtoReflect.Descriptor instead.
 func (*ListDMChannelsWithMembersRequest) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{19}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{26}
 }
 
 type ListDMChannelsWithMembersResponse struct {
@@ -1176,7 +1647,7 @@ type ListDMChannelsWithMembersResponse struct {
 
 func (x *ListDMChannelsWithMembersResponse) Reset() {
 	*x = ListDMChannelsWithMembersResponse{}
-	mi := &file_channel_v1_channel_proto_msgTypes[20]
+	mi := &file_channel_v1_channel_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1188,7 +1659,7 @@ func (x *ListDMChannelsWithMembersResponse) String() string {
 func (*ListDMChannelsWithMembersResponse) ProtoMessage() {}
 
 func (x *ListDMChannelsWithMembersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[20]
+	mi := &file_channel_v1_channel_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1201,7 +1672,7 @@ func (x *ListDMChannelsWithMembersResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ListDMChannelsWithMembersResponse.ProtoReflect.Descriptor instead.
 func (*ListDMChannelsWithMembersResponse) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{20}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ListDMChannelsWithMembersResponse) GetChannels() []*DMChannelWithMembers {
@@ -1221,7 +1692,7 @@ type AddDMGroupMemberRequest struct {
 
 func (x *AddDMGroupMemberRequest) Reset() {
 	*x = AddDMGroupMemberRequest{}
-	mi := &file_channel_v1_channel_proto_msgTypes[21]
+	mi := &file_channel_v1_channel_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1233,7 +1704,7 @@ func (x *AddDMGroupMemberRequest) String() string {
 func (*AddDMGroupMemberRequest) ProtoMessage() {}
 
 func (x *AddDMGroupMemberRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[21]
+	mi := &file_channel_v1_channel_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1246,7 +1717,7 @@ func (x *AddDMGroupMemberRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddDMGroupMemberRequest.ProtoReflect.Descriptor instead.
 func (*AddDMGroupMemberRequest) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{21}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *AddDMGroupMemberRequest) GetChannelId() string {
@@ -1271,7 +1742,7 @@ type AddDMGroupMemberResponse struct {
 
 func (x *AddDMGroupMemberResponse) Reset() {
 	*x = AddDMGroupMemberResponse{}
-	mi := &file_channel_v1_channel_proto_msgTypes[22]
+	mi := &file_channel_v1_channel_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1283,7 +1754,7 @@ func (x *AddDMGroupMemberResponse) String() string {
 func (*AddDMGroupMemberResponse) ProtoMessage() {}
 
 func (x *AddDMGroupMemberResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[22]
+	mi := &file_channel_v1_channel_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1296,7 +1767,7 @@ func (x *AddDMGroupMemberResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddDMGroupMemberResponse.ProtoReflect.Descriptor instead.
 func (*AddDMGroupMemberResponse) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{22}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{29}
 }
 
 type RemoveDMGroupMemberRequest struct {
@@ -1309,7 +1780,7 @@ type RemoveDMGroupMemberRequest struct {
 
 func (x *RemoveDMGroupMemberRequest) Reset() {
 	*x = RemoveDMGroupMemberRequest{}
-	mi := &file_channel_v1_channel_proto_msgTypes[23]
+	mi := &file_channel_v1_channel_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1321,7 +1792,7 @@ func (x *RemoveDMGroupMemberRequest) String() string {
 func (*RemoveDMGroupMemberRequest) ProtoMessage() {}
 
 func (x *RemoveDMGroupMemberRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[23]
+	mi := &file_channel_v1_channel_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1334,7 +1805,7 @@ func (x *RemoveDMGroupMemberRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveDMGroupMemberRequest.ProtoReflect.Descriptor instead.
 func (*RemoveDMGroupMemberRequest) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{23}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *RemoveDMGroupMemberRequest) GetChannelId() string {
@@ -1359,7 +1830,7 @@ type RemoveDMGroupMemberResponse struct {
 
 func (x *RemoveDMGroupMemberResponse) Reset() {
 	*x = RemoveDMGroupMemberResponse{}
-	mi := &file_channel_v1_channel_proto_msgTypes[24]
+	mi := &file_channel_v1_channel_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1371,7 +1842,7 @@ func (x *RemoveDMGroupMemberResponse) String() string {
 func (*RemoveDMGroupMemberResponse) ProtoMessage() {}
 
 func (x *RemoveDMGroupMemberResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_channel_v1_channel_proto_msgTypes[24]
+	mi := &file_channel_v1_channel_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1384,7 +1855,7 @@ func (x *RemoveDMGroupMemberResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveDMGroupMemberResponse.ProtoReflect.Descriptor instead.
 func (*RemoveDMGroupMemberResponse) Descriptor() ([]byte, []int) {
-	return file_channel_v1_channel_proto_rawDescGZIP(), []int{24}
+	return file_channel_v1_channel_proto_rawDescGZIP(), []int{31}
 }
 
 var File_channel_v1_channel_proto protoreflect.FileDescriptor
@@ -1392,7 +1863,15 @@ var File_channel_v1_channel_proto protoreflect.FileDescriptor
 const file_channel_v1_channel_proto_rawDesc = "" +
 	"\n" +
 	"\x18channel/v1/channel.proto\x12\n" +
-	"channel.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bbuf/validate/validate.proto\"\xff\x01\n" +
+	"channel.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1bbuf/validate/validate.proto\"\x87\x01\n" +
+	"\x0fChannelOverride\x12\x1f\n" +
+	"\vtarget_type\x18\x01 \x01(\tR\n" +
+	"targetType\x12\x1b\n" +
+	"\ttarget_id\x18\x02 \x01(\tR\btargetId\x12\x1e\n" +
+	"\n" +
+	"permission\x18\x03 \x01(\tR\n" +
+	"permission\x12\x16\n" +
+	"\x06effect\x18\x04 \x01(\tR\x06effect\"\xff\x01\n" +
 	"\aChannel\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bguild_id\x18\x02 \x01(\tR\aguildId\x12\x12\n" +
@@ -1402,7 +1881,33 @@ const file_channel_v1_channel_proto_rawDesc = "" +
 	"\bposition\x18\x06 \x01(\x05R\bposition\x12\x1b\n" +
 	"\tparent_id\x18\a \x01(\tR\bparentId\x129\n" +
 	"\n" +
-	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xd9\x01\n" +
+	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xf6\x01\n" +
+	"\x19SetChannelOverrideRequest\x12'\n" +
+	"\n" +
+	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\x122\n" +
+	"\vtarget_type\x18\x02 \x01(\tB\x11\xbaH\x0er\fR\x04roleR\x04userR\n" +
+	"targetType\x12%\n" +
+	"\ttarget_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\btargetId\x12)\n" +
+	"\n" +
+	"permission\x18\x04 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\n" +
+	"permission\x12*\n" +
+	"\x06effect\x18\x05 \x01(\tB\x12\xbaH\x0fr\rR\x05allowR\x04denyR\x06effect\"\x1c\n" +
+	"\x1aSetChannelOverrideResponse\"\xcd\x01\n" +
+	"\x1cDeleteChannelOverrideRequest\x12'\n" +
+	"\n" +
+	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\x122\n" +
+	"\vtarget_type\x18\x02 \x01(\tB\x11\xbaH\x0er\fR\x04roleR\x04userR\n" +
+	"targetType\x12%\n" +
+	"\ttarget_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\btargetId\x12)\n" +
+	"\n" +
+	"permission\x18\x04 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\n" +
+	"permission\"\x1f\n" +
+	"\x1dDeleteChannelOverrideResponse\"F\n" +
+	"\x1bListChannelOverridesRequest\x12'\n" +
+	"\n" +
+	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\"Y\n" +
+	"\x1cListChannelOverridesResponse\x129\n" +
+	"\toverrides\x18\x01 \x03(\v2\x1b.channel.v1.ChannelOverrideR\toverrides\"\xd9\x01\n" +
 	"\x14CreateChannelRequest\x12#\n" +
 	"\bguild_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\aguildId\x12\x1d\n" +
 	"\x04name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18dR\x04name\x127\n" +
@@ -1482,7 +1987,15 @@ const file_channel_v1_channel_proto_rawDesc = "" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\x12!\n" +
 	"\auser_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\"\x1d\n" +
-	"\x1bRemoveDMGroupMemberResponse*\x8c\x02\n" +
+	"\x1bRemoveDMGroupMemberResponse*i\n" +
+	"\x12OverrideTargetType\x12\x1f\n" +
+	"\x1bOVERRIDE_TARGET_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14OVERRIDE_TARGET_ROLE\x10\x01\x12\x18\n" +
+	"\x14OVERRIDE_TARGET_USER\x10\x02*f\n" +
+	"\x0eOverrideEffect\x12\x1f\n" +
+	"\x1bOVERRIDE_EFFECT_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15OVERRIDE_EFFECT_ALLOW\x10\x01\x12\x18\n" +
+	"\x14OVERRIDE_EFFECT_DENY\x10\x02*\x8c\x02\n" +
 	"\vChannelType\x12\x1c\n" +
 	"\x18CHANNEL_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11CHANNEL_TYPE_TEXT\x10\x01\x12\x16\n" +
@@ -1493,20 +2006,23 @@ const file_channel_v1_channel_proto_rawDesc = "" +
 	"\x15CHANNEL_TYPE_GROUP_DM\x10\x06\x12\x1d\n" +
 	"\x19CHANNEL_TYPE_ANNOUNCEMENT\x10\a\x12\x16\n" +
 	"\x12CHANNEL_TYPE_FORUM\x10\b\x12\x16\n" +
-	"\x12CHANNEL_TYPE_STAGE\x10\t2\xa2\b\n" +
-	"\x0eChannelService\x12T\n" +
-	"\rCreateChannel\x12 .channel.v1.CreateChannelRequest\x1a!.channel.v1.CreateChannelResponse\x12K\n" +
+	"\x12CHANNEL_TYPE_STAGE\x10\t2\xca\x0f\n" +
+	"\x0eChannelService\x12\x7f\n" +
+	"\rCreateChannel\x12 .channel.v1.CreateChannelRequest\x1a!.channel.v1.CreateChannelResponse\")\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/guilds/{guild_id}/channels\x12n\n" +
 	"\n" +
-	"GetChannel\x12\x1d.channel.v1.GetChannelRequest\x1a\x1e.channel.v1.GetChannelResponse\x12T\n" +
-	"\rUpdateChannel\x12 .channel.v1.UpdateChannelRequest\x1a!.channel.v1.UpdateChannelResponse\x12T\n" +
-	"\rDeleteChannel\x12 .channel.v1.DeleteChannelRequest\x1a!.channel.v1.DeleteChannelResponse\x12`\n" +
-	"\x11ListGuildChannels\x12$.channel.v1.ListGuildChannelsRequest\x1a%.channel.v1.ListGuildChannelsResponse\x12Z\n" +
-	"\x0fCreateDMChannel\x12\".channel.v1.CreateDMChannelRequest\x1a#.channel.v1.CreateDMChannelResponse\x12W\n" +
-	"\x0eListDMChannels\x12!.channel.v1.ListDMChannelsRequest\x1a\".channel.v1.ListDMChannelsResponse\x12i\n" +
-	"\x14ListDMChannelMembers\x12'.channel.v1.ListDMChannelMembersRequest\x1a(.channel.v1.ListDMChannelMembersResponse\x12x\n" +
-	"\x19ListDMChannelsWithMembers\x12,.channel.v1.ListDMChannelsWithMembersRequest\x1a-.channel.v1.ListDMChannelsWithMembersResponse\x12]\n" +
-	"\x10AddDMGroupMember\x12#.channel.v1.AddDMGroupMemberRequest\x1a$.channel.v1.AddDMGroupMemberResponse\x12f\n" +
-	"\x13RemoveDMGroupMember\x12&.channel.v1.RemoveDMGroupMemberRequest\x1a'.channel.v1.RemoveDMGroupMemberResponseB?Z=github.com/ananddub/ndiscord_backend/gen/channel/v1;channelv1b\x06proto3"
+	"GetChannel\x12\x1d.channel.v1.GetChannelRequest\x1a\x1e.channel.v1.GetChannelResponse\"!\x82\xd3\xe4\x93\x02\x1b\x12\x19/v1/channels/{channel_id}\x12z\n" +
+	"\rUpdateChannel\x12 .channel.v1.UpdateChannelRequest\x1a!.channel.v1.UpdateChannelResponse\"$\x82\xd3\xe4\x93\x02\x1e:\x01*2\x19/v1/channels/{channel_id}\x12w\n" +
+	"\rDeleteChannel\x12 .channel.v1.DeleteChannelRequest\x1a!.channel.v1.DeleteChannelResponse\"!\x82\xd3\xe4\x93\x02\x1b*\x19/v1/channels/{channel_id}\x12\x88\x01\n" +
+	"\x11ListGuildChannels\x12$.channel.v1.ListGuildChannelsRequest\x1a%.channel.v1.ListGuildChannelsResponse\"&\x82\xd3\xe4\x93\x02 \x12\x1e/v1/guilds/{guild_id}/channels\x12n\n" +
+	"\x0fCreateDMChannel\x12\".channel.v1.CreateDMChannelRequest\x1a#.channel.v1.CreateDMChannelResponse\"\x12\x82\xd3\xe4\x93\x02\f:\x01*\"\a/v1/dms\x12h\n" +
+	"\x0eListDMChannels\x12!.channel.v1.ListDMChannelsRequest\x1a\".channel.v1.ListDMChannelsResponse\"\x0f\x82\xd3\xe4\x93\x02\t\x12\a/v1/dms\x12\x8f\x01\n" +
+	"\x14ListDMChannelMembers\x12'.channel.v1.ListDMChannelMembersRequest\x1a(.channel.v1.ListDMChannelMembersResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/v1/dms/{channel_id}/members\x12\x95\x01\n" +
+	"\x19ListDMChannelsWithMembers\x12,.channel.v1.ListDMChannelsWithMembersRequest\x1a-.channel.v1.ListDMChannelsWithMembersResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/v1/dms:withMembers\x12\x90\x01\n" +
+	"\x10AddDMGroupMember\x12#.channel.v1.AddDMGroupMemberRequest\x1a$.channel.v1.AddDMGroupMemberResponse\"1\x82\xd3\xe4\x93\x02+:\x01*\x1a&/v1/dms/{channel_id}/members/{user_id}\x12\x96\x01\n" +
+	"\x13RemoveDMGroupMember\x12&.channel.v1.RemoveDMGroupMemberRequest\x1a'.channel.v1.RemoveDMGroupMemberResponse\".\x82\xd3\xe4\x93\x02(*&/v1/dms/{channel_id}/members/{user_id}\x12\xba\x01\n" +
+	"\x12SetChannelOverride\x12%.channel.v1.SetChannelOverrideRequest\x1a&.channel.v1.SetChannelOverrideResponse\"U\x82\xd3\xe4\x93\x02O:\x01*\x1aJ/v1/channels/{channel_id}/overrides/{target_type}/{target_id}/{permission}\x12\xc0\x01\n" +
+	"\x15DeleteChannelOverride\x12(.channel.v1.DeleteChannelOverrideRequest\x1a).channel.v1.DeleteChannelOverrideResponse\"R\x82\xd3\xe4\x93\x02L*J/v1/channels/{channel_id}/overrides/{target_type}/{target_id}/{permission}\x12\x96\x01\n" +
+	"\x14ListChannelOverrides\x12'.channel.v1.ListChannelOverridesRequest\x1a(.channel.v1.ListChannelOverridesResponse\"+\x82\xd3\xe4\x93\x02%\x12#/v1/channels/{channel_id}/overridesB?Z=github.com/ananddub/ndiscord_backend/gen/channel/v1;channelv1b\x06proto3"
 
 var (
 	file_channel_v1_channel_proto_rawDescOnce sync.Once
@@ -1520,79 +2036,95 @@ func file_channel_v1_channel_proto_rawDescGZIP() []byte {
 	return file_channel_v1_channel_proto_rawDescData
 }
 
-var file_channel_v1_channel_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_channel_v1_channel_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
+var file_channel_v1_channel_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_channel_v1_channel_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_channel_v1_channel_proto_goTypes = []any{
-	(ChannelType)(0),                          // 0: channel.v1.ChannelType
-	(*Channel)(nil),                           // 1: channel.v1.Channel
-	(*CreateChannelRequest)(nil),              // 2: channel.v1.CreateChannelRequest
-	(*CreateChannelResponse)(nil),             // 3: channel.v1.CreateChannelResponse
-	(*GetChannelRequest)(nil),                 // 4: channel.v1.GetChannelRequest
-	(*GetChannelResponse)(nil),                // 5: channel.v1.GetChannelResponse
-	(*UpdateChannelRequest)(nil),              // 6: channel.v1.UpdateChannelRequest
-	(*UpdateChannelResponse)(nil),             // 7: channel.v1.UpdateChannelResponse
-	(*DeleteChannelRequest)(nil),              // 8: channel.v1.DeleteChannelRequest
-	(*DeleteChannelResponse)(nil),             // 9: channel.v1.DeleteChannelResponse
-	(*ListGuildChannelsRequest)(nil),          // 10: channel.v1.ListGuildChannelsRequest
-	(*ListGuildChannelsResponse)(nil),         // 11: channel.v1.ListGuildChannelsResponse
-	(*CreateDMChannelRequest)(nil),            // 12: channel.v1.CreateDMChannelRequest
-	(*CreateDMChannelResponse)(nil),           // 13: channel.v1.CreateDMChannelResponse
-	(*ListDMChannelsRequest)(nil),             // 14: channel.v1.ListDMChannelsRequest
-	(*ListDMChannelsResponse)(nil),            // 15: channel.v1.ListDMChannelsResponse
-	(*DMMember)(nil),                          // 16: channel.v1.DMMember
-	(*ListDMChannelMembersRequest)(nil),       // 17: channel.v1.ListDMChannelMembersRequest
-	(*ListDMChannelMembersResponse)(nil),      // 18: channel.v1.ListDMChannelMembersResponse
-	(*DMChannelWithMembers)(nil),              // 19: channel.v1.DMChannelWithMembers
-	(*ListDMChannelsWithMembersRequest)(nil),  // 20: channel.v1.ListDMChannelsWithMembersRequest
-	(*ListDMChannelsWithMembersResponse)(nil), // 21: channel.v1.ListDMChannelsWithMembersResponse
-	(*AddDMGroupMemberRequest)(nil),           // 22: channel.v1.AddDMGroupMemberRequest
-	(*AddDMGroupMemberResponse)(nil),          // 23: channel.v1.AddDMGroupMemberResponse
-	(*RemoveDMGroupMemberRequest)(nil),        // 24: channel.v1.RemoveDMGroupMemberRequest
-	(*RemoveDMGroupMemberResponse)(nil),       // 25: channel.v1.RemoveDMGroupMemberResponse
-	(*timestamppb.Timestamp)(nil),             // 26: google.protobuf.Timestamp
+	(OverrideTargetType)(0),                   // 0: channel.v1.OverrideTargetType
+	(OverrideEffect)(0),                       // 1: channel.v1.OverrideEffect
+	(ChannelType)(0),                          // 2: channel.v1.ChannelType
+	(*ChannelOverride)(nil),                   // 3: channel.v1.ChannelOverride
+	(*Channel)(nil),                           // 4: channel.v1.Channel
+	(*SetChannelOverrideRequest)(nil),         // 5: channel.v1.SetChannelOverrideRequest
+	(*SetChannelOverrideResponse)(nil),        // 6: channel.v1.SetChannelOverrideResponse
+	(*DeleteChannelOverrideRequest)(nil),      // 7: channel.v1.DeleteChannelOverrideRequest
+	(*DeleteChannelOverrideResponse)(nil),     // 8: channel.v1.DeleteChannelOverrideResponse
+	(*ListChannelOverridesRequest)(nil),       // 9: channel.v1.ListChannelOverridesRequest
+	(*ListChannelOverridesResponse)(nil),      // 10: channel.v1.ListChannelOverridesResponse
+	(*CreateChannelRequest)(nil),              // 11: channel.v1.CreateChannelRequest
+	(*CreateChannelResponse)(nil),             // 12: channel.v1.CreateChannelResponse
+	(*GetChannelRequest)(nil),                 // 13: channel.v1.GetChannelRequest
+	(*GetChannelResponse)(nil),                // 14: channel.v1.GetChannelResponse
+	(*UpdateChannelRequest)(nil),              // 15: channel.v1.UpdateChannelRequest
+	(*UpdateChannelResponse)(nil),             // 16: channel.v1.UpdateChannelResponse
+	(*DeleteChannelRequest)(nil),              // 17: channel.v1.DeleteChannelRequest
+	(*DeleteChannelResponse)(nil),             // 18: channel.v1.DeleteChannelResponse
+	(*ListGuildChannelsRequest)(nil),          // 19: channel.v1.ListGuildChannelsRequest
+	(*ListGuildChannelsResponse)(nil),         // 20: channel.v1.ListGuildChannelsResponse
+	(*CreateDMChannelRequest)(nil),            // 21: channel.v1.CreateDMChannelRequest
+	(*CreateDMChannelResponse)(nil),           // 22: channel.v1.CreateDMChannelResponse
+	(*ListDMChannelsRequest)(nil),             // 23: channel.v1.ListDMChannelsRequest
+	(*ListDMChannelsResponse)(nil),            // 24: channel.v1.ListDMChannelsResponse
+	(*DMMember)(nil),                          // 25: channel.v1.DMMember
+	(*ListDMChannelMembersRequest)(nil),       // 26: channel.v1.ListDMChannelMembersRequest
+	(*ListDMChannelMembersResponse)(nil),      // 27: channel.v1.ListDMChannelMembersResponse
+	(*DMChannelWithMembers)(nil),              // 28: channel.v1.DMChannelWithMembers
+	(*ListDMChannelsWithMembersRequest)(nil),  // 29: channel.v1.ListDMChannelsWithMembersRequest
+	(*ListDMChannelsWithMembersResponse)(nil), // 30: channel.v1.ListDMChannelsWithMembersResponse
+	(*AddDMGroupMemberRequest)(nil),           // 31: channel.v1.AddDMGroupMemberRequest
+	(*AddDMGroupMemberResponse)(nil),          // 32: channel.v1.AddDMGroupMemberResponse
+	(*RemoveDMGroupMemberRequest)(nil),        // 33: channel.v1.RemoveDMGroupMemberRequest
+	(*RemoveDMGroupMemberResponse)(nil),       // 34: channel.v1.RemoveDMGroupMemberResponse
+	(*timestamppb.Timestamp)(nil),             // 35: google.protobuf.Timestamp
 }
 var file_channel_v1_channel_proto_depIdxs = []int32{
-	0,  // 0: channel.v1.Channel.type:type_name -> channel.v1.ChannelType
-	26, // 1: channel.v1.Channel.created_at:type_name -> google.protobuf.Timestamp
-	0,  // 2: channel.v1.CreateChannelRequest.type:type_name -> channel.v1.ChannelType
-	1,  // 3: channel.v1.CreateChannelResponse.channel:type_name -> channel.v1.Channel
-	1,  // 4: channel.v1.GetChannelResponse.channel:type_name -> channel.v1.Channel
-	1,  // 5: channel.v1.UpdateChannelResponse.channel:type_name -> channel.v1.Channel
-	1,  // 6: channel.v1.ListGuildChannelsResponse.channels:type_name -> channel.v1.Channel
-	1,  // 7: channel.v1.CreateDMChannelResponse.channel:type_name -> channel.v1.Channel
-	1,  // 8: channel.v1.ListDMChannelsResponse.channels:type_name -> channel.v1.Channel
-	16, // 9: channel.v1.ListDMChannelMembersResponse.members:type_name -> channel.v1.DMMember
-	0,  // 10: channel.v1.DMChannelWithMembers.type:type_name -> channel.v1.ChannelType
-	26, // 11: channel.v1.DMChannelWithMembers.created_at:type_name -> google.protobuf.Timestamp
-	16, // 12: channel.v1.DMChannelWithMembers.members:type_name -> channel.v1.DMMember
-	19, // 13: channel.v1.ListDMChannelsWithMembersResponse.channels:type_name -> channel.v1.DMChannelWithMembers
-	2,  // 14: channel.v1.ChannelService.CreateChannel:input_type -> channel.v1.CreateChannelRequest
-	4,  // 15: channel.v1.ChannelService.GetChannel:input_type -> channel.v1.GetChannelRequest
-	6,  // 16: channel.v1.ChannelService.UpdateChannel:input_type -> channel.v1.UpdateChannelRequest
-	8,  // 17: channel.v1.ChannelService.DeleteChannel:input_type -> channel.v1.DeleteChannelRequest
-	10, // 18: channel.v1.ChannelService.ListGuildChannels:input_type -> channel.v1.ListGuildChannelsRequest
-	12, // 19: channel.v1.ChannelService.CreateDMChannel:input_type -> channel.v1.CreateDMChannelRequest
-	14, // 20: channel.v1.ChannelService.ListDMChannels:input_type -> channel.v1.ListDMChannelsRequest
-	17, // 21: channel.v1.ChannelService.ListDMChannelMembers:input_type -> channel.v1.ListDMChannelMembersRequest
-	20, // 22: channel.v1.ChannelService.ListDMChannelsWithMembers:input_type -> channel.v1.ListDMChannelsWithMembersRequest
-	22, // 23: channel.v1.ChannelService.AddDMGroupMember:input_type -> channel.v1.AddDMGroupMemberRequest
-	24, // 24: channel.v1.ChannelService.RemoveDMGroupMember:input_type -> channel.v1.RemoveDMGroupMemberRequest
-	3,  // 25: channel.v1.ChannelService.CreateChannel:output_type -> channel.v1.CreateChannelResponse
-	5,  // 26: channel.v1.ChannelService.GetChannel:output_type -> channel.v1.GetChannelResponse
-	7,  // 27: channel.v1.ChannelService.UpdateChannel:output_type -> channel.v1.UpdateChannelResponse
-	9,  // 28: channel.v1.ChannelService.DeleteChannel:output_type -> channel.v1.DeleteChannelResponse
-	11, // 29: channel.v1.ChannelService.ListGuildChannels:output_type -> channel.v1.ListGuildChannelsResponse
-	13, // 30: channel.v1.ChannelService.CreateDMChannel:output_type -> channel.v1.CreateDMChannelResponse
-	15, // 31: channel.v1.ChannelService.ListDMChannels:output_type -> channel.v1.ListDMChannelsResponse
-	18, // 32: channel.v1.ChannelService.ListDMChannelMembers:output_type -> channel.v1.ListDMChannelMembersResponse
-	21, // 33: channel.v1.ChannelService.ListDMChannelsWithMembers:output_type -> channel.v1.ListDMChannelsWithMembersResponse
-	23, // 34: channel.v1.ChannelService.AddDMGroupMember:output_type -> channel.v1.AddDMGroupMemberResponse
-	25, // 35: channel.v1.ChannelService.RemoveDMGroupMember:output_type -> channel.v1.RemoveDMGroupMemberResponse
-	25, // [25:36] is the sub-list for method output_type
-	14, // [14:25] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	2,  // 0: channel.v1.Channel.type:type_name -> channel.v1.ChannelType
+	35, // 1: channel.v1.Channel.created_at:type_name -> google.protobuf.Timestamp
+	3,  // 2: channel.v1.ListChannelOverridesResponse.overrides:type_name -> channel.v1.ChannelOverride
+	2,  // 3: channel.v1.CreateChannelRequest.type:type_name -> channel.v1.ChannelType
+	4,  // 4: channel.v1.CreateChannelResponse.channel:type_name -> channel.v1.Channel
+	4,  // 5: channel.v1.GetChannelResponse.channel:type_name -> channel.v1.Channel
+	4,  // 6: channel.v1.UpdateChannelResponse.channel:type_name -> channel.v1.Channel
+	4,  // 7: channel.v1.ListGuildChannelsResponse.channels:type_name -> channel.v1.Channel
+	4,  // 8: channel.v1.CreateDMChannelResponse.channel:type_name -> channel.v1.Channel
+	4,  // 9: channel.v1.ListDMChannelsResponse.channels:type_name -> channel.v1.Channel
+	25, // 10: channel.v1.ListDMChannelMembersResponse.members:type_name -> channel.v1.DMMember
+	2,  // 11: channel.v1.DMChannelWithMembers.type:type_name -> channel.v1.ChannelType
+	35, // 12: channel.v1.DMChannelWithMembers.created_at:type_name -> google.protobuf.Timestamp
+	25, // 13: channel.v1.DMChannelWithMembers.members:type_name -> channel.v1.DMMember
+	28, // 14: channel.v1.ListDMChannelsWithMembersResponse.channels:type_name -> channel.v1.DMChannelWithMembers
+	11, // 15: channel.v1.ChannelService.CreateChannel:input_type -> channel.v1.CreateChannelRequest
+	13, // 16: channel.v1.ChannelService.GetChannel:input_type -> channel.v1.GetChannelRequest
+	15, // 17: channel.v1.ChannelService.UpdateChannel:input_type -> channel.v1.UpdateChannelRequest
+	17, // 18: channel.v1.ChannelService.DeleteChannel:input_type -> channel.v1.DeleteChannelRequest
+	19, // 19: channel.v1.ChannelService.ListGuildChannels:input_type -> channel.v1.ListGuildChannelsRequest
+	21, // 20: channel.v1.ChannelService.CreateDMChannel:input_type -> channel.v1.CreateDMChannelRequest
+	23, // 21: channel.v1.ChannelService.ListDMChannels:input_type -> channel.v1.ListDMChannelsRequest
+	26, // 22: channel.v1.ChannelService.ListDMChannelMembers:input_type -> channel.v1.ListDMChannelMembersRequest
+	29, // 23: channel.v1.ChannelService.ListDMChannelsWithMembers:input_type -> channel.v1.ListDMChannelsWithMembersRequest
+	31, // 24: channel.v1.ChannelService.AddDMGroupMember:input_type -> channel.v1.AddDMGroupMemberRequest
+	33, // 25: channel.v1.ChannelService.RemoveDMGroupMember:input_type -> channel.v1.RemoveDMGroupMemberRequest
+	5,  // 26: channel.v1.ChannelService.SetChannelOverride:input_type -> channel.v1.SetChannelOverrideRequest
+	7,  // 27: channel.v1.ChannelService.DeleteChannelOverride:input_type -> channel.v1.DeleteChannelOverrideRequest
+	9,  // 28: channel.v1.ChannelService.ListChannelOverrides:input_type -> channel.v1.ListChannelOverridesRequest
+	12, // 29: channel.v1.ChannelService.CreateChannel:output_type -> channel.v1.CreateChannelResponse
+	14, // 30: channel.v1.ChannelService.GetChannel:output_type -> channel.v1.GetChannelResponse
+	16, // 31: channel.v1.ChannelService.UpdateChannel:output_type -> channel.v1.UpdateChannelResponse
+	18, // 32: channel.v1.ChannelService.DeleteChannel:output_type -> channel.v1.DeleteChannelResponse
+	20, // 33: channel.v1.ChannelService.ListGuildChannels:output_type -> channel.v1.ListGuildChannelsResponse
+	22, // 34: channel.v1.ChannelService.CreateDMChannel:output_type -> channel.v1.CreateDMChannelResponse
+	24, // 35: channel.v1.ChannelService.ListDMChannels:output_type -> channel.v1.ListDMChannelsResponse
+	27, // 36: channel.v1.ChannelService.ListDMChannelMembers:output_type -> channel.v1.ListDMChannelMembersResponse
+	30, // 37: channel.v1.ChannelService.ListDMChannelsWithMembers:output_type -> channel.v1.ListDMChannelsWithMembersResponse
+	32, // 38: channel.v1.ChannelService.AddDMGroupMember:output_type -> channel.v1.AddDMGroupMemberResponse
+	34, // 39: channel.v1.ChannelService.RemoveDMGroupMember:output_type -> channel.v1.RemoveDMGroupMemberResponse
+	6,  // 40: channel.v1.ChannelService.SetChannelOverride:output_type -> channel.v1.SetChannelOverrideResponse
+	8,  // 41: channel.v1.ChannelService.DeleteChannelOverride:output_type -> channel.v1.DeleteChannelOverrideResponse
+	10, // 42: channel.v1.ChannelService.ListChannelOverrides:output_type -> channel.v1.ListChannelOverridesResponse
+	29, // [29:43] is the sub-list for method output_type
+	15, // [15:29] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_channel_v1_channel_proto_init() }
@@ -1600,14 +2132,14 @@ func file_channel_v1_channel_proto_init() {
 	if File_channel_v1_channel_proto != nil {
 		return
 	}
-	file_channel_v1_channel_proto_msgTypes[5].OneofWrappers = []any{}
+	file_channel_v1_channel_proto_msgTypes[12].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_channel_v1_channel_proto_rawDesc), len(file_channel_v1_channel_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   25,
+			NumEnums:      3,
+			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

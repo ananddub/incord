@@ -114,7 +114,7 @@ func TestSendAndAcceptFriendRequest(t *testing.T) {
 	friends, err := svc.ListFriends(ctx, alice)
 	require.NoError(t, err)
 	assert.Len(t, friends, 1)
-	assert.Equal(t, "bob", friends[0].Username)
+	assert.Equal(t, "bob", (*friends)[0].Username)
 }
 
 func TestCannotFriendSelf(t *testing.T) {

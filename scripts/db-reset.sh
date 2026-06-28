@@ -25,24 +25,25 @@ DROP TABLE IF EXISTS media_files CASCADE;
 DROP TABLE IF EXISTS webhooks CASCADE;
 DROP TABLE IF EXISTS emojis CASCADE;
 DROP TABLE IF EXISTS bans CASCADE;
+DROP TABLE IF EXISTS invite_uses CASCADE;
 DROP TABLE IF EXISTS invites CASCADE;
 DROP TABLE IF EXISTS dm_channel_members CASCADE;
 DROP TABLE IF EXISTS channel_permission_overwrites CASCADE;
 DROP TABLE IF EXISTS channels CASCADE;
+DROP TABLE IF EXISTS role_permissions CASCADE;
 DROP TABLE IF EXISTS role_members CASCADE;
 DROP TABLE IF EXISTS roles CASCADE;
 DROP TABLE IF EXISTS guild_members CASCADE;
 DROP TABLE IF EXISTS guilds CASCADE;
 DROP TABLE IF EXISTS friendships CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS permissions CASCADE;
 DROP TABLE IF EXISTS schema_migrations CASCADE;
+DROP TABLE IF EXISTS goose_db_version CASCADE;
 "
 
-# Run all up migrations
-for f in db/timescale/migrations/*.up.sql; do
-  echo "  Running: $(basename $f)"
-  cat "$f" | docker exec -i "$PG_CONTAINER" psql -U "$PG_USER" -d "$PG_DB" -q
-done
+# Run Goose migrations
+goose -dir db/timescale/migrations postgres "postgres://$PG_USER:$PG_USER@localhost:5432/$PG_DB?sslmode=disable" up
 echo "  TimescaleDB: OK ($(docker exec "$PG_CONTAINER" psql -U "$PG_USER" -d "$PG_DB" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'") tables)"
 
 # ── ScyllaDB ──

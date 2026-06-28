@@ -1,4 +1,4 @@
-.PHONY: all build build-server build-voice run run-voice generate proto sqlc migrate test lint clean docker-up docker-down
+.PHONY: all build build-server build-voice run run-voice generate proto sqlc migrate test lint clean docker-up docker-down chrome
 all: generate build
 
 # Build
@@ -14,6 +14,7 @@ build-init:
 	go build -o bin/init ./cmd/init
 
 up:
+	@docker compose down
 	@docker compose build
 	@docker compose up -d
 # Run
@@ -34,13 +35,13 @@ sqlc:
 
 # Database migrations
 migrate-up:
-	migrate -path db/timescale/migrations -database "postgres://ndiscord:ndiscord@localhost:5432/ndiscord?sslmode=disable" up
+	goose -dir db/timescale/migrations postgres "postgres://ndiscord:ndiscord@localhost:5432/ndiscord?sslmode=disable" up
 
 migrate-down:
-	migrate -path db/timescale/migrations -database "postgres://ndiscord:ndiscord@localhost:5432/ndiscord?sslmode=disable" down 1
+	goose -dir db/timescale/migrations postgres "postgres://ndiscord:ndiscord@localhost:5432/ndiscord?sslmode=disable" down
 
 migrate-create:
-	migrate create -ext sql -dir db/timescale/migrations -seq $(name)
+	goose -dir db/timescale/migrations create $(name) sql
 
 # Testing
 test:
@@ -78,3 +79,8 @@ db-seed:
 # Clean
 clean:
 	rm -rf bin/ coverage.out coverage.html
+
+# Open a fresh Chrome window (Flatpak). Used as the dependency for
+# any target that wants to pop a dev URL in the browser.
+chrome:
+	flatpak run com.google.Chrome --new-window >/dev/null 2>&1 &

@@ -21,4 +21,5 @@ func Init(level string) {
 			TimeFormat: time.RFC3339,
 		},
 	).Level(lvl).With().Timestamp().Caller().Logger()
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 }

@@ -6,53 +6,30 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
+
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/ananddub/ndiscord_backend/gen/scylladb"
 	streamv1 "github.com/ananddub/ndiscord_backend/gen/stream/v1"
 	"github.com/ananddub/ndiscord_backend/internal/shared/authz"
+	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
 	"github.com/ananddub/ndiscord_backend/internal/shared/realtime"
 )
-
-// DMChannelResolver creates/finds DM channels. Implemented by channel service.
-type DMChannelResolver interface {
-	GetOrCreateDMChannel(ctx context.Context, userID string, recipientIDs []string) (channelID string, err error)
-}
-
-// BlockChecker checks if a user is blocked. Implemented by user service.
-type BlockChecker interface {
-	IsBlocked(ctx context.Context, userID, targetID string) bool
-}
-
-// DMChannelLister lists all DM channels a user is part of with metadata.
-type DMChannelLister interface {
-	GetUserDMChannelIDs(ctx context.Context, userID string) ([]string, error)
-	GetDMChannelMemberIDs(ctx context.Context, channelID string) ([]string, error)
-}
-
-// MediaResolver resolves uploaded media file IDs into concrete attachment
-// metadata. Implemented by the media service; injected here to avoid a hard
-// dependency on that package.
-type MediaResolver interface {
-	// ResolveAttachment returns filename, presigned-URL, content_type and size
-	// for a previously uploaded media file. If the file does not exist, belongs
-	// to a different uploader, or is unconfirmed, an error is returned.
-	ResolveAttachment(ctx context.Context, fileID, uploaderID string) (filename, url, contentType string, size int64, err error)
-}
 
 type Service struct {
 	repo          *Repository
 	redis         *redis.Client
 	authz         *authz.Client
-	nats          *realtime.Hub
+	lpb           *realtime.LPubSub
 	dmResolver    DMChannelResolver
 	blockChecker  BlockChecker
 	dmChannelList DMChannelLister
 	media         MediaResolver
 }
 
-func NewService(repo *Repository, redis *redis.Client, nats *realtime.Hub, authzClient ...*authz.Client) *Service {
-	s := &Service{repo: repo, redis: redis, nats: nats}
+func NewService(repo *Repository, redis *redis.Client, lpb *realtime.LPubSub, authzClient ...*authz.Client) *Service {
+	s := &Service{repo: repo, redis: redis, lpb: lpb}
 	if len(authzClient) > 0 {
 		s.authz = authzClient[0]
 	}
@@ -72,7 +49,6 @@ func (s *Service) SetDMChannelLister(l DMChannelLister) { s.dmChannelList = l }
 func (s *Service) SetMediaResolver(m MediaResolver) { s.media = m }
 
 // dedupMentions normalises a caller-supplied list of mentioned user IDs:
-// drops self-mentions, removes duplicates, ignores empty strings.
 func dedupMentions(ids []string, authorID string) []string {
 	if len(ids) == 0 {
 		return nil
@@ -103,6 +79,48 @@ func (s *Service) GetAttachments(ctx context.Context, channelID, messageID strin
 	return s.repo.GetMessageAttachments(ctx, chUUID, msgUUID)
 }
 
+// containsEveryoneMention reports whether the message content uses
+// @everyone or @here — i.e. the MENTION_EVERYONE permission should be
+// enforced. Word boundaries keep "@everyone" a mention but "hi@everyone"
+// inside an email-looking string not. Case-sensitive matches Discord.
+func containsEveryoneMention(content string) bool {
+	for _, tag := range []string{"@everyone", "@here"} {
+		idx := 0
+		for {
+			i := indexOf(content, tag, idx)
+			if i < 0 {
+				break
+			}
+			end := i + len(tag)
+			// Trailing char must not be alnum — otherwise it's a substring.
+			if end == len(content) || !isAlnum(content[end]) {
+				// Leading char must not be alnum either.
+				if i == 0 || !isAlnum(content[i-1]) {
+					return true
+				}
+			}
+			idx = end
+		}
+	}
+	return false
+}
+
+func indexOf(s, sub string, from int) int {
+	if from >= len(s) {
+		return -1
+	}
+	for i := from; i+len(sub) <= len(s); i++ {
+		if s[i:i+len(sub)] == sub {
+			return i
+		}
+	}
+	return -1
+}
+
+func isAlnum(b byte) bool {
+	return (b >= '0' && b <= '9') || (b >= 'A' && b <= 'Z') || (b >= 'a' && b <= 'z') || b == '_'
+}
+
 // loadAttachments hydrates the persisted attachment rows for a message.
 // Returns nil on any lookup error so a caller can still emit an event
 // without attachments rather than failing entirely.
@@ -114,32 +132,35 @@ func (s *Service) loadAttachments(ctx context.Context, channelID, messageID gocq
 	return atts
 }
 
-// buildMessageEvent assembles a rich DM/guild-channel event payload with
-// every field a client needs (reply_to_id, attachments, edited_at, deleted,
-// type, pinned, mentions, reactions, forwarded_from) so subscribers don't
-// have to round-trip GetMessage. Used by both DM and guild-channel publish
-// paths — the subject routing happens in publishChannelEvent.
-// buildMessageEvent builds a typed TextChannelEvent proto. Since the JSON
-// field names match DmChatEvent too, the same payload deserialises cleanly
-// into DmChatEvent on the DM-stream path — guild_id is simply ignored there.
 func (s *Service) buildMessageEvent(ctx context.Context, evtType streamv1.ChatEventType, channelID, guildID, userID string, msg *Message, atts []Attachment) *streamv1.TextChannelEvent {
+	msgID := uuidValue(msg.Id)
+	msgChannelID := uuidValue(msg.ChannelId)
+	authorID := uuidValue(msg.AuthorId)
+	replyToID := uuidValue(msg.ReplyToId)
+	forwardedFromChannelID := uuidValue(msg.ForwardedFromChannelId)
+	forwardedFromMessageID := uuidValue(msg.ForwardedFromMessageId)
+	forwardedFromAuthorID := uuidValue(msg.ForwardedFromAuthorId)
+	createdAt := timeValue(msg.CreatedAt)
+	mentions := uuidSliceValue(msg.MentionUserIds)
+
 	evt := &streamv1.TextChannelEvent{
 		Type:      evtType,
-		MessageId: msg.ID.String(),
+		MessageId: msgID.String(),
 		ChannelId: channelID,
 		GuildId:   guildID,
-		AuthorId:  msg.AuthorID.String(),
+		AuthorId:  authorID.String(),
 		SenderId:  userID,
-		Content:   msg.Content,
-		MsgType:   int32(msg.Type),
-		Pinned:    msg.Pinned,
-		Deleted:   msg.Deleted,
+		Content:   *msg.Content,
+		MsgType:   int32(*msg.Type),
+		Pinned:    *msg.Pinned,
+		Deleted:   msg.Deleted != nil && *msg.Deleted,
 	}
 
-	if reactions, err := s.repo.GetReactions(ctx, msg.ChannelID, msg.ID, msg.AuthorID); err == nil && len(reactions) > 0 {
+	if reactions, err := s.repo.GetReactions(ctx, msgChannelID, msgID, authorID); err == nil && len(reactions) > 0 {
 		evt.Reactions = make([]*streamv1.ChatReactionCount, len(reactions))
 		for i, r := range reactions {
 			evt.Reactions[i] = &streamv1.ChatReactionCount{
+				User:  r.user_id,
 				Emoji: r.Emoji,
 				Count: r.Count,
 				Me:    r.Me,
@@ -147,55 +168,51 @@ func (s *Service) buildMessageEvent(ctx context.Context, evtType streamv1.ChatEv
 		}
 	}
 	var zeroUUID gocql.UUID
-	if msg.ReplyToID != zeroUUID {
-		evt.ReplyToId = msg.ReplyToID.String()
+	if replyToID != zeroUUID {
+		evt.ReplyToId = replyToID.String()
 	}
 	if msg.EditedAt != nil {
 		evt.EditedAt = msg.EditedAt.Format(time.RFC3339Nano)
 	}
-	if !msg.CreatedAt.IsZero() {
-		evt.CreatedAt = msg.CreatedAt.Format(time.RFC3339Nano)
+	if !createdAt.IsZero() {
+		evt.CreatedAt = createdAt.Format(time.RFC3339Nano)
 	}
 	if len(atts) > 0 {
 		evt.Attachments = make([]*streamv1.ChatAttachment, len(atts))
 		for i, a := range atts {
 			evt.Attachments[i] = &streamv1.ChatAttachment{
-				Id:          a.ID.String(),
-				Filename:    a.Filename,
-				Url:         a.URL,
-				ContentType: a.ContentType,
-				Size:        a.Size,
+				Id:          uuidValue(a.Id).String(),
+				Filename:    stringValue(a.Filename),
+				Url:         stringValue(a.Url),
+				ContentType: stringValue(a.ContentType),
+				Size:        int64Value(a.Size),
 			}
 		}
 	}
-	if msg.ForwardedFromMessageID != zeroUUID {
+	if forwardedFromMessageID != zeroUUID {
 		evt.ForwardedFrom = &streamv1.ChatForwardedReference{
-			ChannelId: msg.ForwardedFromChannelID.String(),
-			MessageId: msg.ForwardedFromMessageID.String(),
-			AuthorId:  msg.ForwardedFromAuthorID.String(),
+			ChannelId: forwardedFromChannelID.String(),
+			MessageId: forwardedFromMessageID.String(),
+			AuthorId:  forwardedFromAuthorID.String(),
 		}
 	}
-	if len(msg.MentionUserIDs) > 0 {
-		evt.MentionUserIds = make([]string, len(msg.MentionUserIDs))
-		for i, m := range msg.MentionUserIDs {
+	if len(mentions) > 0 {
+		evt.MentionUserIds = make([]string, len(mentions))
+		for i, m := range mentions {
 			evt.MentionUserIds[i] = m.String()
 		}
 	}
+
+	logger.Log.Info().Str("BuildMessage", "build message").RawJSON("json:", evt.ProtoReflect().GetUnknown())
 	return evt
 }
 
-// publishChannelEvent fans out a message event to the right subject: a
-// single guild-channel subject for guild messages, or per-member DM subjects
-// so every member (including the sender's other devices) gets synced.
-// publishChannelEvent accepts the typed TextChannelEvent proto. Its JSON
-// field names overlap fully with DmChatEvent, so the same payload round-trips
-// cleanly into a DmChatEvent on the DM stream path (guild_id is ignored).
 func (s *Service) publishChannelEvent(ctx context.Context, guildID, channelID string, payload *streamv1.TextChannelEvent) {
-	if s.nats == nil || payload == nil {
+	if s.lpb == nil || payload == nil {
 		return
 	}
 	if guildID != "" {
-		_ = s.nats.Publish(realtime.GuildChannelMessage(guildID, channelID), payload)
+		_ = realtime.Publish(s.lpb, realtime.GuildChannelMessage(guildID, channelID), payload)
 		return
 	}
 	if s.dmChannelList == nil {
@@ -203,21 +220,17 @@ func (s *Service) publishChannelEvent(ctx context.Context, guildID, channelID st
 	}
 	members, _ := s.dmChannelList.GetDMChannelMemberIDs(ctx, channelID)
 	for _, memberID := range members {
-		_ = s.nats.Publish(realtime.DmMessage(memberID, channelID), payload)
+		_ = realtime.Publish(s.lpb, realtime.DmMessage(memberID, channelID), payload)
 	}
 }
 
 // ForwardSource references an existing message to be re-broadcast as the
-// content of a new SendMessage call.
+// content of a new SendMessage call.test
 type ForwardSource struct {
 	ChannelID string
 	MessageID string
 }
 
-// SendMessage persists a new message (with optional reply, attachments,
-// forward and explicit @-mentions) and fans out a "create" event on the
-// channel subject. Content may be empty as long as at least one attachment
-// is attached or the message is a forward.
 func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, content string, msgType int32, replyToID string, attachmentIDs []string, forward *ForwardSource, mentionIDs []string) (*Message, []Attachment, error) {
 	if channelID == "" {
 		return nil, nil, ErrChannelRequired
@@ -226,9 +239,18 @@ func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, c
 		return nil, nil, ErrContentRequired
 	}
 
-	// For guild channels, check send permission via authz
-	if guildID != "" && !s.authz.CanSendInChannel(ctx, userID, channelID) {
-		return nil, nil, ErrInsufficientPermissions
+	// Guild permission cascade — check the most specific gate first so
+	// the client sees a deterministic error ordering.
+	if guildID != "" {
+		if !s.authz.CanSendInChannel(ctx, userID, channelID) {
+			return nil, nil, ErrInsufficientPermissions
+		}
+		if len(attachmentIDs) > 0 && !s.authz.CanAttachFiles(ctx, userID, guildID) {
+			return nil, nil, ErrInsufficientPermissions
+		}
+		if containsEveryoneMention(content) && !s.authz.CanMentionEveryone(ctx, userID, guildID) {
+			return nil, nil, ErrInsufficientPermissions
+		}
 	}
 
 	chUUID, err := gocqlParseUUID(channelID)
@@ -252,20 +274,38 @@ func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, c
 		mentionUUIDs = append(mentionUUIDs, mUUID)
 	}
 
-	msg := &Message{
-		ChannelID:      chUUID,
-		ID:             gocql.TimeUUID(),
-		AuthorID:       authorUUID,
+	msgID := gocql.TimeUUID()
+	createdAt := time.Now()
+	msgType64 := int64(msgType)
+	pinned := false
+	deleted := false
+	var zeroUUID gocql.UUID
+
+	create := &scylladb.CreatemessageParams{
+		ChannelId:      chUUID,
+		Id:             msgID,
+		AuthorId:       authorUUID,
 		Content:        content,
-		Type:           int(msgType),
-		Pinned:         false,
-		CreatedAt:      time.Now(),
-		MentionUserIDs: mentionUUIDs,
+		Type:           msgType64,
+		ReplyToId:      zeroUUID,
+		Pinned:         pinned,
+		CreatedAt:      createdAt,
+		MentionUserIds: mentionUUIDs,
 	}
 
-	// Resolve the forward source up front. We copy the source's content
-	// over (if the caller didn't supply their own) and stamp the new row
-	// with the source coordinates so clients can render "Forwarded from".
+	msg := &scylladb.Messages{
+		ChannelId:      &create.ChannelId,
+		Id:             &create.Id,
+		AuthorId:       &create.AuthorId,
+		Content:        &create.Content,
+		Type:           &create.Type,
+		ReplyToId:      &create.ReplyToId,
+		Pinned:         &pinned,
+		Deleted:        &deleted,
+		CreatedAt:      &create.CreatedAt,
+		MentionUserIds: &create.MentionUserIds,
+	}
+
 	var forwardedSourceAttachments []Attachment
 	if forward != nil {
 		srcChUUID, err := gocqlParseUUID(forward.ChannelID)
@@ -280,11 +320,18 @@ func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, c
 		if err != nil {
 			return nil, nil, ErrForwardSourceNotFound
 		}
-		msg.ForwardedFromChannelID = src.ChannelID
-		msg.ForwardedFromMessageID = src.ID
-		msg.ForwardedFromAuthorID = src.AuthorID
-		if msg.Content == "" {
-			msg.Content = src.Content
+		srcChannelID := src.ChannelId
+		srcMessageID := src.Id
+		srcAuthorID := src.AuthorId
+		create.ForwardedFromChannelId = *srcChannelID
+		create.ForwardedFromMessageId = *srcMessageID
+		create.ForwardedFromAuthorId = *srcAuthorID
+		msg.ForwardedFromChannelId = &create.ForwardedFromChannelId
+		msg.ForwardedFromMessageId = &create.ForwardedFromMessageId
+		msg.ForwardedFromAuthorId = &create.ForwardedFromAuthorId
+		if msg.Content == nil || *msg.Content == "" {
+			create.Content = *src.Content
+			msg.Content = &create.Content
 		}
 		// Copy the source's attachments so the forward stands on its own
 		// even if the original is later deleted.
@@ -301,10 +348,11 @@ func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, c
 		if _, err := s.repo.GetMessage(ctx, chUUID, replyUUID); err != nil {
 			return nil, nil, ErrReplyParentNotFound
 		}
-		msg.ReplyToID = replyUUID
+		create.ReplyToId = replyUUID
+		msg.ReplyToId = &create.ReplyToId
 	}
 
-	if err := s.repo.CreateMessage(ctx, msg); err != nil {
+	if err := s.repo.CreateMessage(ctx, create); err != nil {
 		return nil, nil, fmt.Errorf("failed to create message: %w", err)
 	}
 
@@ -323,15 +371,19 @@ func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, c
 			if err != nil {
 				continue
 			}
-			if err := s.repo.AddMessageAttachment(ctx, chUUID, msg.ID, attID, filename, fURL, contentType, size); err != nil {
+			if err := s.repo.AddMessageAttachment(ctx, chUUID, msgID, attID, filename, fURL, contentType, size); err != nil {
 				continue
 			}
+			attFilename := filename
+			attURL := fURL
+			attContentType := contentType
+			attSize := size
 			attachments = append(attachments, Attachment{
-				ID:          attID,
-				Filename:    filename,
-				URL:         fURL,
-				ContentType: contentType,
-				Size:        size,
+				Id:          &attID,
+				Filename:    &attFilename,
+				Url:         &attURL,
+				ContentType: &attContentType,
+				Size:        &attSize,
 			})
 		}
 	}
@@ -343,15 +395,19 @@ func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, c
 		if err != nil {
 			continue
 		}
-		if err := s.repo.AddMessageAttachment(ctx, chUUID, msg.ID, attID, a.Filename, a.URL, a.ContentType, a.Size); err != nil {
+		filename := stringValue(a.Filename)
+		url := stringValue(a.Url)
+		contentType := stringValue(a.ContentType)
+		size := int64Value(a.Size)
+		if err := s.repo.AddMessageAttachment(ctx, chUUID, msgID, attID, filename, url, contentType, size); err != nil {
 			continue
 		}
 		attachments = append(attachments, Attachment{
-			ID:          attID,
-			Filename:    a.Filename,
-			URL:         a.URL,
-			ContentType: a.ContentType,
-			Size:        a.Size,
+			Id:          &attID,
+			Filename:    &filename,
+			Url:         &url,
+			ContentType: &contentType,
+			Size:        &size,
 		})
 	}
 
@@ -362,9 +418,8 @@ func (s *Service) SendMessage(ctx context.Context, userID, channelID, guildID, c
 	for _, mUUID := range mentionUUIDs {
 		_ = s.repo.IncrementMentionCount(ctx, mUUID, chUUID)
 	}
-
-	s.publishChannelEvent(ctx, guildID, channelID,
-		s.buildMessageEvent(ctx, streamv1.ChatEventType_CHAT_EVENT_CREATE, channelID, guildID, userID, msg, attachments))
+	data := s.buildMessageEvent(ctx, streamv1.ChatEventType_CHAT_EVENT_CREATE, channelID, guildID, userID, msg, attachments)
+	s.publishChannelEvent(ctx, guildID, channelID, data)
 
 	return msg, attachments, nil
 }
@@ -405,12 +460,12 @@ func (s *Service) EditMessage(ctx context.Context, userID, channelID, guildID, m
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrMessageNotFound, err)
 	}
-	if existing.AuthorID != authorUUID {
+	if uuidValue(existing.AuthorId) != authorUUID {
 		if guildID == "" || !s.authz.CanManageChannel(ctx, userID, channelID) {
 			return nil, ErrNotMessageAuthor
 		}
 	} else {
-		if time.Since(existing.CreatedAt) > EditWindow {
+		if time.Since(timeValue(existing.CreatedAt)) > EditWindow {
 			return nil, ErrEditWindowExpired
 		}
 	}
@@ -421,14 +476,14 @@ func (s *Service) EditMessage(ctx context.Context, userID, channelID, guildID, m
 	}
 
 	// Save edit history before overwriting
-	_ = s.repo.SaveEditHistory(ctx, chUUID, msgUUID, existing.Content, now)
+	_ = s.repo.SaveEditHistory(ctx, chUUID, msgUUID, stringValue(existing.Content), now)
 
-	existing.Content = content
+	existing.Content = &content
 	existing.EditedAt = &now
 
 	atts := s.loadAttachments(ctx, chUUID, msgUUID)
-	s.publishChannelEvent(ctx, guildID, channelID,
-		s.buildMessageEvent(ctx, streamv1.ChatEventType_CHAT_EVENT_UPDATE, channelID, guildID, userID, existing, atts))
+	data := s.buildMessageEvent(ctx, streamv1.ChatEventType_CHAT_EVENT_UPDATE, channelID, guildID, userID, existing, atts)
+	s.publishChannelEvent(ctx, guildID, channelID, data)
 
 	return existing, nil
 }
@@ -451,7 +506,7 @@ func (s *Service) DeleteMessage(ctx context.Context, userID, channelID, guildID,
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrMessageNotFound, err)
 	}
-	if existing.AuthorID != authorUUID {
+	if uuidValue(existing.AuthorId) != authorUUID {
 		if guildID == "" || !s.authz.CanManageChannel(ctx, userID, channelID) {
 			return ErrNotMessageAuthor
 		}
@@ -465,14 +520,44 @@ func (s *Service) DeleteMessage(ctx context.Context, userID, channelID, guildID,
 
 	// Mirror the deleted flag on the in-memory copy we publish so clients
 	// can drop the message without a follow-up fetch.
-	existing.Deleted = true
-	s.publishChannelEvent(ctx, guildID, channelID,
-		s.buildMessageEvent(ctx, streamv1.ChatEventType_CHAT_EVENT_DELETE, channelID, guildID, userID, existing, nil))
+	deleted := true
+	existing.Deleted = &deleted
+	data := s.buildMessageEvent(ctx, streamv1.ChatEventType_CHAT_EVENT_DELETE, channelID, guildID, userID, existing, nil)
+	s.publishChannelEvent(ctx, guildID, channelID, data)
 
 	return nil
 }
 
+// canReadChannel unifies the "is this user allowed to read history?"
+// decision across guild and DM channels. Guild channels go through
+// authz.CanViewChannel (which resolves via the channel→guild binding
+// and then VIEW_CHANNELS perm). DM channels don't live in OpenFGA —
+// a raw Check would always deny — so we fall back to DM-member lookup.
+// With neither wired (tests / degraded mode) we allow so the path
+// doesn't lock users out entirely.
+func (s *Service) canReadChannel(ctx context.Context, userID, channelID string) bool {
+	if s.authz != nil && s.authz.CanViewChannel(ctx, userID, channelID) {
+		return true
+	}
+	if s.dmChannelList != nil {
+		members, _ := s.dmChannelList.GetDMChannelMemberIDs(ctx, channelID)
+		for _, m := range members {
+			if m == userID {
+				return true
+			}
+		}
+	}
+	return s.authz == nil && s.dmChannelList == nil
+}
+
 func (s *Service) ListMessages(ctx context.Context, userID, channelID, before, after string, limit int32) ([]*Message, error) {
+	// Access is gated by VIEW_CHANNELS for guild channels, or by DM
+	// membership for DM / group-DM channels — DMs never get registered
+	// in OpenFGA, so a raw CanViewChannel returns false for them.
+	if !s.canReadChannel(ctx, userID, channelID) {
+		return nil, ErrInsufficientPermissions
+	}
+
 	chUUID, err := gocqlParseUUID(channelID)
 	if err != nil {
 		return nil, ErrInvalidUUID
@@ -511,7 +596,9 @@ func (s *Service) UnpinMessage(ctx context.Context, userID, channelID, guildID, 
 }
 
 func (s *Service) setPinned(ctx context.Context, userID, channelID, guildID, messageID string, pinned bool) error {
-	if guildID != "" && !s.authz.CanManageChannel(ctx, userID, channelID) {
+	// PIN_MESSAGES is a dedicated permission — different from MANAGE_CHANNEL
+	// in Discord: a role that can pin need not be able to edit the channel.
+	if guildID != "" && !s.authz.CanPinMessages(ctx, userID, guildID) {
 		return ErrInsufficientPermissions
 	}
 
@@ -535,14 +622,14 @@ func (s *Service) setPinned(ctx context.Context, userID, channelID, guildID, mes
 	if err != nil {
 		return nil
 	}
-	msg.Pinned = pinned
+	msg.Pinned = &pinned
 	atts := s.loadAttachments(ctx, chUUID, msgUUID)
 	evtType := streamv1.ChatEventType_CHAT_EVENT_PIN
 	if !pinned {
 		evtType = streamv1.ChatEventType_CHAT_EVENT_UNPIN
 	}
-	s.publishChannelEvent(ctx, guildID, channelID,
-		s.buildMessageEvent(ctx, evtType, channelID, guildID, userID, msg, atts))
+	data := s.buildMessageEvent(ctx, evtType, channelID, guildID, userID, msg, atts)
+	s.publishChannelEvent(ctx, guildID, channelID, data)
 	return nil
 }
 
@@ -558,8 +645,7 @@ func (s *Service) toggleReaction(ctx context.Context, userID, channelID, guildID
 	if emoji == "" {
 		return ErrEmojiRequired
 	}
-	// For guild channels, check view permission as proxy for reaction permission
-	if add && guildID != "" && !s.authz.CanViewChannel(ctx, userID, channelID) {
+	if add && guildID != "" && !s.authz.CanAddReactions(ctx, userID, guildID) {
 		return ErrInsufficientPermissions
 	}
 	chUUID, err := gocqlParseUUID(channelID)
@@ -575,8 +661,6 @@ func (s *Service) toggleReaction(ctx context.Context, userID, channelID, guildID
 		return ErrInvalidUUID
 	}
 
-	// Don't allow reacting to deleted messages — matches GetMessage's
-	// tombstone-hiding behavior.
 	msg, err := s.repo.GetMessage(ctx, chUUID, msgUUID)
 	if err != nil {
 		return ErrMessageNotFound
@@ -596,16 +680,9 @@ func (s *Service) toggleReaction(ctx context.Context, userID, channelID, guildID
 	if add {
 		evtType = streamv1.ChatEventType_CHAT_EVENT_REACTION_ADD
 	}
-	// Build the rich snapshot via buildMessageEvent so the event carries the
-	// full per-emoji reactions list + attachments + reply info — receivers
-	// can replace their local state wholesale instead of recomputing from
-	// incremental deltas. This is what makes multi-device sync "just work":
-	// every subscribed device (including the reactor's own other devices)
-	// receives an authoritative state snapshot on every mutation.
+
 	atts := s.loadAttachments(ctx, chUUID, msgUUID)
 	payload := s.buildMessageEvent(ctx, evtType, channelID, guildID, userID, msg, atts)
-	// Reaction-specific field. The reactor's identity already rides on
-	// SenderId (set by buildMessageEvent), so no separate user_id is needed.
 	payload.Emoji = emoji
 	s.publishChannelEvent(ctx, guildID, channelID, payload)
 	return nil
@@ -647,32 +724,29 @@ func (s *Service) AckMessage(ctx context.Context, userID, channelID, guildID, me
 	return nil
 }
 
-func (s *Service) StartTyping(ctx context.Context, userID, channelID, guildID string) error {
+func (s *Service) StartTyping(ctx context.Context, name, userID, channelID, guildID string) error {
 	if channelID == "" {
 		return ErrChannelRequired
 	}
 
-	// Store typing indicator in Redis with 8s TTL
 	key := fmt.Sprintf("typing:%s", channelID)
 	if err := s.redis.Set(ctx, key, userID, 8*time.Second).Err(); err != nil {
 		return fmt.Errorf("failed to set typing indicator: %w", err)
 	}
-
-	// Publish typing event as a typed proto so stream subscribers decode
-	// directly into TypingEvent without field-name drift risk.
 	typingEvt := &streamv1.TypingEvent{
 		ChannelId: channelID,
 		GuildId:   guildID,
 		UserId:    userID,
+		Username:  name,
 		Timestamp: timestamppb.Now(),
 	}
 	if guildID != "" {
-		_ = s.nats.Publish(realtime.GuildChannelTyping(guildID, channelID), typingEvt)
+		_ = realtime.Publish(s.lpb, realtime.GuildChannelTyping(guildID, channelID), typingEvt)
 	} else if s.dmChannelList != nil {
 		members, _ := s.dmChannelList.GetDMChannelMemberIDs(ctx, channelID)
 		for _, memberID := range members {
 			if memberID != userID {
-				_ = s.nats.Publish(realtime.DmTyping(memberID, channelID), typingEvt)
+				_ = realtime.Publish(s.lpb, realtime.DmTyping(memberID, channelID), typingEvt)
 			}
 		}
 	}
@@ -763,29 +837,28 @@ func (s *Service) GetUnreadCounts(ctx context.Context, userID string) ([]UnreadI
 		return nil, 0, ErrInvalidUUID
 	}
 
-	// Track which channels we've already counted
 	seen := make(map[string]bool)
 	var results []UnreadInfo
 	var totalUnread int32
 
-	// 1. Channels with read_states (user has read before)
 	readStates, err := s.repo.GetUserReadStates(ctx, uUID)
 	if err == nil {
 		for _, rs := range readStates {
-			chID := rs.ChannelID.String()
+			channelID := uuidValue(rs.ChannelId)
+			lastReadMessageID := uuidValue(rs.LastReadMessageId)
+			chID := channelID.String()
 			seen[chID] = true
 
-			count, lastMsg, lastTime, err := s.repo.CountUnreadMessages(ctx, rs.ChannelID, rs.LastReadMessageID)
+			count, lastMsg, lastTime, err := s.repo.CountUnreadMessages(ctx, channelID, lastReadMessageID)
 			if err != nil || count == 0 {
 				continue
 			}
-			// Fetch up to 5 recent unread messages for preview
-			recent, _ := s.repo.ListMessagesAfter(ctx, rs.ChannelID, rs.LastReadMessageID, 5)
+			recent, _ := s.repo.ListMessagesAfter(ctx, channelID, lastReadMessageID, 5)
 			results = append(results, UnreadInfo{
 				ChannelID:       chID,
-				LastReadMsgID:   rs.LastReadMessageID.String(),
+				LastReadMsgID:   lastReadMessageID.String(),
 				UnreadCount:     int32(count),
-				MentionCount:    int32(rs.MentionCount),
+				MentionCount:    int32(int64Value(rs.MentionCount)),
 				LastMessageID:   lastMsg.String(),
 				LastMessageTime: lastTime,
 				RecentMessages:  recent,
@@ -794,11 +867,9 @@ func (s *Service) GetUnreadCounts(ctx context.Context, userID string) ([]UnreadI
 		}
 	}
 
-	// 2. DM channels user is part of (mark as DM, resolve other user)
 	if s.dmChannelList != nil {
 		dmChannelIDs, err := s.dmChannelList.GetUserDMChannelIDs(ctx, userID)
 		if err == nil {
-			// Mark already-seen channels as DM too
 			dmSet := make(map[string]bool)
 			for _, id := range dmChannelIDs {
 				dmSet[id] = true
@@ -853,9 +924,12 @@ func (s *Service) resolveDMOtherUser(ctx context.Context, channelID, userID stri
 	if err != nil {
 		return ""
 	}
+
 	for _, m := range members {
+
 		if m != userID {
 			return m
+
 		}
 	}
 	return ""

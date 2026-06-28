@@ -3,6 +3,7 @@ package guild
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -96,6 +97,38 @@ func (h *Handler) UploadGuildIcon(ctx context.Context, req *guildv1.UploadGuildI
 	}, nil
 }
 
+func (h *Handler) UploadGuildBanner(ctx context.Context, req *guildv1.UploadGuildBannerRequest) (*guildv1.UploadGuildBannerResponse, error) {
+	callerID := middleware.UserIDFromContext(ctx)
+	if callerID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+
+	callerPgID, err := parseUUID(callerID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "invalid caller id")
+	}
+	guildPgID, err := parseUUID(req.GetGuildId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid guild_id")
+	}
+
+	guild, bannerURL, err := h.svc.UploadGuildBanner(ctx, callerPgID, guildPgID, req.GetFilename(), req.GetContentType(), req.GetData())
+	if err != nil {
+		if errors.Is(err, ErrInsufficientPermissions) {
+			return nil, status.Error(codes.PermissionDenied, "cannot manage this guild")
+		}
+		if errors.Is(err, ErrGuildNotFound) {
+			return nil, status.Error(codes.NotFound, "guild not found")
+		}
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &guildv1.UploadGuildBannerResponse{
+		BannerUrl: bannerURL,
+		Guild:     h.toProto(ctx, guild, 0),
+	}, nil
+}
+
 func (h *Handler) UpdateGuild(ctx context.Context, req *guildv1.UpdateGuildRequest) (*guildv1.UpdateGuildResponse, error) {
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
@@ -116,6 +149,7 @@ func (h *Handler) UpdateGuild(ctx context.Context, req *guildv1.UpdateGuildReque
 		Name:        req.Name,
 		Description: req.Description,
 		IconUrl:     req.IconUrl,
+		BannerUrl:   req.BannerUrl,
 	}
 
 	guild, err := h.svc.UpdateGuild(ctx, callerPgID, guildPgID, params)
@@ -722,6 +756,7 @@ func dbGuildToProto(g db.Guild, memberCount int32) *guildv1.Guild {
 		Name:        g.Name,
 		Description: g.Description,
 		IconUrl:     g.IconUrl,
+		BannerUrl:   g.BannerUrl,
 		OwnerId:     g.OwnerID.String(),
 		MemberCount: memberCount,
 	}
@@ -731,11 +766,12 @@ func dbGuildToProto(g db.Guild, memberCount int32) *guildv1.Guild {
 	return pg
 }
 
-// toProto wraps dbGuildToProto and resolves the stored object key into a fresh
-// presigned URL that external clients can actually reach.
+// toProto wraps dbGuildToProto and resolves the stored object keys into fresh
+// presigned URLs that external clients can actually reach.
 func (h *Handler) toProto(ctx context.Context, g db.Guild, memberCount int32) *guildv1.Guild {
 	pg := dbGuildToProto(g, memberCount)
 	pg.IconUrl = h.svc.ResolveIconURL(ctx, g.IconUrl)
+	pg.BannerUrl = h.svc.ResolveBannerURL(ctx, g.BannerUrl)
 	return pg
 }
 
@@ -753,11 +789,11 @@ func dbGuildMemberToProto(m db.GuildMember) *guildv1.GuildMember {
 
 func dbRoleToProto(r db.Role) *guildv1.Role {
 	pr := &guildv1.Role{
-		Id:          r.ID.String(),
-		GuildId:     r.GuildID.String(),
-		Name:        r.Name,
-		Color:       r.Color,
-		Position:    r.Position,
+		Id:       r.ID.String(),
+		GuildId:  r.GuildID.String(),
+		Name:     r.Name,
+		Color:    r.Color,
+		Position: r.Position,
 		// Permissions managed via OpenFGA, not in DB
 	}
 	if r.CreatedAt.Valid {
@@ -785,69 +821,109 @@ func (h *Handler) inviteToProto(inv db.Invite) *guildv1.Invite {
 	return pi
 }
 
-// Permission enum → OpenFGA relation mapping
-var permToRelation = map[guildv1.Permission]string{
-	guildv1.Permission_PERMISSION_MANAGE_GUILD:    "can_manage_guild",
-	guildv1.Permission_PERMISSION_KICK_MEMBERS:    "can_kick",
-	guildv1.Permission_PERMISSION_BAN_MEMBERS:     "can_ban",
-	guildv1.Permission_PERMISSION_MANAGE_ROLES:    "can_manage_roles",
-	guildv1.Permission_PERMISSION_MANAGE_CHANNELS: "can_manage_channels",
-	guildv1.Permission_PERMISSION_ADMINISTRATOR:   "admin",
+// GrantPermission (per-user guild grants) is deprecated in the
+// Postgres RBAC model: grants are role-scoped via role_permissions.
+// Use GrantRolePermission with a role that contains the target user.
+// For per-channel overrides, use SetChannelOverride in ChannelService.
+func (h *Handler) GrantPermission(ctx context.Context, _ *guildv1.GrantPermissionRequest) (*guildv1.GrantPermissionResponse, error) {
+	return nil, status.Error(codes.Unimplemented,
+		"user-scoped guild permissions are no longer supported; use GrantRolePermission, or SetChannelOverride for per-channel rules")
 }
 
-func (h *Handler) GrantPermission(ctx context.Context, req *guildv1.GrantPermissionRequest) (*guildv1.GrantPermissionResponse, error) {
+// RevokePermission is deprecated — see GrantPermission.
+func (h *Handler) RevokePermission(ctx context.Context, _ *guildv1.RevokePermissionRequest) (*guildv1.RevokePermissionResponse, error) {
+	return nil, status.Error(codes.Unimplemented,
+		"user-scoped guild permissions are no longer supported; use RevokeRolePermission, or DeleteChannelOverride for per-channel rules")
+}
+
+func (h *Handler) GrantRolePermission(ctx context.Context, req *guildv1.GrantRolePermissionRequest) (*guildv1.GrantRolePermissionResponse, error) {
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
-	if !h.svc.authz.CanManageRoles(ctx, callerID, req.GuildId) {
-		return nil, status.Error(codes.PermissionDenied, "insufficient permissions")
+	callerPg, err := parseUUID(callerID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "invalid caller id")
 	}
-
-	relation, ok := permToRelation[req.Permission]
-	if !ok {
-		// For non-guild-level permissions (view, send, connect etc), grant as admin
-		relation = "admin"
+	guildPg, err := parseUUID(req.GuildId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid guild_id")
 	}
-
-	if err := h.svc.authz.WriteTuple(ctx, "user:"+req.UserId, relation, "guild:"+req.GuildId); err != nil {
-		return nil, status.Error(codes.Internal, "failed to grant permission")
+	rolePg, err := parseUUID(req.RoleId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid role_id")
 	}
-	return &guildv1.GrantPermissionResponse{}, nil
+	if err := h.svc.GrantRolePermission(ctx, callerPg, guildPg, rolePg, strings.TrimPrefix(req.Permission.String(), "PERMISSION_")); err != nil {
+		switch {
+		case errors.Is(err, ErrInsufficientPermissions):
+			return nil, status.Error(codes.PermissionDenied, "cannot manage roles")
+		case errors.Is(err, ErrRoleNotFound):
+			return nil, status.Error(codes.NotFound, "role not found")
+		case errors.Is(err, ErrInvalidPermission):
+			return nil, status.Error(codes.InvalidArgument, "unknown permission")
+		default:
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+	return &guildv1.GrantRolePermissionResponse{}, nil
 }
 
-func (h *Handler) RevokePermission(ctx context.Context, req *guildv1.RevokePermissionRequest) (*guildv1.RevokePermissionResponse, error) {
+func (h *Handler) RevokeRolePermission(ctx context.Context, req *guildv1.RevokeRolePermissionRequest) (*guildv1.RevokeRolePermissionResponse, error) {
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
-	if !h.svc.authz.CanManageRoles(ctx, callerID, req.GuildId) {
-		return nil, status.Error(codes.PermissionDenied, "insufficient permissions")
+	callerPg, err := parseUUID(callerID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "invalid caller id")
 	}
-
-	relation, ok := permToRelation[req.Permission]
-	if !ok {
-		relation = "admin"
+	guildPg, err := parseUUID(req.GuildId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid guild_id")
 	}
-
-	if err := h.svc.authz.DeleteTuple(ctx, "user:"+req.UserId, relation, "guild:"+req.GuildId); err != nil {
-		return nil, status.Error(codes.Internal, "failed to revoke permission")
+	rolePg, err := parseUUID(req.RoleId)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid role_id")
 	}
-	return &guildv1.RevokePermissionResponse{}, nil
+	if err := h.svc.RevokeRolePermission(ctx, callerPg, guildPg, rolePg, strings.TrimPrefix(req.Permission.String(), "PERMISSION_")); err != nil {
+		switch {
+		case errors.Is(err, ErrInsufficientPermissions):
+			return nil, status.Error(codes.PermissionDenied, "cannot manage roles")
+		case errors.Is(err, ErrRoleNotFound):
+			return nil, status.Error(codes.NotFound, "role not found")
+		case errors.Is(err, ErrInvalidPermission):
+			return nil, status.Error(codes.InvalidArgument, "unknown permission")
+		default:
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+	return &guildv1.RevokeRolePermissionResponse{}, nil
 }
 
+// GetUserPermissions returns the effective Discord-style permission
+// set for a user in a guild — owner + admin both get the full 50,
+// regular members get whatever their assigned roles union out to.
 func (h *Handler) GetUserPermissions(ctx context.Context, req *guildv1.GetUserPermissionsRequest) (*guildv1.GetUserPermissionsResponse, error) {
 	callerID := middleware.UserIDFromContext(ctx)
 	if callerID == "" {
 		return nil, status.Error(codes.Unauthenticated, "not authenticated")
 	}
-
-	var perms []guildv1.Permission
-	for perm, relation := range permToRelation {
-		if h.svc.authz.Check(ctx, "user:"+req.UserId, relation, "guild:"+req.GuildId) {
-			perms = append(perms, perm)
+	names, err := h.svc.authz.ListGuildPermissions(ctx, req.GetUserId(), req.GetGuildId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	nameToEnum := make(map[string]guildv1.Permission, len(guildv1.Permission_name))
+	for num, name := range guildv1.Permission_name {
+		// enum values are "PERMISSION_FOO"; strip the prefix so we can
+		// match the names stored in the catalogue (e.g. "FOO").
+		stripped := strings.TrimPrefix(name, "PERMISSION_")
+		nameToEnum[stripped] = guildv1.Permission(num)
+	}
+	perms := make([]guildv1.Permission, 0, len(names))
+	for _, n := range names {
+		if p, ok := nameToEnum[n]; ok {
+			perms = append(perms, p)
 		}
 	}
-
 	return &guildv1.GetUserPermissionsResponse{Permissions: perms}, nil
 }

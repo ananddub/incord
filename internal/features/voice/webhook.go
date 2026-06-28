@@ -37,15 +37,15 @@ func parseRoomMeta(r *livekit.Room) roomMeta {
 
 type WebhookHandler struct {
 	provider  *auth.SimpleKeyProvider
-	nats      *realtime.Hub
+	lpb       *realtime.LPubSub
 	voiceSvc  *Service
 	roomMetas sync.Map // room name → roomMeta cache
 }
 
-func NewWebhookHandler(cfg config.LiveKitConfig, nats *realtime.Hub, voiceSvc *Service) *WebhookHandler {
+func NewWebhookHandler(cfg config.LiveKitConfig, ldp *realtime.LPubSub, voiceSvc *Service) *WebhookHandler {
 	return &WebhookHandler{
 		provider: auth.NewSimpleKeyProvider(cfg.APIKey, cfg.APISecret),
-		nats:     nats,
+		lpb:      ldp,
 		voiceSvc: voiceSvc,
 	}
 }
@@ -180,9 +180,9 @@ func (h *WebhookHandler) publish(meta roomMeta, evt *streamv1.VoiceStateEvent) {
 		evt.RoomActiveSince = h.voiceSvc.GetActiveSince(context.Background(), meta.ChannelID)
 	}
 	if meta.GuildID != "" {
-		_ = h.nats.Publish(realtime.GuildChannelVoice(meta.GuildID, meta.ChannelID), evt)
+		_ = realtime.Publish(h.lpb, realtime.GuildChannelVoice(meta.GuildID, meta.ChannelID), evt)
 	} else if evt.UserId != "" {
-		_ = h.nats.Publish(realtime.DmCall(evt.UserId), evt)
+		_ = realtime.Publish(h.lpb, realtime.DmCall(evt.UserId), evt)
 	}
 }
 

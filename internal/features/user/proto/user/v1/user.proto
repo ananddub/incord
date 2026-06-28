@@ -5,40 +5,79 @@ package user.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/user/v1;userv1";
 
 import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
 import "buf/validate/validate.proto";
 
+// URL conventions:
+//   /v1/users/{user_id}                       profile CRUD
+//   /v1/users/search?q=                       substring search
+//   /v1/users/by-username/{username}          alt lookup
+//   /v1/users/me/*                            authenticated-self shortcuts
+//   /v1/friends, /v1/friends/{friend_id}      friendship graph
+//   /v1/blocks, /v1/blocks/{user_id}          block list
 service UserService {
-  rpc GetUser(GetUserRequest) returns (GetUserResponse);
-  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
-  // UpdateUsername sets the caller's username handle. Only allowed once —
-  // succeeds only if the current username is empty; otherwise returns
-  // FailedPrecondition. Server appends a random "#1234" discriminator.
-  rpc UpdateUsername(UpdateUsernameRequest) returns (UpdateUsernameResponse);
-  rpc UpdateStatus(UpdateStatusRequest) returns (UpdateStatusResponse);
-  rpc UploadUserAvatar(UploadUserAvatarRequest) returns (UploadUserAvatarResponse);
-  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
-  rpc GetUserByUsername(GetUserByUsernameRequest) returns (GetUserByUsernameResponse);
-  rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
+  rpc GetUser(GetUserRequest) returns (GetUserResponse) {
+    option (google.api.http) = { get: "/v1/users/{user_id}" };
+  }
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {
+    option (google.api.http) = { patch: "/v1/users/me" body: "*" };
+  }
+  rpc UpdateUsername(UpdateUsernameRequest) returns (UpdateUsernameResponse) {
+    option (google.api.http) = { patch: "/v1/users/me/username" body: "*" };
+  }
+  rpc UpdateStatus(UpdateStatusRequest) returns (UpdateStatusResponse) {
+    option (google.api.http) = { patch: "/v1/users/me/status" body: "*" };
+  }
+  rpc UploadUserAvatar(UploadUserAvatarRequest) returns (UploadUserAvatarResponse) {
+    option (google.api.http) = { post: "/v1/users/me/avatar" body: "*" };
+  }
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {
+    option (google.api.http) = { delete: "/v1/users/me" };
+  }
+  rpc GetUserByUsername(GetUserByUsernameRequest) returns (GetUserByUsernameResponse) {
+    option (google.api.http) = { get: "/v1/users/by-username/{username}" };
+  }
+  rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse) {
+    option (google.api.http) = { get: "/v1/users/search" };
+  }
 
   // Friends
-  rpc SendFriendRequest(SendFriendRequestRequest) returns (SendFriendRequestResponse);
-  rpc AcceptFriendRequest(AcceptFriendRequestRequest) returns (AcceptFriendRequestResponse);
-  rpc DeclineFriendRequest(DeclineFriendRequestRequest) returns (DeclineFriendRequestResponse);
-  // CancelFriendRequest is called by the sender to withdraw their own
-  // outgoing pending request before the recipient has acted on it.
-  rpc CancelFriendRequest(CancelFriendRequestRequest) returns (CancelFriendRequestResponse);
-  rpc RemoveFriend(RemoveFriendRequest) returns (RemoveFriendResponse);
-  rpc BlockUser(BlockUserRequest) returns (BlockUserResponse);
-  rpc UnblockUser(UnblockUserRequest) returns (UnblockUserResponse);
-  rpc ListFriends(ListFriendsRequest) returns (ListFriendsResponse);
-  rpc ListPendingRequests(ListPendingRequestsRequest) returns (ListPendingRequestsResponse);
-  rpc ListBlocked(ListBlockedRequest) returns (ListBlockedResponse);
-
+  rpc SendFriendRequest(SendFriendRequestRequest) returns (SendFriendRequestResponse) {
+    // POST because request takes the friend's `name#1234` handle in the
+    // body rather than a UUID in the path.
+    option (google.api.http) = { post: "/v1/friends/requests" body: "*" };
+  }
+  rpc AcceptFriendRequest(AcceptFriendRequestRequest) returns (AcceptFriendRequestResponse) {
+    option (google.api.http) = { post: "/v1/friends/{requester_user_id}/accept" body: "*" };
+  }
+  rpc DeclineFriendRequest(DeclineFriendRequestRequest) returns (DeclineFriendRequestResponse) {
+    option (google.api.http) = { post: "/v1/friends/{requester_user_id}/decline" body: "*" };
+  }
+  rpc CancelFriendRequest(CancelFriendRequestRequest) returns (CancelFriendRequestResponse) {
+    option (google.api.http) = { post: "/v1/friends/{target_user_id}/cancel" body: "*" };
+  }
+  rpc RemoveFriend(RemoveFriendRequest) returns (RemoveFriendResponse) {
+    option (google.api.http) = { delete: "/v1/friends/{friend_id}" };
+  }
+  rpc BlockUser(BlockUserRequest) returns (BlockUserResponse) {
+    option (google.api.http) = { put: "/v1/blocks/{target_user_id}" body: "*" };
+  }
+  rpc UnblockUser(UnblockUserRequest) returns (UnblockUserResponse) {
+    option (google.api.http) = { delete: "/v1/blocks/{target_user_id}" };
+  }
+  rpc ListFriends(ListFriendsRequest) returns (ListFriendsResponse) {
+    option (google.api.http) = { get: "/v1/friends" };
+  }
+  rpc ListPendingRequests(ListPendingRequestsRequest) returns (ListPendingRequestsResponse) {
+    option (google.api.http) = { get: "/v1/friends/pending" };
+  }
+  rpc ListBlocked(ListBlockedRequest) returns (ListBlockedResponse) {
+    option (google.api.http) = { get: "/v1/blocks" };
+  }
 }
 
 message User {
   string id = 1;
-  // Unique identity handle in "name#1234" format. Changeable but must stay unique.
   string username = 2;
   string email = 3;
   string avatar_url = 4;
@@ -46,9 +85,7 @@ message User {
   string status = 6;
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
-  // Hex color (e.g. "#5865F2") used as the profile/card background.
   string background_color = 9;
-  // Freely changeable display name shown in UI. Not unique.
   string display_name = 10;
 }
 
@@ -64,7 +101,6 @@ message UpdateUserRequest {
   optional string avatar_url = 2 [(buf.validate.field).string = {max_len: 2048}];
   optional string bio = 3 [(buf.validate.field).string = {max_len: 500}];
   optional string status = 4 [(buf.validate.field).string = {max_len: 128}];
-  // Hex color like "#5865F2". Must be 4 or 7 chars starting with '#'.
   optional string background_color = 5 [(buf.validate.field).string = {pattern: "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"}];
   optional string display_name = 6 [(buf.validate.field).string = {min_len: 1, max_len: 32}];
 }
@@ -74,7 +110,6 @@ message UpdateUserResponse {
 }
 
 message UpdateUsernameRequest {
-  // Base name only. Server appends a random 4-digit discriminator.
   string username = 1 [(buf.validate.field).string = {min_len: 2, max_len: 32}];
 }
 
@@ -108,7 +143,6 @@ message DeleteUserRequest {
 message DeleteUserResponse {}
 
 message GetUserByUsernameRequest {
-  // Full handle in "name#1234" format.
   string username = 1 [(buf.validate.field).string = {pattern: "^.{2,32}#[0-9]{4}$"}];
 }
 
@@ -139,8 +173,10 @@ enum FriendshipStatus {
 message Friendship {
   string user_id = 1;
   string friend_id = 2;
-  FriendshipStatus status = 3;
-  google.protobuf.Timestamp created_at = 4;
+  string username = 3;
+  string avatar_url = 4;
+  FriendshipStatus status = 5;
+  google.protobuf.Timestamp created_at = 6;
 }
 
 message SendFriendRequestRequest {
@@ -167,7 +203,6 @@ message DeclineFriendRequestRequest {
 message DeclineFriendRequestResponse {}
 
 message CancelFriendRequestRequest {
-  // The user the pending request was sent to.
   string target_user_id = 1 [(buf.validate.field).string.uuid = true];
 }
 

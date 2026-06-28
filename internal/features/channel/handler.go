@@ -256,6 +256,49 @@ func channelToProto(ch db.Channel) *channelv1.Channel {
 	return pb
 }
 
+func (h *Handler) SetChannelOverride(ctx context.Context, req *channelv1.SetChannelOverrideRequest) (*channelv1.SetChannelOverrideResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if userID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+	if err := h.svc.SetChannelOverride(ctx, userID, req.GetChannelId(), req.GetTargetType(), req.GetTargetId(), req.GetPermission(), req.GetEffect()); err != nil {
+		return nil, mapError(err)
+	}
+	return &channelv1.SetChannelOverrideResponse{}, nil
+}
+
+func (h *Handler) DeleteChannelOverride(ctx context.Context, req *channelv1.DeleteChannelOverrideRequest) (*channelv1.DeleteChannelOverrideResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if userID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+	if err := h.svc.DeleteChannelOverride(ctx, userID, req.GetChannelId(), req.GetTargetType(), req.GetTargetId(), req.GetPermission()); err != nil {
+		return nil, mapError(err)
+	}
+	return &channelv1.DeleteChannelOverrideResponse{}, nil
+}
+
+func (h *Handler) ListChannelOverrides(ctx context.Context, req *channelv1.ListChannelOverridesRequest) (*channelv1.ListChannelOverridesResponse, error) {
+	userID := middleware.UserIDFromContext(ctx)
+	if userID == "" {
+		return nil, status.Error(codes.Unauthenticated, "not authenticated")
+	}
+	rows, err := h.svc.ListChannelOverrides(ctx, userID, req.GetChannelId())
+	if err != nil {
+		return nil, mapError(err)
+	}
+	out := make([]*channelv1.ChannelOverride, len(rows))
+	for i, r := range rows {
+		out[i] = &channelv1.ChannelOverride{
+			TargetType: r.TargetType,
+			TargetId:   r.TargetID,
+			Permission: r.Permission,
+			Effect:     r.Effect,
+		}
+	}
+	return &channelv1.ListChannelOverridesResponse{Overrides: out}, nil
+}
+
 // mapError converts domain errors to gRPC status errors.
 func mapError(err error) error {
 	switch {

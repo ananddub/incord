@@ -95,8 +95,8 @@ func (s *Service) RemoveParticipant(ctx context.Context, channelID, userID strin
 		return err
 	}
 
-	if guildID != "" && s.nats != nil {
-		_ = s.nats.Publish(realtime.GuildChannelVoice(guildID, channelID),
+	if guildID != "" && s.lpb != nil {
+		_ = realtime.Publish(s.lpb, realtime.GuildChannelVoice(guildID, channelID),
 			&streamv1.VoiceStateEvent{
 				Event:           streamv1.VoiceEvent_VOICE_EVENT_STATE_UPDATE,
 				Action:          streamv1.VoiceAction_VOICE_ACTION_LEAVE,
@@ -199,27 +199,52 @@ func (s *Service) Undeafen(ctx context.Context, userID, channelID string) ([]Par
 }
 
 func (s *Service) EnableVideo(ctx context.Context, userID, channelID string) ([]ParticipantState, error) {
+	if err := s.requireStreamPerm(ctx, userID, channelID); err != nil {
+		return nil, err
+	}
 	return s.toggleField(ctx, userID, channelID, func(ps *ParticipantState) {
 		ps.Video = true
 	})
 }
 
 func (s *Service) DisableVideo(ctx context.Context, userID, channelID string) ([]ParticipantState, error) {
+	// Turning OFF your own camera is always allowed — no perm check.
 	return s.toggleField(ctx, userID, channelID, func(ps *ParticipantState) {
 		ps.Video = false
 	})
 }
 
 func (s *Service) StartScreenShare(ctx context.Context, userID, channelID string) ([]ParticipantState, error) {
+	if err := s.requireStreamPerm(ctx, userID, channelID); err != nil {
+		return nil, err
+	}
 	return s.toggleField(ctx, userID, channelID, func(ps *ParticipantState) {
 		ps.ScreenShare = true
 	})
 }
 
 func (s *Service) StopScreenShare(ctx context.Context, userID, channelID string) ([]ParticipantState, error) {
+	// Stopping a share is always allowed.
 	return s.toggleField(ctx, userID, channelID, func(ps *ParticipantState) {
 		ps.ScreenShare = false
 	})
+}
+
+// requireStreamPerm enforces Discord's STREAM permission before the user
+// can publish camera/screen tracks. DMs have no guild → no check needed,
+// both parties consent by being in the 1:1 channel.
+func (s *Service) requireStreamPerm(ctx context.Context, userID, channelID string) error {
+	if s.authz == nil {
+		return nil
+	}
+	ps, _ := s.GetParticipant(ctx, channelID, userID)
+	if ps == nil || ps.GuildID == "" {
+		return nil
+	}
+	if !s.authz.CanStream(ctx, userID, ps.GuildID) {
+		return ErrInsufficientPermissions
+	}
+	return nil
 }
 
 func (s *Service) broadcastParticipant(ctx context.Context, activeSince time.Time, ps ParticipantState) {
@@ -241,7 +266,7 @@ func (s *Service) broadcastParticipant(ctx context.Context, activeSince time.Tim
 		Timestamp:       timestamppb.Now(),
 		RoomActiveSince: s.GetActiveSince(ctx, ps.ChannelID),
 	}
-	_ = s.nats.Publish(realtime.GuildChannelVoice(ps.GuildID, ps.ChannelID), evt)
+	_ = realtime.Publish(s.lpb, realtime.GuildChannelVoice(ps.GuildID, ps.ChannelID), evt)
 }
 
 func (s *Service) broadcastChannelState(ctx context.Context, activeSince time.Time, channelID, guildID string) ([]ParticipantState, error) {

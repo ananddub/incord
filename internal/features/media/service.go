@@ -23,11 +23,11 @@ const (
 
 // Service contains the business logic for the media feature.
 type Service struct {
-	repo           *Repository
-	minio          *minio.Client // internal endpoint — used for direct object ops
-	signer         *minio.Client // public endpoint — used for signing client-facing URLs
-	bucket         string
-	publicBaseURL  string // pre-built "http(s)://<public-endpoint>/<bucket>/" prefix
+	repo          *Repository
+	minio         *minio.Client // internal endpoint — used for direct object ops
+	signer        *minio.Client // public endpoint — used for signing client-facing URLs
+	bucket        string
+	publicBaseURL string // pre-built "http(s)://<public-endpoint>/<bucket>/" prefix
 }
 
 // NewService creates a new media Service. `signer` is a MinIO client

@@ -5,18 +5,8 @@ package stream.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/stream/v1;streamv1";
 
 import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
 
-// === Enums ===
-//
-// These enums are paired with hand-written Wire() helpers in wire.go that
-// translate each value into the exact snake_case/upper-case string used on
-// the NATS wire. Message fields stay typed as `string` so subscribers
-// (including external clients) don't have to change their JSON decoders;
-// publishers should always go through `Enum_VALUE.Wire()` instead of
-// hand-typing the tag string.
-
-// Chat events — used for DmChatEvent.type, TextChannelEvent.type and
-// VoiceChatEvent.type.
 enum ChatEventType {
   CHAT_EVENT_UNSPECIFIED = 0;
   CHAT_EVENT_CREATE = 1;
@@ -29,7 +19,6 @@ enum ChatEventType {
   CHAT_EVENT_READ_RECEIPT = 8;
 }
 
-// DM channel lifecycle — used for DmChannelEvent.type.
 enum ChannelLifecycleType {
   CHANNEL_LIFECYCLE_UNSPECIFIED = 0;
   CHANNEL_LIFECYCLE_CREATE = 1;
@@ -37,7 +26,6 @@ enum ChannelLifecycleType {
   CHANNEL_LIFECYCLE_DELETE = 3;
 }
 
-// DM call signalling — used for DmCallEvent.type.
 enum DmCallType {
   DM_CALL_UNSPECIFIED = 0;
   DM_CALL_INCOMING = 1;
@@ -47,14 +35,11 @@ enum DmCallType {
   DM_CALL_PARTICIPANT_LEFT = 5;
 }
 
-// Voice event — used for VoiceStateEvent.event (currently single-valued
-// but defined as an enum so hardcoded strings never leak back in).
 enum VoiceEvent {
   VOICE_EVENT_UNSPECIFIED = 0;
   VOICE_EVENT_STATE_UPDATE = 1;
 }
 
-// Voice action — used for VoiceStateEvent.action.
 enum VoiceAction {
   VOICE_ACTION_UNSPECIFIED = 0;
   VOICE_ACTION_JOIN = 1;
@@ -68,7 +53,6 @@ enum VoiceAction {
   VOICE_ACTION_ROOM_FINISHED = 9;
 }
 
-// Voice track kind — used for VoiceStateEvent.track_type.
 enum VoiceTrackType {
   VOICE_TRACK_UNSPECIFIED = 0;
   VOICE_TRACK_AUDIO = 1;
@@ -76,7 +60,6 @@ enum VoiceTrackType {
   VOICE_TRACK_SCREEN_SHARE = 3;
 }
 
-// Friend/presence activity — used for FriendActivityEvent.event.
 enum FriendEventType {
   FRIEND_EVENT_UNSPECIFIED = 0;
   FRIEND_EVENT_PRESENCE_UPDATE = 1;
@@ -88,8 +71,6 @@ enum FriendEventType {
   FRIEND_EVENT_REQUEST_CANCELLED = 7;
 }
 
-// User presence — used for FriendActivityEvent.status and wherever a
-// human-readable presence string is emitted.
 enum PresenceStatus {
   PRESENCE_STATUS_UNSPECIFIED = 0;
   PRESENCE_STATUS_ONLINE = 1;
@@ -98,8 +79,6 @@ enum PresenceStatus {
   PRESENCE_STATUS_OFFLINE = 4;
 }
 
-// Guild-level event — used for GuildEvent.event (+ GuildEvent.action,
-// which currently mirrors event).
 enum GuildEventType {
   GUILD_EVENT_UNSPECIFIED = 0;
   GUILD_EVENT_MEMBER_ADD = 1;
@@ -118,31 +97,54 @@ enum GuildEventType {
   GUILD_EVENT_CHANNEL_DELETE = 14;
 }
 
+// All streaming RPCs are exposed over HTTP as SSE (Server-Sent Events).
+// grpc-gateway emits each streamed message as a newline-delimited JSON
+// object over HTTP chunked transfer — compatible with SSE consumers when
+// the gateway is wired with an SSE marshaler / `Accept: text/event-stream`
+// response header at the mux layer. All request types are empty (subscriber
+// identity comes from the bearer token), so GET is the correct verb.
+//
+// URL convention: `/v1/stream/*` — subscription endpoints live under a
+// single namespace so the frontend can multiplex them through one EventSource
+// per topic.
 service StreamService {
-  rpc StreamDmChat(StreamDmChatRequest) returns (stream DmChatEvent);
+  rpc StreamDmChat(StreamDmChatRequest) returns (stream DmChatEvent) {
+    option (google.api.http) = { get: "/v1/stream/dm/chat" };
+  }
 
-  rpc StreamDmChannels(StreamDmChannelsRequest) returns (stream DmChannelEvent);
+  rpc StreamDmChannels(StreamDmChannelsRequest) returns (stream DmChannelEvent) {
+    option (google.api.http) = { get: "/v1/stream/dm/channels" };
+  }
 
-  rpc StreamDmCalls(StreamDmCallsRequest) returns (stream DmCallEvent);
+  rpc StreamDmCalls(StreamDmCallsRequest) returns (stream DmCallEvent) {
+    option (google.api.http) = { get: "/v1/stream/dm/calls" };
+  }
 
-  rpc StreamTextChannels(StreamTextChannelsRequest) returns (stream TextChannelEvent);
+  rpc StreamTextChannels(StreamTextChannelsRequest) returns (stream TextChannelEvent) {
+    option (google.api.http) = { get: "/v1/stream/channels/text" };
+  }
 
-  rpc StreamVoiceChat(StreamVoiceChatRequest) returns (stream VoiceChatEvent);
+  rpc StreamVoiceChat(StreamVoiceChatRequest) returns (stream VoiceChatEvent) {
+    option (google.api.http) = { get: "/v1/stream/channels/voice-chat" };
+  }
 
-  rpc StreamGuildEvents(StreamGuildEventsRequest) returns (stream GuildEvent);
+  rpc StreamGuildEvents(StreamGuildEventsRequest) returns (stream GuildEvent) {
+    option (google.api.http) = { get: "/v1/stream/guilds" };
+  }
 
-  rpc StreamVoiceState(StreamVoiceStateRequest) returns (stream VoiceStateEvent);
+  rpc StreamVoiceState(StreamVoiceStateRequest) returns (stream VoiceStateEvent) {
+    option (google.api.http) = { get: "/v1/stream/voice-state" };
+  }
 
-  rpc StreamTyping(StreamTypingRequest) returns (stream TypingEvent);
+  rpc StreamTyping(StreamTypingRequest) returns (stream TypingEvent) {
+    option (google.api.http) = { get: "/v1/stream/typing" };
+  }
 
-  rpc StreamFriendActivity(StreamFriendActivityRequest) returns (stream FriendActivityEvent);
+  rpc StreamFriendActivity(StreamFriendActivityRequest) returns (stream FriendActivityEvent) {
+    option (google.api.http) = { get: "/v1/stream/friends" };
+  }
 }
 
-// === Shared chat payloads ===
-
-// ChatAttachment mirrors message.v1.Attachment for stream payloads so the
-// stream feature doesn't pull in the whole message proto. Reused by every
-// chat-like event (DM + guild text + guild voice chat).
 message ChatAttachment {
   string id = 1;
   string filename = 2;
@@ -151,28 +153,20 @@ message ChatAttachment {
   int64 size = 5;
 }
 
-// ChatReactionCount is a per-emoji snapshot of a message's reactions.
-// Reused across all chat events so clients never have to recompute totals
-// from raw reaction_add / reaction_remove deltas.
 message ChatReactionCount {
-  string emoji = 1;
-  int32 count = 2;
-  // True if the current stream subscriber has reacted with this emoji.
-  // On a fan-out subject we don't know the receiver, so this is populated
-  // best-effort by the server for the event's `sender_id` perspective —
-  // clients should still maintain their own self-reaction set.
-  bool me = 3;
+  repeated string user = 1;
+  string emoji = 2;
+  int32 count = 3;
+  bool me = 4;
 }
 
-// ChatForwardedReference points at the message a forward was created from.
-// Mirrors message.v1.ForwardedReference; kept flat for stream payloads.
+
 message ChatForwardedReference {
   string channel_id = 1;
   string message_id = 2;
   string author_id = 3;
 }
 
-// === DM Chat (all DMs, auto-detect) ===
 
 message StreamDmChatRequest {}
 
@@ -180,42 +174,29 @@ message DmChatEvent {
   ChatEventType type = 1;
   string channel_id = 2;
   string message_id = 3;
-  // The user who initiated the event (sender/editor/reactor/etc.).
   string sender_id = 4;
-  // Message author — present on create/update/delete/pin/unpin.
   string author_id = 10;
-  // On "update" this is the new content; on "create" it's the initial
-  // content; on "delete" it is empty.
   string content = 5;
   google.protobuf.Timestamp timestamp = 6;
   string reply_to_id = 7;
   repeated ChatAttachment attachments = 8;
-  // Underlying MessageType int (1=default, 3=reply, ...).
   int32 msg_type = 9;
   bool pinned = 11;
   bool deleted = 12;
-  // Populated on reaction_add / reaction_remove events.
   string emoji = 13;
   string edited_at = 14;
   string created_at = 15;
-  // User IDs explicitly @-mentioned by the author. Empty on non-create
-  // events where mentions don't change.
   repeated string mention_user_ids = 16;
-  // Full per-emoji reaction snapshot — sent on create/update/delete/pin
-  // AND on reaction_add / reaction_remove so clients can render counts
-  // without recomputing from deltas.
   repeated ChatReactionCount reactions = 17;
-  // Populated when this message is a forward of another.
   ChatForwardedReference forwarded_from = 18;
 }
 
-// === DM Channels lifecycle ===
 
 message StreamDmChannelsRequest {}
 
 message DmChannelMember {
   string id = 1;
-  string username = 2;      // full "name#1234"
+  string username = 2;      
   string display_name = 3;
   string avatar_url = 4;
   string status = 5;
@@ -223,56 +204,41 @@ message DmChannelMember {
 
 message DmChannelEvent {
   ChannelLifecycleType type = 1;
-  string id = 2;            // channel id
+  string id = 2;           
   string name = 3;
-  int32 channel_type = 4;   // 5=DM, 6=GROUP_DM
+  int32 channel_type = 4;   
   repeated DmChannelMember members = 5;
 }
 
-// === DM Calls ===
 
 message StreamDmCallsRequest {}
 
 message DmCallEvent {
   DmCallType type = 1;
   string channel_id = 2;
-  // The user who initiated the call (present on every event so late
-  // subscribers can identify the ongoing call).
   string caller_id = 3;
-  // The specific participant this event is about (accepted/rejected/left).
   string participant_id = 4;
-  // True if the caller intends to publish video (camera).
   bool video = 5;
   google.protobuf.Timestamp timestamp = 6;
 }
 
-// === Text Channels (all guilds, auto-detect) ===
 
 message StreamTextChannelsRequest {}
 
-// TextChannelEvent carries the same rich payload as DmChatEvent so guild
-// channel subscribers can render replies, attachments, reactions and
-// mentions without additional round trips.
 message TextChannelEvent {
   ChatEventType type = 1;
   string guild_id = 2;
   string channel_id = 3;
   string message_id = 4;
-  // Message author — present on create/update/delete/pin/unpin.
   string author_id = 5;
-  // On "update" this is the new content; on "create" it's the initial
-  // content; on "delete" it is empty.
   string content = 6;
   google.protobuf.Timestamp timestamp = 7;
-  // The user who initiated this event. Differs from author_id on
-  // moderation-style edits/deletes.
   string sender_id = 8;
   string reply_to_id = 9;
   repeated ChatAttachment attachments = 10;
   int32 msg_type = 11;
   bool pinned = 12;
   bool deleted = 13;
-  // Populated on reaction_add / reaction_remove events.
   string emoji = 14;
   string edited_at = 15;
   string created_at = 16;
@@ -281,12 +247,9 @@ message TextChannelEvent {
   ChatForwardedReference forwarded_from = 19;
 }
 
-// === Voice Chat (text in voice channels, all guilds) ===
 
 message StreamVoiceChatRequest {}
 
-// VoiceChatEvent is identical in shape to TextChannelEvent — text chat
-// that happens inside a voice channel.
 message VoiceChatEvent {
   ChatEventType type = 1;
   string guild_id = 2;
@@ -309,7 +272,6 @@ message VoiceChatEvent {
   ChatForwardedReference forwarded_from = 19;
 }
 
-// === Guild Events (all guilds, auto-detect) ===
 
 message StreamGuildEventsRequest {}
 
@@ -321,21 +283,27 @@ message GuildEvent {
   string name = 5;
   int64 type = 6;
   google.protobuf.Timestamp timestamp = 7;
-  // Channel-specific fields (CHANNEL_CREATE/UPDATE).
   string topic = 8;
   int32 position = 9;
   string parent_id = 10;
-  // Guild icon URL on "update" icon change.
   string icon_url = 11;
-  // Role id on role_* events.
   string role_id = 12;
-  // Reason on member_ban.
+  // Guild banner URL on "update" banner change.
+  string banner_url = 15;
   string reason = 13;
-  // Set by publishGuildEvent; mirrors `event`.
   GuildEventType action = 14;
+
+  // Role snapshot — populated on ROLE_CREATE, ROLE_UPDATE, ROLE_DELETE,
+  // and on the ROLE_UPDATE events emitted by GrantRolePermission /
+  // RevokeRolePermission. Carrying the full role state in the event
+  // lets clients refresh their cache atomically without a follow-up
+  // ListRolePermissions round trip.
+  string role_name     = 16;
+  string role_color    = 17;
+  int32  role_position = 18;
+  repeated string role_permissions = 19;
 }
 
-// === Voice State (all guilds, auto-detect) ===
 
 message StreamVoiceStateRequest {}
 
@@ -350,21 +318,14 @@ message VoiceStateEvent {
   bool streaming = 8;
   google.protobuf.Timestamp timestamp = 9;
   VoiceAction action = 10;
-  // LiveKit participant SID.
   string sid = 11;
-  // Display name from LiveKit participant.
   string name = 12;
-  // Participant metadata JSON: {"userId","username","avatarUrl"}.
   string metadata = 13;
   VoiceTrackType track_type = 14;
-  // On track_update: true = published, false = unpublished.
   bool published = 15;
-  // Unix timestamp (seconds) when the LiveKit room for this channel
-  // became active. Same value for every participant in the same channel.
   int64 room_active_since = 16;
 }
 
-// === Typing (all channels, auto-detect) ===
 
 message StreamTypingRequest {}
 
@@ -372,25 +333,21 @@ message TypingEvent {
   string channel_id = 1;
   string guild_id = 2;
   string user_id = 3;
-  google.protobuf.Timestamp timestamp = 4;
+  string username = 4;
+  google.protobuf.Timestamp timestamp = 5;
 }
 
-// === Friend Activity ===
 
 message StreamFriendActivityRequest {}
 
 message FriendActivityEvent {
   FriendEventType event = 1;
   string user_id = 2;
-  // Full unique handle in "name#1234" format.
   string username = 3;
   PresenceStatus status = 4;
   string custom_status = 5;
   string avatar_url = 6;
   google.protobuf.Timestamp timestamp = 7;
-  // For friend_accepted: the auto-opened DM channel id so both ends can
-  // jump straight into conversation.
   string channel_id = 8;
-  // Freely changeable display name shown in UI.
   string display_name = 9;
 }

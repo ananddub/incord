@@ -2,7 +2,6 @@ package stream
 
 import (
 	"context"
-	"encoding/json"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -22,47 +21,37 @@ type VoiceSnapshotProvider interface {
 	GetGuildVoiceChannelIDs(ctx context.Context, guildID string) ([]string, error)
 }
 
-type Handler struct {
-	streamv1.UnimplementedStreamServiceServer
-	nats          *realtime.Hub
-	resolver      UserDataResolver
-	voiceSnapshot VoiceSnapshotProvider
+type PresenceController interface {
+	OnUserConnect(ctx context.Context, userID string)
+	OnUserDisconnect(ctx context.Context, userID string)
 }
 
-func NewHandler(nats *realtime.Hub, resolver UserDataResolver) *Handler {
-	return &Handler{nats: nats, resolver: resolver}
+// ChannelViewer answers "can this user see this channel right now?".
+// Used to filter per-channel fan-out (text messages, typng, voice
+// state) so a private channel's traffic nver reaches a member who
+// doesn't have view_channel. Implemented by authz.Client.CanViewChannel.
+type ChannelViewer interface {
+	CanViewChannel(ctx context.Context, userID, channelID string) bool
+}
+
+type Handler struct {
+	streamv1.UnimplementedStreamServiceServer
+	lpb           *realtime.LPubSub
+	resolver      UserDataResolver
+	voiceSnapshot VoiceSnapshotProvider
+	presence      PresenceController
+	viewer        ChannelViewer
+}
+
+func NewHandler(lpb *realtime.LPubSub, resolver UserDataResolver) *Handler {
+	return &Handler{lpb: lpb, resolver: resolver}
 }
 
 func (h *Handler) SetVoiceSnapshotProvider(v VoiceSnapshotProvider) { h.voiceSnapshot = v }
 
-func streamFromSubjects[T any](h *Handler, ctx context.Context, subjects []string, send func(*T) error) error {
-	if len(subjects) == 0 {
-		<-ctx.Done()
-		return nil
-	}
-	multi, err := h.nats.SubscribeMulti(subjects)
-	if err != nil {
-		return status.Error(codes.Internal, "failed to subscribe")
-	}
-	defer multi.Unsubscribe()
+func (h *Handler) SetPresenceController(p PresenceController) { h.presence = p }
 
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case msg, ok := <-multi.Ch:
-			if !ok {
-				return nil
-			}
-			var evt T
-			if json.Unmarshal(msg.Data, &evt) == nil {
-				if err := send(&evt); err != nil {
-					return err
-				}
-			}
-		}
-	}
-}
+func (h *Handler) SetChannelViewer(v ChannelViewer) { h.viewer = v }
 
 func (h *Handler) StreamDmChat(req *streamv1.StreamDmChatRequest, stream streamv1.StreamService_StreamDmChatServer) error {
 	userID := middleware.UserIDFromContext(stream.Context())
@@ -70,7 +59,9 @@ func (h *Handler) StreamDmChat(req *streamv1.StreamDmChatRequest, stream streamv
 		return status.Error(codes.Unauthenticated, "not authenticated")
 	}
 	subjects := []string{realtime.DmAllMessages(userID)}
-	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, true, func(data *streamv1.DmChatEvent) {
+		stream.Send(data)
+	})
 }
 
 func (h *Handler) StreamDmChannels(req *streamv1.StreamDmChannelsRequest, stream streamv1.StreamService_StreamDmChannelsServer) error {
@@ -79,7 +70,9 @@ func (h *Handler) StreamDmChannels(req *streamv1.StreamDmChannelsRequest, stream
 		return status.Error(codes.Unauthenticated, "not authenticated")
 	}
 	subjects := []string{realtime.DmChannels(userID)}
-	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, true, func(data *streamv1.DmChannelEvent) {
+		stream.Send(data)
+	})
 }
 
 func (h *Handler) StreamDmCalls(req *streamv1.StreamDmCallsRequest, stream streamv1.StreamService_StreamDmCallsServer) error {
@@ -88,7 +81,9 @@ func (h *Handler) StreamDmCalls(req *streamv1.StreamDmCallsRequest, stream strea
 		return status.Error(codes.Unauthenticated, "not authenticated")
 	}
 	subjects := []string{realtime.DmCall(userID)}
-	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, true, func(data *streamv1.DmCallEvent) {
+		stream.Send(data)
+	})
 }
 
 func (h *Handler) StreamTextChannels(req *streamv1.StreamTextChannelsRequest, stream streamv1.StreamService_StreamTextChannelsServer) error {
@@ -104,7 +99,12 @@ func (h *Handler) StreamTextChannels(req *streamv1.StreamTextChannelsRequest, st
 	for _, gid := range guildIDs {
 		subjects = append(subjects, realtime.GuildAllMessages(gid))
 	}
-	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
+
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, true, func(data *streamv1.TextChannelEvent) {
+		if h.canSeeChannel(stream.Context(), userID, data.GetChannelId()) {
+			stream.Send(data)
+		}
+	})
 }
 
 func (h *Handler) StreamVoiceChat(req *streamv1.StreamVoiceChatRequest, stream streamv1.StreamService_StreamVoiceChatServer) error {
@@ -120,7 +120,19 @@ func (h *Handler) StreamVoiceChat(req *streamv1.StreamVoiceChatRequest, stream s
 	for _, gid := range guildIDs {
 		subjects = append(subjects, realtime.GuildAllVoiceChat(gid))
 	}
-	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
+
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, true, func(data *streamv1.VoiceChatEvent) {
+		if h.canSeeChannel(stream.Context(), userID, data.GetChannelId()) {
+			stream.Send(data)
+		}
+	})
+}
+
+func (h *Handler) canSeeChannel(ctx context.Context, userID, channelID string) bool {
+	if h.viewer == nil || channelID == "" {
+		return true
+	}
+	return h.viewer.CanViewChannel(ctx, userID, channelID)
 }
 
 func (h *Handler) StreamGuildEvents(req *streamv1.StreamGuildEventsRequest, stream streamv1.StreamService_StreamGuildEventsServer) error {
@@ -136,7 +148,9 @@ func (h *Handler) StreamGuildEvents(req *streamv1.StreamGuildEventsRequest, stre
 	for _, gid := range guildIDs {
 		subjects = append(subjects, realtime.GuildEvents(gid))
 	}
-	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, true, func(data *streamv1.GuildEvent) {
+		stream.Send(data)
+	})
 }
 
 func (h *Handler) StreamVoiceState(req *streamv1.StreamVoiceStateRequest, stream streamv1.StreamService_StreamVoiceStateServer) error {
@@ -155,6 +169,9 @@ func (h *Handler) StreamVoiceState(req *streamv1.StreamVoiceStateRequest, stream
 				continue
 			}
 			for _, chID := range channelIDs {
+				if !h.canSeeChannel(stream.Context(), userID, chID) {
+					continue
+				}
 				events, err := h.voiceSnapshot.GetChannelParticipants(stream.Context(), chID)
 				if err != nil {
 					continue
@@ -172,7 +189,11 @@ func (h *Handler) StreamVoiceState(req *streamv1.StreamVoiceStateRequest, stream
 	for _, gid := range guildIDs {
 		subjects = append(subjects, realtime.GuildAllVoice(gid))
 	}
-	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, true, func(data *streamv1.VoiceStateEvent) {
+		if h.canSeeChannel(stream.Context(), userID, data.GetChannelId()) {
+			stream.Send(data)
+		}
+	})
 }
 
 func (h *Handler) StreamTyping(req *streamv1.StreamTypingRequest, stream streamv1.StreamService_StreamTypingServer) error {
@@ -186,13 +207,28 @@ func (h *Handler) StreamTyping(req *streamv1.StreamTypingRequest, stream streamv
 	for _, gid := range guildIDs {
 		subjects = append(subjects, realtime.GuildAllTyping(gid))
 	}
-	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, false, func(data *streamv1.TypingEvent) {
+		if data.GetGuildId() == "" {
+			stream.Send(data)
+			return
+		}
+		if h.canSeeChannel(stream.Context(), userID, data.GetChannelId()) {
+			stream.Send(data)
+		}
+	})
 }
 
 func (h *Handler) StreamFriendActivity(req *streamv1.StreamFriendActivityRequest, stream streamv1.StreamService_StreamFriendActivityServer) error {
 	userID := middleware.UserIDFromContext(stream.Context())
 	if userID == "" {
 		return status.Error(codes.Unauthenticated, "not authenticated")
+	}
+
+	if h.presence != nil {
+		h.presence.OnUserConnect(stream.Context(), userID)
+		defer func() {
+			h.presence.OnUserDisconnect(context.Background(), userID)
+		}()
 	}
 
 	subjects := []string{realtime.FriendActivity(userID)}
@@ -205,5 +241,7 @@ func (h *Handler) StreamFriendActivity(req *streamv1.StreamFriendActivityRequest
 		}
 	}
 
-	return streamFromSubjects(h, stream.Context(), subjects, stream.Send)
+	return realtime.MultiSubscribe(h.lpb, stream.Context(), subjects, true, func(data *streamv1.FriendActivityEvent) {
+		stream.Send(data)
+	})
 }

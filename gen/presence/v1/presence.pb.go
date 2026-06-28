@@ -8,6 +8,7 @@ package presencev1
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -422,7 +423,7 @@ var File_presence_v1_presence_proto protoreflect.FileDescriptor
 
 const file_presence_v1_presence_proto_rawDesc = "" +
 	"\n" +
-	"\x1apresence/v1/presence.proto\x12\vpresence.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bbuf/validate/validate.proto\"\xae\x01\n" +
+	"\x1apresence/v1/presence.proto\x12\vpresence.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1bbuf/validate/validate.proto\"\xae\x01\n" +
 	"\bPresence\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12+\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x13.presence.v1.StatusR\x06status\x12#\n" +
@@ -448,11 +449,11 @@ const file_presence_v1_presence_proto_rawDesc = "" +
 	"\vSTATUS_IDLE\x10\x02\x12\x0e\n" +
 	"\n" +
 	"STATUS_DND\x10\x03\x12\x12\n" +
-	"\x0eSTATUS_OFFLINE\x10\x042\x9c\x02\n" +
-	"\x0fPresenceService\x12Y\n" +
-	"\x0eUpdatePresence\x12\".presence.v1.UpdatePresenceRequest\x1a#.presence.v1.UpdatePresenceResponse\x12P\n" +
-	"\vGetPresence\x12\x1f.presence.v1.GetPresenceRequest\x1a .presence.v1.GetPresenceResponse\x12\\\n" +
-	"\x0fGetBulkPresence\x12#.presence.v1.GetBulkPresenceRequest\x1a$.presence.v1.GetBulkPresenceResponseBAZ?github.com/ananddub/ndiscord_backend/gen/presence/v1;presencev1b\x06proto3"
+	"\x0eSTATUS_OFFLINE\x10\x042\xfa\x02\n" +
+	"\x0fPresenceService\x12{\n" +
+	"\x0eUpdatePresence\x12\".presence.v1.UpdatePresenceRequest\x1a#.presence.v1.UpdatePresenceResponse\" \x82\xd3\xe4\x93\x02\x1a:\x01*2\x15/v1/users/me/presence\x12v\n" +
+	"\vGetPresence\x12\x1f.presence.v1.GetPresenceRequest\x1a .presence.v1.GetPresenceResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/v1/users/{user_id}/presence\x12r\n" +
+	"\x0fGetBulkPresence\x12#.presence.v1.GetBulkPresenceRequest\x1a$.presence.v1.GetBulkPresenceResponse\"\x14\x82\xd3\xe4\x93\x02\x0e\x12\f/v1/presenceBAZ?github.com/ananddub/ndiscord_backend/gen/presence/v1;presencev1b\x06proto3"
 
 var (
 	file_presence_v1_presence_proto_rawDescOnce sync.Once

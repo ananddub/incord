@@ -10,7 +10,8 @@ SELECT * FROM guilds WHERE id = $1 AND deleted = FALSE;
 UPDATE guilds SET
     name = COALESCE(sqlc.narg('name'), name),
     description = COALESCE(sqlc.narg('description'), description),
-    icon_url = COALESCE(sqlc.narg('icon_url'), icon_url)
+    icon_url = COALESCE(sqlc.narg('icon_url'), icon_url),
+    banner_url = COALESCE(sqlc.narg('banner_url'), banner_url)
 WHERE id = $1
 RETURNING *;
 

@@ -23,7 +23,7 @@ import (
 type Service struct {
 	repo          *Repository
 	authz         *authz.Client
-	nats          *realtime.Hub
+	lpb           *realtime.LPubSub
 	minio         *minio.Client
 	signer        *minio.Client
 	bucket        string
@@ -43,8 +43,8 @@ func (s *Service) BuildInviteURL(code string) string {
 	return s.inviteBaseURL + "/" + code
 }
 
-func NewService(repo *Repository, nats *realtime.Hub, authzClient ...*authz.Client) *Service {
-	s := &Service{repo: repo, nats: nats}
+func NewService(repo *Repository, lpb *realtime.LPubSub, authzClient ...*authz.Client) *Service {
+	s := &Service{repo: repo, lpb: lpb}
 	if len(authzClient) > 0 {
 		s.authz = authzClient[0]
 	}
@@ -64,6 +64,17 @@ func (s *Service) SetStorage(client, signer *minio.Client, bucket string) {
 // If the key is empty it returns empty string. If the key looks like a full URL
 // (legacy data), it is returned as-is.
 func (s *Service) ResolveIconURL(ctx context.Context, key string) string {
+	return s.resolveGuildAssetURL(ctx, key)
+}
+
+// ResolveBannerURL mirrors ResolveIconURL for the guild background image.
+// Banners share the same object-storage layout (different key prefix) so the
+// same presigner works.
+func (s *Service) ResolveBannerURL(ctx context.Context, key string) string {
+	return s.resolveGuildAssetURL(ctx, key)
+}
+
+func (s *Service) resolveGuildAssetURL(ctx context.Context, key string) string {
 	if key == "" {
 		return ""
 	}
@@ -82,6 +93,7 @@ func (s *Service) ResolveIconURL(ctx context.Context, key string) string {
 
 const (
 	maxGuildIconSize     = 5 * 1024 * 1024
+	maxGuildBannerSize   = 10 * 1024 * 1024 // banners are bigger; match proto validator
 	guildIconDownloadTTL = 7 * 24 * time.Hour
 )
 
@@ -135,6 +147,49 @@ func (s *Service) UploadGuildIcon(ctx context.Context, callerID, guildID pgtype.
 	return updated, iconURL, nil
 }
 
+// UploadGuildBanner uploads raw banner bytes (hero background image) to object
+// storage and updates the guild's banner_url. Mirrors UploadGuildIcon; the
+// size cap is larger because banners are typically 1920-wide cover images.
+func (s *Service) UploadGuildBanner(ctx context.Context, callerID, guildID pgtype.UUID, filename, contentType string, data []byte) (db.Guild, string, error) {
+	if s.minio == nil {
+		return db.Guild{}, "", fmt.Errorf("storage not configured")
+	}
+	if !s.authz.CanManageGuild(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return db.Guild{}, "", ErrInsufficientPermissions
+	}
+	if len(data) == 0 {
+		return db.Guild{}, "", fmt.Errorf("empty file")
+	}
+	if len(data) > maxGuildBannerSize {
+		return db.Guild{}, "", fmt.Errorf("banner too large (max %d bytes)", maxGuildBannerSize)
+	}
+	if !allowedIconContentTypes[contentType] {
+		return db.Guild{}, "", fmt.Errorf("unsupported content type: %s", contentType)
+	}
+
+	objectKey := fmt.Sprintf("guilds/%s/banner_%s_%s", pgToStr(guildID), uuid.New().String(), filename)
+
+	_, err := s.minio.PutObject(ctx, s.bucket, objectKey, bytes.NewReader(data), int64(len(data)), minio.PutObjectOptions{
+		ContentType: contentType,
+	})
+	if err != nil {
+		return db.Guild{}, "", fmt.Errorf("failed to upload banner: %w", err)
+	}
+
+	updated, err := s.repo.UpdateGuild(ctx, db.UpdateGuildParams{
+		ID:        guildID,
+		BannerUrl: &objectKey,
+	})
+	if err != nil {
+		return db.Guild{}, "", fmt.Errorf("failed to update guild banner: %w", err)
+	}
+
+	bannerURL := s.ResolveBannerURL(ctx, objectKey)
+	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_UPDATE, map[string]string{"banner_url": bannerURL})
+
+	return updated, bannerURL, nil
+}
+
 // pgToStr converts a pgtype.UUID to its string representation for authz calls.
 func pgToStr(id pgtype.UUID) string {
 	return uuid.UUID(id.Bytes).String()
@@ -158,6 +213,8 @@ func (s *Service) publishGuildEvent(ctx context.Context, guildID pgtype.UUID, ac
 			evt.Name = v
 		case "icon_url":
 			evt.IconUrl = v
+		case "banner_url":
+			evt.BannerUrl = v
 		case "role_id":
 			evt.RoleId = v
 		case "reason":
@@ -168,7 +225,45 @@ func (s *Service) publishGuildEvent(ctx context.Context, guildID pgtype.UUID, ac
 			evt.Topic = v
 		}
 	}
-	_ = s.nats.Publish(realtime.GuildEvents(gid), evt)
+	_ = realtime.Publish(s.lpb, realtime.GuildEvents(gid), evt)
+}
+
+// publishRoleEvent broadcasts a role-scoped change on the guild events
+// subject with the full role snapshot embedded — name, color, position
+// and current permission list — so every member's StreamGuildEvents
+// subscription refreshes its role cache without a follow-up
+// ListRolePermissions round trip.
+//
+// `extra` is the same shape accepted by publishGuildEvent (e.g. adds
+// user_id for ROLE_ASSIGN / ROLE_REMOVE).
+func (s *Service) publishRoleEvent(
+	ctx context.Context,
+	guildID pgtype.UUID,
+	action streamv1.GuildEventType,
+	role db.Role,
+	extra map[string]string,
+) {
+	gid := pgToStr(guildID)
+	perms, _ := s.authz.ListRolePermissions(ctx, pgToStr(role.ID))
+	evt := &streamv1.GuildEvent{
+		Event:           action,
+		Action:          action,
+		GuildId:         gid,
+		RoleId:          pgToStr(role.ID),
+		RoleName:        role.Name,
+		RoleColor:       role.Color,
+		RolePosition:    role.Position,
+		RolePermissions: perms,
+	}
+	for k, v := range extra {
+		switch k {
+		case "user_id":
+			evt.UserId = v
+		case "reason":
+			evt.Reason = v
+		}
+	}
+	_ = realtime.Publish(s.lpb, realtime.GuildEvents(gid), evt)
 }
 
 func (s *Service) CreateGuild(ctx context.Context, ownerID pgtype.UUID, name, description, iconURL string) (db.Guild, error) {
@@ -192,17 +287,69 @@ func (s *Service) CreateGuild(ctx context.Context, ownerID pgtype.UUID, name, de
 		return db.Guild{}, fmt.Errorf("failed to add owner as member: %w", err)
 	}
 
-	// Write authz tuples
 	ownerStr := pgToStr(ownerID)
-	guildStr := pgToStr(guild.ID)
-	_ = s.authz.AddGuildOwner(ctx, ownerStr, guildStr)
-	_ = s.authz.AddGuildMember(ctx, ownerStr, guildStr)
+
+	// Auto-create the @everyone role — Discord convention: every guild
+	// has an implicit role every member belongs to. Permission grants on
+	// it form the guild's baseline (e.g. muted-by-default).
+	_ = s.ensureEveryoneRole(ctx, guild.ID, ownerID)
 
 	s.publishGuildEvent(ctx, guild.ID, streamv1.GuildEventType_GUILD_EVENT_MEMBER_ADD, map[string]string{
 		"user_id": ownerStr, "name": name,
 	})
 
 	return guild, nil
+}
+
+// ensureEveryoneRole creates the @everyone row if it doesn't exist and
+// assigns the given user to it. Idempotent on both the Postgres row
+// (name+guild UNIQUE via ON CONFLICT isn't set today, so we GET before
+// INSERT) and the OpenFGA tuples (duplicates are swallowed silently).
+// A failure here is best-effort: the guild / member creation succeeded,
+// and the next member add will also attempt to provision the role.
+func (s *Service) ensureEveryoneRole(ctx context.Context, guildID, userID pgtype.UUID) error {
+	role, err := s.repo.GetEveryoneRole(ctx, guildID)
+	if err != nil {
+		role, err = s.repo.CreateRole(ctx, db.CreateRoleParams{
+			GuildID:  guildID,
+			Name:     "@everyone",
+			Color:    "",
+			Position: 0,
+		})
+		if err != nil {
+			return fmt.Errorf("create @everyone role: %w", err)
+		}
+	}
+	// Assign the user to @everyone. role_members is the source of
+	// truth — authz.Check reads it directly on every permission
+	// decision, no separate tuple to keep in sync.
+	_ = s.repo.AssignRole(ctx, db.AssignRoleParams{RoleID: role.ID, UserID: userID})
+	return nil
+}
+
+// assignEveryoneRole is the lightweight variant used on every member
+// add — assumes the role already exists (guild was created via
+// CreateGuild, which provisions it). Falls back to ensureEveryoneRole
+// if the role is missing (e.g. historical rows from before this feature).
+func (s *Service) assignEveryoneRole(ctx context.Context, guildID, userID pgtype.UUID) {
+	role, err := s.repo.GetEveryoneRole(ctx, guildID)
+	if err != nil {
+		_ = s.ensureEveryoneRole(ctx, guildID, userID)
+		return
+	}
+	_ = s.repo.AssignRole(ctx, db.AssignRoleParams{RoleID: role.ID, UserID: userID})
+	_ = s.authz.AddUserToRole(ctx, pgToStr(userID), pgToStr(role.ID))
+}
+
+// removeEveryoneRole un-assigns a user from the @everyone role, used on
+// kick/ban/leave paths. Idempotent.
+func (s *Service) removeEveryoneRole(ctx context.Context, guildID, userID pgtype.UUID) {
+	role, err := s.repo.GetEveryoneRole(ctx, guildID)
+	if err != nil {
+		return
+	}
+	_ = s.repo.RemoveRole(ctx, db.RemoveRoleParams{RoleID: role.ID, UserID: userID})
+	_ = s.authz.RemoveUserFromRole(ctx, pgToStr(userID), pgToStr(role.ID))
 }
 
 func (s *Service) GetGuild(ctx context.Context, guildID pgtype.UUID) (db.Guild, int64, error) {
@@ -403,10 +550,8 @@ func (s *Service) JoinGuild(ctx context.Context, userID pgtype.UUID, inviteCode 
 		InviterID:  invite.CreatorID,
 	})
 
-	// Write authz tuple
 	userStr := pgToStr(userID)
-	guildStr := pgToStr(invite.GuildID)
-	_ = s.authz.AddGuildMember(ctx, userStr, guildStr)
+	s.assignEveryoneRole(ctx, invite.GuildID, userID)
 
 	s.publishGuildEvent(ctx, invite.GuildID, streamv1.GuildEventType_GUILD_EVENT_MEMBER_ADD, map[string]string{
 		"user_id": userStr,
@@ -461,10 +606,10 @@ func (s *Service) LeaveGuild(ctx context.Context, userID, guildID pgtype.UUID) e
 		return err
 	}
 
-	// Remove authz tuple
+	// Drop from @everyone role. Deleting the guild_members row is
+	// enough for the permission layer — authz.Check reads it directly.
 	userStr := pgToStr(userID)
-	guildStr := pgToStr(guildID)
-	_ = s.authz.RemoveGuildMember(ctx, userStr, guildStr)
+	s.removeEveryoneRole(ctx, guildID, userID)
 
 	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_MEMBER_REMOVE, map[string]string{
 		"user_id": userStr,
@@ -486,6 +631,12 @@ func (s *Service) ListMembers(ctx context.Context, guildID pgtype.UUID, limit, o
 
 func (s *Service) KickMember(ctx context.Context, callerID, guildID, targetID pgtype.UUID) error {
 	if !s.authz.CanKick(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return ErrInsufficientPermissions
+	}
+	// Discord role-hierarchy rule: actor's top role must strictly outrank
+	// the target's. Prevents a mod with KICK_MEMBERS from kicking an
+	// admin positioned above them.
+	if !s.authz.CanActOn(ctx, pgToStr(callerID), pgToStr(targetID), pgToStr(guildID)) {
 		return ErrInsufficientPermissions
 	}
 	guild, err := s.repo.GetGuildByID(ctx, guildID)
@@ -511,10 +662,10 @@ func (s *Service) KickMember(ctx context.Context, callerID, guildID, targetID pg
 		return err
 	}
 
-	// Remove authz tuple
+	// Drop from @everyone role. removing the guild_members row is
+	// enough for the permission layer — authz.Check reads it directly.
 	targetStr := pgToStr(targetID)
-	guildStr := pgToStr(guildID)
-	_ = s.authz.RemoveGuildMember(ctx, targetStr, guildStr)
+	s.removeEveryoneRole(ctx, guildID, targetID)
 
 	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_MEMBER_REMOVE, map[string]string{
 		"user_id": targetStr,
@@ -525,6 +676,9 @@ func (s *Service) KickMember(ctx context.Context, callerID, guildID, targetID pg
 
 func (s *Service) BanMember(ctx context.Context, callerID, guildID, targetID pgtype.UUID, reason string) error {
 	if !s.authz.CanBan(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return ErrInsufficientPermissions
+	}
+	if !s.authz.CanActOn(ctx, pgToStr(callerID), pgToStr(targetID), pgToStr(guildID)) {
 		return ErrInsufficientPermissions
 	}
 	guild, err := s.repo.GetGuildByID(ctx, guildID)
@@ -550,10 +704,10 @@ func (s *Service) BanMember(ctx context.Context, callerID, guildID, targetID pgt
 		return fmt.Errorf("failed to create ban: %w", err)
 	}
 
-	// Remove authz tuple
+	// Drop from @everyone role. removing the guild_members row is
+	// enough for the permission layer — authz.Check reads it directly.
 	targetStr := pgToStr(targetID)
-	guildStr := pgToStr(guildID)
-	_ = s.authz.RemoveGuildMember(ctx, targetStr, guildStr)
+	s.removeEveryoneRole(ctx, guildID, targetID)
 
 	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_MEMBER_BAN, map[string]string{
 		"user_id": targetStr,
@@ -598,6 +752,11 @@ func (s *Service) CreateInvite(ctx context.Context, callerID, guildID, channelID
 	})
 	if err != nil {
 		return db.Invite{}, ErrNotGuildMember
+	}
+
+	// MANAGE_INVITES (aka Discord's CREATE_INSTANT_INVITE) gate.
+	if !s.authz.CanManageInvites(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return db.Invite{}, ErrInsufficientPermissions
 	}
 
 	code, err := generateInviteCode()
@@ -649,7 +808,7 @@ func (s *Service) CreateRole(ctx context.Context, callerID, guildID pgtype.UUID,
 		return db.Role{}, fmt.Errorf("failed to create role: %w", err)
 	}
 
-	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_ROLE_CREATE, map[string]string{"name": role.Name})
+	s.publishRoleEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_ROLE_CREATE, role, nil)
 
 	return role, nil
 }
@@ -664,7 +823,7 @@ func (s *Service) UpdateRole(ctx context.Context, callerID, guildID pgtype.UUID,
 		return db.Role{}, fmt.Errorf("failed to update role: %w", err)
 	}
 
-	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_ROLE_UPDATE, nil)
+	s.publishRoleEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_ROLE_UPDATE, role, nil)
 
 	return role, nil
 }
@@ -674,7 +833,7 @@ func (s *Service) DeleteRole(ctx context.Context, callerID, guildID, roleID pgty
 		return ErrInsufficientPermissions
 	}
 
-	_, roleErr := s.repo.GetRoleByID(ctx, roleID)
+	role, roleErr := s.repo.GetRoleByID(ctx, roleID)
 	if roleErr != nil {
 		return ErrRoleNotFound
 	}
@@ -683,7 +842,10 @@ func (s *Service) DeleteRole(ctx context.Context, callerID, guildID, roleID pgty
 		return err
 	}
 
-	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_ROLE_DELETE, nil)
+	// Publish the final snapshot (what the role looked like before the
+	// delete) so clients can log the disappearance and also know the
+	// permission set the role carried.
+	s.publishRoleEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_ROLE_DELETE, role, nil)
 
 	return nil
 }
@@ -698,8 +860,8 @@ func (s *Service) AssignRole(ctx context.Context, callerID, guildID, targetID, r
 		return ErrMemberNotFound
 	}
 
-	// Verify role exists
-	if _, roleErr := s.repo.GetRoleByID(ctx, roleID); roleErr != nil {
+	role, roleErr := s.repo.GetRoleByID(ctx, roleID)
+	if roleErr != nil {
 		return ErrRoleNotFound
 	}
 
@@ -707,7 +869,12 @@ func (s *Service) AssignRole(ctx context.Context, callerID, guildID, targetID, r
 		return err
 	}
 
-	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_ROLE_ASSIGN, map[string]string{
+	_ = s.authz.AddUserToRole(ctx, pgToStr(targetID), pgToStr(roleID))
+
+	// The ASSIGN event carries the role's full snapshot so the target
+	// user's client can update their effective-permission cache without
+	// a follow-up ListRolePermissions round trip.
+	s.publishRoleEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_ROLE_ASSIGN, role, map[string]string{
 		"user_id": pgToStr(targetID),
 	})
 
@@ -719,6 +886,11 @@ func (s *Service) RemoveRole(ctx context.Context, callerID, guildID, targetID, r
 		return ErrInsufficientPermissions
 	}
 
+	role, roleErr := s.repo.GetRoleByID(ctx, roleID)
+	if roleErr != nil {
+		return ErrRoleNotFound
+	}
+
 	if err := s.repo.RemoveRole(ctx, db.RemoveRoleParams{
 		RoleID: roleID,
 		UserID: targetID,
@@ -726,10 +898,71 @@ func (s *Service) RemoveRole(ctx context.Context, callerID, guildID, targetID, r
 		return err
 	}
 
-	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_ROLE_REMOVE, map[string]string{
+	_ = s.authz.RemoveUserFromRole(ctx, pgToStr(targetID), pgToStr(roleID))
+
+	s.publishRoleEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_ROLE_REMOVE, role, map[string]string{
 		"user_id": pgToStr(targetID),
 	})
 
+	return nil
+}
+
+// GrantRolePermission adds the permission to the role. `permission`
+// is one of the Discord-style keys in authz.PermissionRelation (e.g.
+// "KICK_MEMBERS", "BAN_MEMBERS", "SEND_MESSAGES"). Fires a ROLE_UPDATE
+// event with the full post-grant permission list embedded, so every
+// member of the guild refreshes their cached role state in one hop.
+//
+// Discord's anti-escalation rule: the caller must hold the permission
+// they're granting (or be guild owner / hold ADMINISTRATOR). Otherwise
+// a MANAGE_ROLES holder could grant themselves any privilege by going
+// through a freshly-created role. `CanGuildPermission` handles owner +
+// admin bypass internally so a single call enforces both.
+func (s *Service) GrantRolePermission(ctx context.Context, callerID, guildID, roleID pgtype.UUID, permission string) error {
+	if !s.authz.CanManageRoles(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return ErrInsufficientPermissions
+	}
+	relation, ok := authz.PermissionRelation[permission]
+	if !ok {
+		return ErrInvalidPermission
+	}
+	if !s.authz.CanGuildPermission(ctx, pgToStr(callerID), pgToStr(guildID), relation) {
+		return ErrInsufficientPermissions
+	}
+	role, err := s.repo.GetRoleByID(ctx, roleID)
+	if err != nil {
+		return ErrRoleNotFound
+	}
+	if err := s.authz.GrantRolePermission(ctx, pgToStr(roleID), pgToStr(guildID), relation); err != nil {
+		return fmt.Errorf("failed to grant role permission: %w", err)
+	}
+	s.publishRoleEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_ROLE_UPDATE, role, nil)
+	return nil
+}
+
+// RevokeRolePermission removes a previously-granted permission from a role.
+// Same anti-escalation rule as Grant: you can't revoke a permission you
+// don't hold yourself (otherwise a moderator could disarm an admin role).
+// Fires ROLE_UPDATE with the updated permission list.
+func (s *Service) RevokeRolePermission(ctx context.Context, callerID, guildID, roleID pgtype.UUID, permission string) error {
+	if !s.authz.CanManageRoles(ctx, pgToStr(callerID), pgToStr(guildID)) {
+		return ErrInsufficientPermissions
+	}
+	relation, ok := authz.PermissionRelation[permission]
+	if !ok {
+		return ErrInvalidPermission
+	}
+	if !s.authz.CanGuildPermission(ctx, pgToStr(callerID), pgToStr(guildID), relation) {
+		return ErrInsufficientPermissions
+	}
+	role, err := s.repo.GetRoleByID(ctx, roleID)
+	if err != nil {
+		return ErrRoleNotFound
+	}
+	if err := s.authz.RevokeRolePermission(ctx, pgToStr(roleID), pgToStr(guildID), relation); err != nil {
+		return fmt.Errorf("failed to revoke role permission: %w", err)
+	}
+	s.publishRoleEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_ROLE_UPDATE, role, nil)
 	return nil
 }
 
@@ -761,16 +994,9 @@ func (s *Service) TransferOwnership(ctx context.Context, callerID, guildID, newO
 		return db.Guild{}, fmt.Errorf("failed to transfer ownership: %w", err)
 	}
 
-	callerStr := pgToStr(callerID)
-	newOwnerStr := pgToStr(newOwnerID)
-	guildStr := pgToStr(guildID)
-
-	// Update OpenFGA tuples: remove old owner, add new owner
-	_ = s.authz.DeleteTuple(ctx, authz.UserKey(callerStr), "owner", authz.GuildKey(guildStr))
-	_ = s.authz.AddGuildOwner(ctx, newOwnerStr, guildStr)
-
+	// Ownership is authoritative via guilds.owner_id — updated above.
 	s.publishGuildEvent(ctx, guildID, streamv1.GuildEventType_GUILD_EVENT_UPDATE, map[string]string{
-		"transferred_to": newOwnerStr,
+		"transferred_to": pgToStr(newOwnerID),
 	})
 
 	return updated, nil

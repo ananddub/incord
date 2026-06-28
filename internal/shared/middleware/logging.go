@@ -19,12 +19,12 @@ func LoggingInterceptor() grpc.UnaryServerInterceptor {
 		st, _ := status.FromError(err)
 		metrics.GrpcRequestDuration.WithLabelValues(info.FullMethod, st.Code().String()).Observe(duration.Seconds())
 
-		logger.Log.Info().
-			Str("method", info.FullMethod).
-			Str("code", st.Code().String()).
-			Dur("duration", duration).
-			Str("user_id", UserIDFromContext(ctx)).
-			Msg("grpc request")
+		// logger.Log.Info().
+		// 	Str("method", info.FullMethod).
+		// 	Any("code", st.Code()).
+		// 	Dur("duration", duration).
+		// 	Str("user_id", UserIDFromContext(ctx)).
+		// 	Msg("grpc request")
 
 		return resp, err
 	}

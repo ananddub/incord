@@ -21,6 +21,13 @@ UPDATE channels SET deleted = TRUE, updated_at = NOW() WHERE id = $1;
 -- name: ListGuildChannels :many
 SELECT * FROM channels WHERE guild_id = $1 AND deleted = FALSE ORDER BY position;
 
+-- name: ListAllGuildChannels :many
+-- Every guild-scoped channel system-wide. Consumed by the OpenFGA
+-- backfill sync to (re-)register channel→guild bindings so the
+-- channel viewer/sender/manager resolution works for old data.
+SELECT id, guild_id FROM channels
+WHERE guild_id IS NOT NULL AND deleted = FALSE;
+
 -- name: CreateDMChannel :one
 INSERT INTO channels (name, type)
 VALUES ($1, $2)

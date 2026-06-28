@@ -1,6 +1,8 @@
 version: v2
 deps:
   - buf.build/bufbuild/protovalidate
+  # google.api.http annotations used by grpc-gateway to expose REST bindings.
+  - buf.build/googleapis/googleapis
 modules:
   - path: internal/features/auth/proto
   - path: internal/features/user/proto

@@ -8,6 +8,7 @@ package voicev1
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -356,15 +357,11 @@ func (x *JoinChannelRequest) GetChannelId() string {
 }
 
 type JoinChannelResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// WebSocket URL of the LiveKit SFU (e.g. "ws://192.168.1.2:7880").
-	Url string `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
-	// Short-lived JWT access token — pass into LiveKit client SDK.
-	Token string `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
-	// Room name (one LiveKit room per voice channel).
-	Room string `protobuf:"bytes,3,opt,name=room,proto3" json:"room,omitempty"`
-	// Seconds until the token expires.
-	ExpiresIn     int32 `protobuf:"varint,4,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Url           string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
+	Token         string                 `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
+	Room          string                 `protobuf:"bytes,3,opt,name=room,proto3" json:"room,omitempty"`
+	ExpiresIn     int32                  `protobuf:"varint,4,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -728,10 +725,9 @@ func (x *GetChannelParticipantsResponse) GetParticipants() []*VoiceParticipant {
 }
 
 type StartDMCallRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	ChannelId string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	// If true, the caller intends to publish video; audio is always on.
-	Video         bool `protobuf:"varint,2,opt,name=video,proto3" json:"video,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	Video         bool                   `protobuf:"varint,2,opt,name=video,proto3" json:"video,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1128,7 +1124,6 @@ func (*LeaveDMCallResponse) Descriptor() ([]byte, []int) {
 	return file_voice_v1_voice_proto_rawDescGZIP(), []int{20}
 }
 
-// Shared request for all self voice controls — just needs channel_id.
 type VoiceChannelRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
@@ -1173,7 +1168,6 @@ func (x *VoiceChannelRequest) GetChannelId() string {
 	return ""
 }
 
-// Returns the full channel participant list after the state change.
 type VoiceParticipantsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Participants  []*VoiceParticipant    `protobuf:"bytes,1,rep,name=participants,proto3" json:"participants,omitempty"`
@@ -1222,7 +1216,7 @@ var File_voice_v1_voice_proto protoreflect.FileDescriptor
 
 const file_voice_v1_voice_proto_rawDesc = "" +
 	"\n" +
-	"\x14voice/v1/voice.proto\x12\bvoice.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bbuf/validate/validate.proto\"\x86\x01\n" +
+	"\x14voice/v1/voice.proto\x12\bvoice.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1bbuf/validate/validate.proto\"\x86\x01\n" +
 	"\x15ServerMuteUserRequest\x12'\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\x12.\n" +
@@ -1307,27 +1301,27 @@ const file_voice_v1_voice_proto_rawDesc = "" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tchannelId\"[\n" +
 	"\x19VoiceParticipantsResponse\x12>\n" +
-	"\fparticipants\x18\x01 \x03(\v2\x1a.voice.v1.VoiceParticipantR\fparticipants2\xd9\v\n" +
-	"\fVoiceService\x12J\n" +
-	"\vJoinChannel\x12\x1c.voice.v1.JoinChannelRequest\x1a\x1d.voice.v1.JoinChannelResponse\x12M\n" +
-	"\fLeaveChannel\x12\x1d.voice.v1.LeaveChannelRequest\x1a\x1e.voice.v1.LeaveChannelResponse\x12k\n" +
-	"\x16GetChannelParticipants\x12'.voice.v1.GetChannelParticipantsRequest\x1a(.voice.v1.GetChannelParticipantsResponse\x12J\n" +
-	"\vStartDMCall\x12\x1c.voice.v1.StartDMCallRequest\x1a\x1d.voice.v1.StartDMCallResponse\x12G\n" +
+	"\fparticipants\x18\x01 \x03(\v2\x1a.voice.v1.VoiceParticipantR\fparticipants2\xb1\x13\n" +
+	"\fVoiceService\x12{\n" +
+	"\vJoinChannel\x12\x1c.voice.v1.JoinChannelRequest\x1a\x1d.voice.v1.JoinChannelResponse\"/\x82\xd3\xe4\x93\x02):\x01*\"$/v1/channels/{channel_id}/voice/join\x12y\n" +
+	"\fLeaveChannel\x12\x1d.voice.v1.LeaveChannelRequest\x1a\x1e.voice.v1.LeaveChannelResponse\"*\x82\xd3\xe4\x93\x02$*\"/v1/channels/{channel_id}/voice/me\x12\xa1\x01\n" +
+	"\x16GetChannelParticipants\x12'.voice.v1.GetChannelParticipantsRequest\x1a(.voice.v1.GetChannelParticipantsResponse\"4\x82\xd3\xe4\x93\x02.\x12,/v1/channels/{channel_id}/voice/participants\x12v\n" +
+	"\vStartDMCall\x12\x1c.voice.v1.StartDMCallRequest\x1a\x1d.voice.v1.StartDMCallResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/v1/channels/{channel_id}/calls\x12x\n" +
 	"\n" +
-	"JoinDMCall\x12\x1b.voice.v1.JoinDMCallRequest\x1a\x1c.voice.v1.JoinDMCallResponse\x12M\n" +
-	"\fRejectDMCall\x12\x1d.voice.v1.RejectDMCallRequest\x1a\x1e.voice.v1.RejectDMCallResponse\x12J\n" +
-	"\vLeaveDMCall\x12\x1c.voice.v1.LeaveDMCallRequest\x1a\x1d.voice.v1.LeaveDMCallResponse\x12J\n" +
-	"\x04Mute\x12\x1d.voice.v1.VoiceChannelRequest\x1a#.voice.v1.VoiceParticipantsResponse\x12L\n" +
-	"\x06Unmute\x12\x1d.voice.v1.VoiceChannelRequest\x1a#.voice.v1.VoiceParticipantsResponse\x12L\n" +
-	"\x06Deafen\x12\x1d.voice.v1.VoiceChannelRequest\x1a#.voice.v1.VoiceParticipantsResponse\x12N\n" +
-	"\bUndeafen\x12\x1d.voice.v1.VoiceChannelRequest\x1a#.voice.v1.VoiceParticipantsResponse\x12Q\n" +
-	"\vEnableVideo\x12\x1d.voice.v1.VoiceChannelRequest\x1a#.voice.v1.VoiceParticipantsResponse\x12R\n" +
-	"\fDisableVideo\x12\x1d.voice.v1.VoiceChannelRequest\x1a#.voice.v1.VoiceParticipantsResponse\x12V\n" +
-	"\x10StartScreenShare\x12\x1d.voice.v1.VoiceChannelRequest\x1a#.voice.v1.VoiceParticipantsResponse\x12U\n" +
-	"\x0fStopScreenShare\x12\x1d.voice.v1.VoiceChannelRequest\x1a#.voice.v1.VoiceParticipantsResponse\x12S\n" +
-	"\x0eServerMuteUser\x12\x1f.voice.v1.ServerMuteUserRequest\x1a .voice.v1.ServerMuteUserResponse\x12Y\n" +
-	"\x10ServerDeafenUser\x12!.voice.v1.ServerDeafenUserRequest\x1a\".voice.v1.ServerDeafenUserResponse\x12S\n" +
-	"\x0eDisconnectUser\x12\x1f.voice.v1.DisconnectUserRequest\x1a .voice.v1.DisconnectUserResponseB;Z9github.com/ananddub/ndiscord_backend/gen/voice/v1;voicev1b\x06proto3"
+	"JoinDMCall\x12\x1b.voice.v1.JoinDMCallRequest\x1a\x1c.voice.v1.JoinDMCallResponse\"/\x82\xd3\xe4\x93\x02):\x01*\"$/v1/channels/{channel_id}/calls/join\x12\x80\x01\n" +
+	"\fRejectDMCall\x12\x1d.voice.v1.RejectDMCallRequest\x1a\x1e.voice.v1.RejectDMCallResponse\"1\x82\xd3\xe4\x93\x02+:\x01*\"&/v1/channels/{channel_id}/calls/reject\x12v\n" +
+	"\vLeaveDMCall\x12\x1c.voice.v1.LeaveDMCallRequest\x1a\x1d.voice.v1.LeaveDMCallResponse\"*\x82\xd3\xe4\x93\x02$*\"/v1/channels/{channel_id}/calls/me\x12~\n" +
+	"\x04Mute\x12\x1d.voice.v1.VoiceChannelRequest\x1a#.voice.v1.VoiceParticipantsResponse\"2\x82\xd3\xe4\x93\x02,:\x01*\x1a'/v1/channels/{channel_id}/voice/me/mute\x12}\n" +
+	"\x06Unmute\x12\x1d.voice.v1.VoiceChannelRequest\x1a#.voice.v1.VoiceParticipantsResponse\"/\x82\xd3\xe4\x93\x02)*'/v1/channels/{channel_id}/voice/me/mute\x12\x80\x01\n" +
+	"\x06Deafen\x12\x1d.voice.v1.VoiceChannelRequest\x1a#.voice.v1.VoiceParticipantsResponse\"2\x82\xd3\xe4\x93\x02,:\x01*\x1a'/v1/channels/{channel_id}/voice/me/deaf\x12\x7f\n" +
+	"\bUndeafen\x12\x1d.voice.v1.VoiceChannelRequest\x1a#.voice.v1.VoiceParticipantsResponse\"/\x82\xd3\xe4\x93\x02)*'/v1/channels/{channel_id}/voice/me/deaf\x12\x86\x01\n" +
+	"\vEnableVideo\x12\x1d.voice.v1.VoiceChannelRequest\x1a#.voice.v1.VoiceParticipantsResponse\"3\x82\xd3\xe4\x93\x02-:\x01*\x1a(/v1/channels/{channel_id}/voice/me/video\x12\x84\x01\n" +
+	"\fDisableVideo\x12\x1d.voice.v1.VoiceChannelRequest\x1a#.voice.v1.VoiceParticipantsResponse\"0\x82\xd3\xe4\x93\x02**(/v1/channels/{channel_id}/voice/me/video\x12\x8c\x01\n" +
+	"\x10StartScreenShare\x12\x1d.voice.v1.VoiceChannelRequest\x1a#.voice.v1.VoiceParticipantsResponse\"4\x82\xd3\xe4\x93\x02.:\x01*\x1a)/v1/channels/{channel_id}/voice/me/screen\x12\x88\x01\n" +
+	"\x0fStopScreenShare\x12\x1d.voice.v1.VoiceChannelRequest\x1a#.voice.v1.VoiceParticipantsResponse\"1\x82\xd3\xe4\x93\x02+*)/v1/channels/{channel_id}/voice/me/screen\x12\xa2\x01\n" +
+	"\x0eServerMuteUser\x12\x1f.voice.v1.ServerMuteUserRequest\x1a .voice.v1.ServerMuteUserResponse\"M\x82\xd3\xe4\x93\x02G:\x01*\x1aB/v1/channels/{channel_id}/voice/participants/{target_user_id}/mute\x12\xa8\x01\n" +
+	"\x10ServerDeafenUser\x12!.voice.v1.ServerDeafenUserRequest\x1a\".voice.v1.ServerDeafenUserResponse\"M\x82\xd3\xe4\x93\x02G:\x01*\x1aB/v1/channels/{channel_id}/voice/participants/{target_user_id}/deaf\x12\x9a\x01\n" +
+	"\x0eDisconnectUser\x12\x1f.voice.v1.DisconnectUserRequest\x1a .voice.v1.DisconnectUserResponse\"E\x82\xd3\xe4\x93\x02?*=/v1/channels/{channel_id}/voice/participants/{target_user_id}B;Z9github.com/ananddub/ndiscord_backend/gen/voice/v1;voicev1b\x06proto3"
 
 var (
 	file_voice_v1_voice_proto_rawDescOnce sync.Once

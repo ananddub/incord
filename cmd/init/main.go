@@ -1,12 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -15,6 +11,7 @@ import (
 
 	"github.com/ananddub/ndiscord_backend/internal/shared/config"
 	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
+	"github.com/ananddub/ndiscord_backend/internal/shared/sqlutil"
 	"github.com/gocql/gocql"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -41,18 +38,10 @@ func main() {
 	}
 	log.Info().Msg("  ScyllaDB: done")
 
-	// [3/3] OpenFGA
-	log.Info().Msg("[3/3] Setting up OpenFGA...")
-	if err := setupOpenFGA(cfg.OpenFGA); err != nil {
-		log.Warn().Err(err).Msg("OpenFGA setup failed (auth will be permissive)")
-	} else {
-		log.Info().Msg("  OpenFGA: done")
-	}
-
 	log.Info().Msg("=== Init complete! ===")
 }
 
-// migratePG reads all .up.sql files from db/timescale/migrations/ and executes them.
+// migratePG reads Goose .sql files from db/timescale/migrations/ and executes their Up sections.
 func migratePG(ctx context.Context, cfg config.DatabaseConfig) error {
 	var pool *pgxpool.Pool
 	var err error
@@ -71,7 +60,7 @@ func migratePG(ctx context.Context, cfg config.DatabaseConfig) error {
 	defer pool.Close()
 
 	// Read migration files from disk
-	files, err := filepath.Glob("db/timescale/migrations/*.up.sql")
+	files, err := filepath.Glob("db/timescale/migrations/*.sql")
 	if err != nil || len(files) == 0 {
 		return fmt.Errorf("no migration files found in db/timescale/migrations/")
 	}
@@ -83,13 +72,8 @@ func migratePG(ctx context.Context, cfg config.DatabaseConfig) error {
 			return fmt.Errorf("failed to read %s: %w", f, err)
 		}
 
-		// Split by semicolons and execute each statement
-		stmts := strings.Split(string(data), ";")
+		stmts := sqlutil.SplitStatements(sqlutil.GooseUpSection(string(data)))
 		for _, stmt := range stmts {
-			stmt = strings.TrimSpace(stmt)
-			if stmt == "" {
-				continue
-			}
 			if _, err := pool.Exec(ctx, stmt); err != nil {
 				// Ignore "already exists" errors
 				if !strings.Contains(err.Error(), "already exists") &&
@@ -182,90 +166,4 @@ func migrateScylla(cfg config.ScyllaDBConfig) error {
 	}
 
 	return nil
-}
-
-func setupOpenFGA(cfg config.OpenFGAConfig) error {
-	apiURL := cfg.APIUrl
-	if apiURL == "" {
-		apiURL = "http://localhost:8090"
-	}
-
-	for range 15 {
-		resp, err := http.Get(apiURL + "/healthz")
-		if err == nil {
-			resp.Body.Close()
-			break
-		}
-		time.Sleep(time.Second)
-	}
-
-	resp, err := http.Get(apiURL + "/healthz")
-	if err != nil {
-		return fmt.Errorf("openfga not reachable: %w", err)
-	}
-	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
-	if !bytes.Contains(body, []byte("SERVING")) {
-		return fmt.Errorf("openfga not serving: %s", string(body))
-	}
-
-	// Check if store exists
-	storesResp, err := http.Get(apiURL + "/stores")
-	if err != nil {
-		return fmt.Errorf("failed to list stores: %w", err)
-	}
-	defer storesResp.Body.Close()
-	var storesBody struct {
-		Stores []struct {
-			ID   string `json:"id"`
-			Name string `json:"name"`
-		} `json:"stores"`
-	}
-	json.NewDecoder(storesResp.Body).Decode(&storesBody)
-
-	var storeID string
-	for _, s := range storesBody.Stores {
-		if s.Name == "ndiscord" {
-			storeID = s.ID
-			break
-		}
-	}
-
-	if storeID == "" {
-		payload, _ := json.Marshal(map[string]string{"name": "ndiscord"})
-		cr, err := http.Post(apiURL+"/stores", "application/json", bytes.NewReader(payload))
-		if err != nil {
-			return fmt.Errorf("create store: %w", err)
-		}
-		defer cr.Body.Close()
-		var created struct{ ID string `json:"id"` }
-		json.NewDecoder(cr.Body).Decode(&created)
-		storeID = created.ID
-		logger.Log.Info().Str("store_id", storeID).Msg("  OpenFGA store created")
-	} else {
-		logger.Log.Info().Str("store_id", storeID).Msg("  OpenFGA store exists")
-	}
-
-	// Read model from file if exists, otherwise use default
-	model := getOpenFGAModel()
-
-	mr, err := http.Post(apiURL+"/stores/"+storeID+"/authorization-models", "application/json", bytes.NewReader([]byte(model)))
-	if err != nil {
-		return fmt.Errorf("create model: %w", err)
-	}
-	defer mr.Body.Close()
-	var modelResult struct{ AuthorizationModelID string `json:"authorization_model_id"` }
-	json.NewDecoder(mr.Body).Decode(&modelResult)
-	logger.Log.Info().Str("model_id", modelResult.AuthorizationModelID).Msg("  OpenFGA auth model set")
-
-	return nil
-}
-
-func getOpenFGAModel() string {
-	// Try reading from file first
-	if data, err := os.ReadFile("openfga/model.json"); err == nil {
-		return string(data)
-	}
-	// Fallback to embedded default
-	return `{"schema_version":"1.1","type_definitions":[{"type":"user","relations":{}},{"type":"guild","relations":{"owner":{"this":{}},"admin":{"this":{}},"member":{"this":{}},"can_manage_guild":{"union":{"child":[{"computedUserset":{"relation":"owner"}},{"computedUserset":{"relation":"admin"}}]}},"can_kick":{"union":{"child":[{"computedUserset":{"relation":"owner"}},{"computedUserset":{"relation":"admin"}}]}},"can_ban":{"union":{"child":[{"computedUserset":{"relation":"owner"}},{"computedUserset":{"relation":"admin"}}]}},"can_manage_roles":{"union":{"child":[{"computedUserset":{"relation":"owner"}},{"computedUserset":{"relation":"admin"}}]}},"can_manage_channels":{"union":{"child":[{"computedUserset":{"relation":"owner"}},{"computedUserset":{"relation":"admin"}}]}}},"metadata":{"relations":{"owner":{"directly_related_user_types":[{"type":"user"}]},"admin":{"directly_related_user_types":[{"type":"user"}]},"member":{"directly_related_user_types":[{"type":"user"}]},"can_manage_guild":{},"can_kick":{},"can_ban":{},"can_manage_roles":{},"can_manage_channels":{}}}},{"type":"channel","relations":{"guild":{"this":{}},"viewer":{"union":{"child":[{"this":{}},{"tupleToUserset":{"tupleset":{"relation":"guild"},"computedUserset":{"relation":"member"}}}]}},"sender":{"union":{"child":[{"this":{}},{"tupleToUserset":{"tupleset":{"relation":"guild"},"computedUserset":{"relation":"member"}}}]}},"manager":{"union":{"child":[{"this":{}},{"tupleToUserset":{"tupleset":{"relation":"guild"},"computedUserset":{"relation":"can_manage_channels"}}}]}}},"metadata":{"relations":{"guild":{"directly_related_user_types":[{"type":"guild"}]},"viewer":{"directly_related_user_types":[{"type":"user"}]},"sender":{"directly_related_user_types":[{"type":"user"}]},"manager":{"directly_related_user_types":[{"type":"user"}]}}}}]}`
 }

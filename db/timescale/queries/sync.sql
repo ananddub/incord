@@ -2,7 +2,8 @@
 
 -- name: SyncUsers :many
 -- Get users that changed (friends + guild members of user's guilds)
-SELECT DISTINCT u.* FROM users u
+SELECT DISTINCT u.*
+ FROM users u
 WHERE u.updated_at > $1
 AND (
   -- User's own profile
@@ -44,9 +45,20 @@ WHERE gm.updated_at > $2
 AND gm.guild_id IN (SELECT gm2.guild_id FROM guild_members gm2 WHERE gm2.user_id = $1 AND gm2.deleted = FALSE);
 
 -- name: SyncFriendships :many
-SELECT * FROM friendships
-WHERE updated_at > $2
-AND (user_id = $1 OR friend_id = $1);
+SELECT
+    f.*,
+    u.*,
+  d.channel_id
+FROM friendships f
+LEFT JOIN dm_channel_members d on f.friend_id = d.user_id
+LEFT JOIN users u
+    ON u.id = CASE
+        WHEN f.user_id = $1 THEN f.friend_id
+        ELSE f.user_id
+    END
+WHERE
+    (f.user_id = $1 OR f.friend_id = $1);
+-- AND f.updated_at > $2;
 
 -- name: SyncDmMembers :many
 SELECT dm.* FROM dm_channel_members dm

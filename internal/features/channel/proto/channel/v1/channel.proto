@@ -5,23 +5,89 @@ package channel.v1;
 option go_package = "github.com/ananddub/ndiscord_backend/gen/channel/v1;channelv1";
 
 import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
 import "buf/validate/validate.proto";
 
 service ChannelService {
-  rpc CreateChannel(CreateChannelRequest) returns (CreateChannelResponse);
-  rpc GetChannel(GetChannelRequest) returns (GetChannelResponse);
-  rpc UpdateChannel(UpdateChannelRequest) returns (UpdateChannelResponse);
-  rpc DeleteChannel(DeleteChannelRequest) returns (DeleteChannelResponse);
-  rpc ListGuildChannels(ListGuildChannelsRequest) returns (ListGuildChannelsResponse);
-  rpc CreateDMChannel(CreateDMChannelRequest) returns (CreateDMChannelResponse);
-  rpc ListDMChannels(ListDMChannelsRequest) returns (ListDMChannelsResponse);
-  // ListDMChannelMembers returns the user_ids of all members in a DM channel.
-  rpc ListDMChannelMembers(ListDMChannelMembersRequest) returns (ListDMChannelMembersResponse);
-  // ListDMChannelsWithMembers returns each DM channel the caller is in
-  // alongside the list of its member user_ids — saves N+1 round trips.
-  rpc ListDMChannelsWithMembers(ListDMChannelsWithMembersRequest) returns (ListDMChannelsWithMembersResponse);
-  rpc AddDMGroupMember(AddDMGroupMemberRequest) returns (AddDMGroupMemberResponse);
-  rpc RemoveDMGroupMember(RemoveDMGroupMemberRequest) returns (RemoveDMGroupMemberResponse);
+  // Guild channels are nested under /v1/guilds/{guild_id}/channels so the
+  // URL reflects the parent → child relationship. Single-resource ops
+  // (GET / PATCH / DELETE) go through /v1/channels/{channel_id} because
+  // a channel id is already globally unique.
+  rpc CreateChannel(CreateChannelRequest) returns (CreateChannelResponse) {
+    option (google.api.http) = { post: "/v1/guilds/{guild_id}/channels" body: "*" };
+  }
+  rpc GetChannel(GetChannelRequest) returns (GetChannelResponse) {
+    option (google.api.http) = { get: "/v1/channels/{channel_id}" };
+  }
+  rpc UpdateChannel(UpdateChannelRequest) returns (UpdateChannelResponse) {
+    option (google.api.http) = { patch: "/v1/channels/{channel_id}" body: "*" };
+  }
+  rpc DeleteChannel(DeleteChannelRequest) returns (DeleteChannelResponse) {
+    option (google.api.http) = { delete: "/v1/channels/{channel_id}" };
+  }
+  rpc ListGuildChannels(ListGuildChannelsRequest) returns (ListGuildChannelsResponse) {
+    option (google.api.http) = { get: "/v1/guilds/{guild_id}/channels" };
+  }
+  // DM channels live under /v1/dms (no parent guild).
+  rpc CreateDMChannel(CreateDMChannelRequest) returns (CreateDMChannelResponse) {
+    option (google.api.http) = { post: "/v1/dms" body: "*" };
+  }
+  rpc ListDMChannels(ListDMChannelsRequest) returns (ListDMChannelsResponse) {
+    option (google.api.http) = { get: "/v1/dms" };
+  }
+  rpc ListDMChannelMembers(ListDMChannelMembersRequest) returns (ListDMChannelMembersResponse) {
+    option (google.api.http) = { get: "/v1/dms/{channel_id}/members" };
+  }
+  rpc ListDMChannelsWithMembers(ListDMChannelsWithMembersRequest) returns (ListDMChannelsWithMembersResponse) {
+    // Convenience variant — DMs + their member lists in one call.
+    option (google.api.http) = { get: "/v1/dms:withMembers" };
+  }
+  rpc AddDMGroupMember(AddDMGroupMemberRequest) returns (AddDMGroupMemberResponse) {
+    option (google.api.http) = { put: "/v1/dms/{channel_id}/members/{user_id}" body: "*" };
+  }
+  rpc RemoveDMGroupMember(RemoveDMGroupMemberRequest) returns (RemoveDMGroupMemberResponse) {
+    option (google.api.http) = { delete: "/v1/dms/{channel_id}/members/{user_id}" };
+  }
+
+  // Per-channel allow/deny permission overrides. Layered on top of the
+  // guild-level role permissions — Discord precedence rules apply
+  // (user beats role, deny beats allow within a layer for user, allow
+  // beats deny within a layer for role; owner and ADMINISTRATOR bypass).
+  rpc SetChannelOverride(SetChannelOverrideRequest) returns (SetChannelOverrideResponse) {
+    // PUT on the (channel, target_type, target_id, permission) tuple —
+    // idempotent upsert of an allow/deny rule.
+    option (google.api.http) = {
+      put: "/v1/channels/{channel_id}/overrides/{target_type}/{target_id}/{permission}"
+      body: "*"
+    };
+  }
+  rpc DeleteChannelOverride(DeleteChannelOverrideRequest) returns (DeleteChannelOverrideResponse) {
+    option (google.api.http) = {
+      delete: "/v1/channels/{channel_id}/overrides/{target_type}/{target_id}/{permission}"
+    };
+  }
+  rpc ListChannelOverrides(ListChannelOverridesRequest) returns (ListChannelOverridesResponse) {
+    option (google.api.http) = { get: "/v1/channels/{channel_id}/overrides" };
+  }
+}
+
+enum OverrideTargetType {
+  OVERRIDE_TARGET_UNSPECIFIED = 0;
+  OVERRIDE_TARGET_ROLE = 1;
+  OVERRIDE_TARGET_USER = 2;
+}
+
+enum OverrideEffect {
+  OVERRIDE_EFFECT_UNSPECIFIED = 0;
+  OVERRIDE_EFFECT_ALLOW = 1;
+  OVERRIDE_EFFECT_DENY = 2;
+}
+
+message ChannelOverride {
+  string target_type = 1;  // "role" or "user"
+  string target_id = 2;
+  string permission = 3;   // Discord name, e.g. "SEND_MESSAGES"
+  string effect = 4;       // "allow" or "deny"
 }
 
 enum ChannelType {
@@ -46,6 +112,30 @@ message Channel {
   int32 position = 6;
   string parent_id = 7;
   google.protobuf.Timestamp created_at = 8;
+}
+
+message SetChannelOverrideRequest {
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string target_type = 2 [(buf.validate.field).string = {in: ["role", "user"]}];
+  string target_id = 3 [(buf.validate.field).string.uuid = true];
+  string permission = 4 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
+  string effect = 5 [(buf.validate.field).string = {in: ["allow", "deny"]}];
+}
+message SetChannelOverrideResponse {}
+
+message DeleteChannelOverrideRequest {
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+  string target_type = 2 [(buf.validate.field).string = {in: ["role", "user"]}];
+  string target_id = 3 [(buf.validate.field).string.uuid = true];
+  string permission = 4 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
+}
+message DeleteChannelOverrideResponse {}
+
+message ListChannelOverridesRequest {
+  string channel_id = 1 [(buf.validate.field).string.uuid = true];
+}
+message ListChannelOverridesResponse {
+  repeated ChannelOverride overrides = 1;
 }
 
 message CreateChannelRequest {

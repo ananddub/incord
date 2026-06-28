@@ -8,6 +8,7 @@ package mediav1
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -411,7 +412,7 @@ var File_media_v1_media_proto protoreflect.FileDescriptor
 
 const file_media_v1_media_proto_rawDesc = "" +
 	"\n" +
-	"\x14media/v1/media.proto\x12\bmedia.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bbuf/validate/validate.proto\"\x8f\x01\n" +
+	"\x14media/v1/media.proto\x12\bmedia.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1bbuf/validate/validate.proto\"\x8f\x01\n" +
 	"\x14RequestUploadRequest\x12&\n" +
 	"\bfilename\x18\x01 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\bfilename\x12-\n" +
@@ -438,13 +439,13 @@ const file_media_v1_media_proto_rawDesc = "" +
 	"\x11DeleteFileRequest\x12#\n" +
 	"\afile_id\x18\x01 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\x06fileId\"\x14\n" +
-	"\x12DeleteFileResponse2\xd0\x02\n" +
-	"\fMediaService\x12P\n" +
-	"\rRequestUpload\x12\x1e.media.v1.RequestUploadRequest\x1a\x1f.media.v1.RequestUploadResponse\x12P\n" +
-	"\rConfirmUpload\x12\x1e.media.v1.ConfirmUploadRequest\x1a\x1f.media.v1.ConfirmUploadResponse\x12S\n" +
-	"\x0eGetDownloadURL\x12\x1f.media.v1.GetDownloadURLRequest\x1a .media.v1.GetDownloadURLResponse\x12G\n" +
+	"\x12DeleteFileResponse2\xf0\x03\n" +
+	"\fMediaService\x12n\n" +
+	"\rRequestUpload\x12\x1e.media.v1.RequestUploadRequest\x1a\x1f.media.v1.RequestUploadResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/media/uploads\x12\x82\x01\n" +
+	"\rConfirmUpload\x12\x1e.media.v1.ConfirmUploadRequest\x1a\x1f.media.v1.ConfirmUploadResponse\"0\x82\xd3\xe4\x93\x02*:\x01*\"%/v1/media/uploads/{upload_id}/confirm\x12\x7f\n" +
+	"\x0eGetDownloadURL\x12\x1f.media.v1.GetDownloadURLRequest\x1a .media.v1.GetDownloadURLResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/v1/media/files/{file_id}/download\x12j\n" +
 	"\n" +
-	"DeleteFile\x12\x1b.media.v1.DeleteFileRequest\x1a\x1c.media.v1.DeleteFileResponseB;Z9github.com/ananddub/ndiscord_backend/gen/media/v1;mediav1b\x06proto3"
+	"DeleteFile\x12\x1b.media.v1.DeleteFileRequest\x1a\x1c.media.v1.DeleteFileResponse\"!\x82\xd3\xe4\x93\x02\x1b*\x19/v1/media/files/{file_id}B;Z9github.com/ananddub/ndiscord_backend/gen/media/v1;mediav1b\x06proto3"
 
 var (
 	file_media_v1_media_proto_rawDescOnce sync.Once
