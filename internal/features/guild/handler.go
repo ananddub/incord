@@ -789,11 +789,11 @@ func dbGuildMemberToProto(m db.GuildMember) *guildv1.GuildMember {
 
 func dbRoleToProto(r db.Role) *guildv1.Role {
 	pr := &guildv1.Role{
-		Id:          r.ID.String(),
-		GuildId:     r.GuildID.String(),
-		Name:        r.Name,
-		Color:       r.Color,
-		Position:    r.Position,
+		Id:       r.ID.String(),
+		GuildId:  r.GuildID.String(),
+		Name:     r.Name,
+		Color:    r.Color,
+		Position: r.Position,
 		// Permissions managed via OpenFGA, not in DB
 	}
 	if r.CreatedAt.Valid {

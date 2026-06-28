@@ -109,7 +109,6 @@ func TestLoginNonExistentUser(t *testing.T) {
 	assert.ErrorIs(t, err, ErrInvalidCredentials)
 }
 
-
 func TestRefreshToken(t *testing.T) {
 	svc, infra := setupAuthService(t)
 	ctx := context.Background()
