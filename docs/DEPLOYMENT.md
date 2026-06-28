@@ -88,9 +88,9 @@ MINIO_USE_SSL=false
 
 ## Migrations
 
-- **Postgres**: plain `golang-migrate` files in
-  [db/timescale/migrations/](../db/timescale/migrations). Named
-  `000NNN_description.{up,down}.sql`.
+- **Postgres**: Goose SQL files in
+  [db/timescale/migrations/](../db/timescale/migrations). Each file has
+  `-- +goose Up` and `-- +goose Down` sections.
 - **Scylla**: `.cql` files in [db/scylla/migrations/](../db/scylla/migrations).
   Applied via `make scylla-migrate`.
 - **Authz**: part of the regular Postgres migrations (000011 seeds the
@@ -99,10 +99,10 @@ MINIO_USE_SSL=false
 **Adding a migration:**
 
 ```bash
-migrate create -ext sql -dir db/timescale/migrations -seq description_of_change
+goose -dir db/timescale/migrations create description_of_change sql
 ```
 
-Edit both `up.sql` and `down.sql`, commit both. Every migration is
+Edit both sections in the generated `.sql` file. Every migration is
 idempotent where possible (`IF NOT EXISTS` on index creation).
 
 ## LiveKit wiring

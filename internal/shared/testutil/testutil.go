@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ananddub/ndiscord_backend/internal/shared/sqlutil"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/testcontainers/testcontainers-go"
@@ -104,11 +105,11 @@ func runMigrations(t *testing.T, pool *pgxpool.Pool) {
 	ctx := context.Background()
 
 	// Read migration files from disk (same as init tool)
-	files, err := filepath.Glob("db/timescale/migrations/*.up.sql")
+	files, err := filepath.Glob("db/timescale/migrations/*.sql")
 	if err != nil || len(files) == 0 {
 		// Try relative paths from different test directories
 		for _, prefix := range []string{"", "../", "../../", "../../../", "../../../../"} {
-			files, _ = filepath.Glob(prefix + "db/timescale/migrations/*.up.sql")
+			files, _ = filepath.Glob(prefix + "db/timescale/migrations/*.sql")
 			if len(files) > 0 {
 				break
 			}
@@ -122,12 +123,8 @@ func runMigrations(t *testing.T, pool *pgxpool.Pool) {
 			if err != nil {
 				t.Fatalf("failed to read migration %s: %v", f, err)
 			}
-			stmts := strings.Split(string(data), ";")
+			stmts := sqlutil.SplitStatements(sqlutil.GooseUpSection(string(data)))
 			for _, stmt := range stmts {
-				stmt = strings.TrimSpace(stmt)
-				if stmt == "" {
-					continue
-				}
 				if _, err := pool.Exec(ctx, stmt); err != nil {
 					// Ignore "already exists" errors
 					if !strings.Contains(err.Error(), "already exists") {
@@ -143,7 +140,7 @@ func runMigrations(t *testing.T, pool *pgxpool.Pool) {
 	migration := `
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(32) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -155,10 +152,10 @@ CREATE TABLE users (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
-CREATE TABLE friendships (
+CREATE TABLE IF NOT EXISTS friendships (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     friend_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
@@ -166,7 +163,7 @@ CREATE TABLE friendships (
     PRIMARY KEY (user_id, friend_id)
 );
 
-CREATE TABLE guilds (
+CREATE TABLE IF NOT EXISTS guilds (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
     description TEXT NOT NULL DEFAULT '',
@@ -175,7 +172,7 @@ CREATE TABLE guilds (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE guild_members (
+CREATE TABLE IF NOT EXISTS guild_members (
     guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     nickname VARCHAR(32) NOT NULL DEFAULT '',
@@ -183,7 +180,7 @@ CREATE TABLE guild_members (
     PRIMARY KEY (guild_id, user_id)
 );
 
-CREATE TABLE roles (
+CREATE TABLE IF NOT EXISTS roles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
@@ -192,13 +189,13 @@ CREATE TABLE roles (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE role_members (
+CREATE TABLE IF NOT EXISTS role_members (
     role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     PRIMARY KEY (role_id, user_id)
 );
 
-CREATE TABLE channels (
+CREATE TABLE IF NOT EXISTS channels (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     guild_id UUID REFERENCES guilds(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
@@ -209,7 +206,7 @@ CREATE TABLE channels (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE channel_permission_overwrites (
+CREATE TABLE IF NOT EXISTS channel_permission_overwrites (
     channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
     target_id UUID NOT NULL,
     target_type VARCHAR(10) NOT NULL,
@@ -218,13 +215,13 @@ CREATE TABLE channel_permission_overwrites (
     PRIMARY KEY (channel_id, target_id)
 );
 
-CREATE TABLE dm_channel_members (
+CREATE TABLE IF NOT EXISTS dm_channel_members (
     channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     PRIMARY KEY (channel_id, user_id)
 );
 
-CREATE TABLE invites (
+CREATE TABLE IF NOT EXISTS invites (
     code VARCHAR(10) PRIMARY KEY,
     guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
     channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
@@ -235,7 +232,7 @@ CREATE TABLE invites (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE bans (
+CREATE TABLE IF NOT EXISTS bans (
     guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     reason TEXT NOT NULL DEFAULT '',
@@ -243,7 +240,7 @@ CREATE TABLE bans (
     PRIMARY KEY (guild_id, user_id)
 );
 
-CREATE TABLE emojis (
+CREATE TABLE IF NOT EXISTS emojis (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
     name VARCHAR(32) NOT NULL,
@@ -252,7 +249,7 @@ CREATE TABLE emojis (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE webhooks (
+CREATE TABLE IF NOT EXISTS webhooks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
     guild_id UUID NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
@@ -262,7 +259,7 @@ CREATE TABLE webhooks (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE media_files (
+CREATE TABLE IF NOT EXISTS media_files (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     uploader_id UUID NOT NULL REFERENCES users(id),
     filename TEXT NOT NULL,

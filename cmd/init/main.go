@@ -11,6 +11,7 @@ import (
 
 	"github.com/ananddub/ndiscord_backend/internal/shared/config"
 	"github.com/ananddub/ndiscord_backend/internal/shared/logger"
+	"github.com/ananddub/ndiscord_backend/internal/shared/sqlutil"
 	"github.com/gocql/gocql"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -40,7 +41,7 @@ func main() {
 	log.Info().Msg("=== Init complete! ===")
 }
 
-// migratePG reads all .up.sql files from db/timescale/migrations/ and executes them.
+// migratePG reads Goose .sql files from db/timescale/migrations/ and executes their Up sections.
 func migratePG(ctx context.Context, cfg config.DatabaseConfig) error {
 	var pool *pgxpool.Pool
 	var err error
@@ -59,7 +60,7 @@ func migratePG(ctx context.Context, cfg config.DatabaseConfig) error {
 	defer pool.Close()
 
 	// Read migration files from disk
-	files, err := filepath.Glob("db/timescale/migrations/*.up.sql")
+	files, err := filepath.Glob("db/timescale/migrations/*.sql")
 	if err != nil || len(files) == 0 {
 		return fmt.Errorf("no migration files found in db/timescale/migrations/")
 	}
@@ -71,13 +72,8 @@ func migratePG(ctx context.Context, cfg config.DatabaseConfig) error {
 			return fmt.Errorf("failed to read %s: %w", f, err)
 		}
 
-		// Split by semicolons and execute each statement
-		stmts := strings.Split(string(data), ";")
+		stmts := sqlutil.SplitStatements(sqlutil.GooseUpSection(string(data)))
 		for _, stmt := range stmts {
-			stmt = strings.TrimSpace(stmt)
-			if stmt == "" {
-				continue
-			}
 			if _, err := pool.Exec(ctx, stmt); err != nil {
 				// Ignore "already exists" errors
 				if !strings.Contains(err.Error(), "already exists") &&
@@ -171,4 +167,3 @@ func migrateScylla(cfg config.ScyllaDBConfig) error {
 
 	return nil
 }
-

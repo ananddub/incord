@@ -47,7 +47,6 @@ func NewHandlers(infra *Infra, cfg *config.Config) *Handlers {
 	userSvc.SetStorage(infra.MinIO, infra.MinIOSigner, cfg.MinIO.Bucket)
 	userHandler := user.NewHandler(userSvc)
 	userHandler.SetBlockChecker(user.NewBlockChecker(userRepo))
-
 	// Guild
 	guildRepo := guild.NewRepository(infra.Pool, infra.Redis)
 	guildSvc := guild.NewService(guildRepo, infra.LPubSub, infra.Authz)

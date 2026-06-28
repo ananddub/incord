@@ -25,7 +25,7 @@ func Publish[T any](lsp *LPubSub, subj string, data T) error {
 	if err != nil {
 		return err
 	}
-	logger.Log.Info().Str("pub:subject", subj).RawJSON("raw:data", b).Msg("nats publish")
+	// logger.Log.Info().Str("pub:subject", subj).RawJSON("raw:data", b).Msg("nats publish")
 	return lsp.nc.Publish(subj, b)
 }
 

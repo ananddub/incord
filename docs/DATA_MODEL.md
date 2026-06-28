@@ -8,7 +8,7 @@ data, Redis for live/ephemeral state, and MinIO for blobs.
 ## Postgres / TimescaleDB
 
 Migrations live in [db/timescale/migrations/](../db/timescale/migrations).
-Apply with `make migrate` or `migrate -path db/timescale/migrations -database $DATABASE_URL up`.
+Apply with `make migrate-up` or `goose -dir db/timescale/migrations postgres $DATABASE_URL up`.
 
 ### Identity
 

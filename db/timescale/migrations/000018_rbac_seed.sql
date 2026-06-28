@@ -1,22 +1,5 @@
--- Replace OpenFGA with a plain Postgres-backed RBAC.
---
--- Two new tables:
---   permissions      — canonical catalogue of Discord-style permission names
---   role_permissions — join table: which permissions a role grants
---
--- Guild owner stays authoritative via guilds.owner_id. Admin is just a
--- row in permissions named 'ADMINISTRATOR' that short-circuits every
--- Can* check when a user has it through any assigned role.
-
-CREATE TABLE permissions (
-    id          BIGSERIAL PRIMARY KEY,
-    name        VARCHAR(64) NOT NULL UNIQUE,
-    description TEXT NOT NULL DEFAULT ''
-);
-
--- Seed all 50 Discord permissions. Names match the guild.v1.Permission
--- proto enum so the Go client can map can_* relation strings → name
--- via authz.PermissionRelation without a second translation table.
+-- +goose Up
+-- +goose StatementBegin
 INSERT INTO permissions (name, description) VALUES
   ('VIEW_CHANNELS',                        'See channels in the guild'),
   ('SEND_MESSAGES',                        'Post messages in text channels'),
@@ -67,22 +50,10 @@ INSERT INTO permissions (name, description) VALUES
   ('SEND_MESSAGES_IN_THREADS',             'Post in threads'),
   ('MANAGE_THREADS',                       'Delete / archive threads'),
   ('CREATE_EVENTS',                        'Create scheduled events'),
-  ('MANAGE_EVENTS',                        'Edit / delete scheduled events');
+  ('MANAGE_EVENTS',                        'Edit / delete scheduled events')
+ON CONFLICT (name) DO UPDATE
+  SET description = EXCLUDED.description;
 
--- Join table. CASCADE on role_id so deleting a role auto-cleans grants;
--- RESTRICT on permission_id so a catalogue row can never be dropped while
--- referenced (would silently strip permissions from every role that had it).
-CREATE TABLE role_permissions (
-    role_id       UUID   NOT NULL REFERENCES roles(id)       ON DELETE CASCADE,
-    permission_id BIGINT NOT NULL REFERENCES permissions(id) ON DELETE RESTRICT,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (role_id, permission_id)
-);
-CREATE INDEX idx_role_permissions_perm ON role_permissions(permission_id);
-
--- Seed @everyone baseline in every existing guild: the permissions
--- Discord enables by default for a fresh server so old users aren't
--- suddenly locked out of public channels after the cutover.
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
@@ -95,3 +66,48 @@ WHERE r.name = '@everyone' AND r.deleted = FALSE
     'USE_EXTERNAL_EMOJIS','USE_SOUNDBOARD','REQUEST_TO_SPEAK'
   )
 ON CONFLICT DO NOTHING;
+-- +goose StatementEnd
+
+-- +goose Down
+-- +goose StatementBegin
+DELETE FROM role_permissions
+WHERE permission_id IN (
+  SELECT id
+  FROM permissions
+  WHERE name IN (
+    'VIEW_CHANNELS','SEND_MESSAGES','MANAGE_MESSAGES','MANAGE_CHANNELS',
+    'MANAGE_GUILD','KICK_MEMBERS','BAN_MEMBERS','MANAGE_ROLES',
+    'MANAGE_INVITES','ADD_REACTIONS','CONNECT','SPEAK','STREAM',
+    'MUTE_MEMBERS','DEAFEN_MEMBERS','MENTION_EVERYONE','MANAGE_EMOJIS',
+    'MANAGE_WEBHOOKS','ADMINISTRATOR','VIEW_AUDIT_LOG','VIEW_GUILD_INSIGHTS',
+    'MANAGE_NICKNAMES','CHANGE_NICKNAME','CREATE_GUILD_EXPRESSIONS',
+    'MODERATE_MEMBERS','VIEW_CREATOR_MONETIZATION_ANALYTICS','SEND_TTS_MESSAGES',
+    'EMBED_LINKS','ATTACH_FILES','READ_MESSAGE_HISTORY','USE_EXTERNAL_EMOJIS',
+    'USE_EXTERNAL_STICKERS','USE_EXTERNAL_SOUNDS','USE_EXTERNAL_APPS',
+    'PRIORITY_SPEAKER','MOVE_MEMBERS','USE_VAD','REQUEST_TO_SPEAK',
+    'USE_SOUNDBOARD','USE_EMBEDDED_ACTIVITIES','SEND_VOICE_MESSAGES',
+    'SEND_POLLS','PIN_MESSAGES','BYPASS_SLOWMODE','CREATE_PUBLIC_THREADS',
+    'CREATE_PRIVATE_THREADS','SEND_MESSAGES_IN_THREADS','MANAGE_THREADS',
+    'CREATE_EVENTS','MANAGE_EVENTS'
+  )
+);
+
+DELETE FROM permissions
+WHERE name IN (
+  'VIEW_CHANNELS','SEND_MESSAGES','MANAGE_MESSAGES','MANAGE_CHANNELS',
+  'MANAGE_GUILD','KICK_MEMBERS','BAN_MEMBERS','MANAGE_ROLES',
+  'MANAGE_INVITES','ADD_REACTIONS','CONNECT','SPEAK','STREAM',
+  'MUTE_MEMBERS','DEAFEN_MEMBERS','MENTION_EVERYONE','MANAGE_EMOJIS',
+  'MANAGE_WEBHOOKS','ADMINISTRATOR','VIEW_AUDIT_LOG','VIEW_GUILD_INSIGHTS',
+  'MANAGE_NICKNAMES','CHANGE_NICKNAME','CREATE_GUILD_EXPRESSIONS',
+  'MODERATE_MEMBERS','VIEW_CREATOR_MONETIZATION_ANALYTICS','SEND_TTS_MESSAGES',
+  'EMBED_LINKS','ATTACH_FILES','READ_MESSAGE_HISTORY','USE_EXTERNAL_EMOJIS',
+  'USE_EXTERNAL_STICKERS','USE_EXTERNAL_SOUNDS','USE_EXTERNAL_APPS',
+  'PRIORITY_SPEAKER','MOVE_MEMBERS','USE_VAD','REQUEST_TO_SPEAK',
+  'USE_SOUNDBOARD','USE_EMBEDDED_ACTIVITIES','SEND_VOICE_MESSAGES',
+  'SEND_POLLS','PIN_MESSAGES','BYPASS_SLOWMODE','CREATE_PUBLIC_THREADS',
+  'CREATE_PRIVATE_THREADS','SEND_MESSAGES_IN_THREADS','MANAGE_THREADS',
+  'CREATE_EVENTS','MANAGE_EVENTS'
+);
+-- +goose StatementEnd
+

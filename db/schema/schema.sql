@@ -7,7 +7,7 @@ WITH replication = {
 
 -- === TABLES ===
 
-CREATE TABLE myapp.users (
+CREATE TABLE IF NOT EXISTS myapp.users (
     id          uuid PRIMARY KEY,
     username    text,
     email       text,
@@ -19,4 +19,4 @@ CREATE TABLE myapp.users (
     updated_at  timestamp
 );
 
-CREATE INDEX myapp.users_email_idx ON myapp.users (email);
+CREATE INDEX IF NOT EXISTS myapp.users_email_idx ON myapp.users (email);

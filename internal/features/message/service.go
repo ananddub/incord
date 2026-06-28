@@ -17,32 +17,6 @@ import (
 	"github.com/ananddub/ndiscord_backend/internal/shared/realtime"
 )
 
-// DMChannelResolver creates/finds DM channels. Implemented by channel service.
-type DMChannelResolver interface {
-	GetOrCreateDMChannel(ctx context.Context, userID string, recipientIDs []string) (channelID string, err error)
-}
-
-// BlockChecker checks if a user is blocked. Implemented by user service.
-type BlockChecker interface {
-	IsBlocked(ctx context.Context, userID, targetID string) bool
-}
-
-// DMChannelLister lists all DM channels a user is part of with metadata.
-type DMChannelLister interface {
-	GetUserDMChannelIDs(ctx context.Context, userID string) ([]string, error)
-	GetDMChannelMemberIDs(ctx context.Context, channelID string) ([]string, error)
-}
-
-// MediaResolver resolves uploaded media file IDs into concrete attachment
-// metadata. Implemented by the media service; injected here to avoid a hard
-// dependency on that package.
-type MediaResolver interface {
-	// ResolveAttachment returns filename, presigned-URL, content_type and size
-	// for a previously uploaded media file. If the file does not exist, belongs
-	// to a different uploader, or is unconfirmed, an error is returned.
-	ResolveAttachment(ctx context.Context, fileID, uploaderID string) (filename, url, contentType string, size int64, err error)
-}
-
 type Service struct {
 	repo          *Repository
 	redis         *redis.Client
@@ -75,7 +49,6 @@ func (s *Service) SetDMChannelLister(l DMChannelLister) { s.dmChannelList = l }
 func (s *Service) SetMediaResolver(m MediaResolver) { s.media = m }
 
 // dedupMentions normalises a caller-supplied list of mentioned user IDs:
-// drops self-mentions, removes duplicates, ignores empty strings.
 func dedupMentions(ids []string, authorID string) []string {
 	if len(ids) == 0 {
 		return nil
@@ -672,9 +645,6 @@ func (s *Service) toggleReaction(ctx context.Context, userID, channelID, guildID
 	if emoji == "" {
 		return ErrEmojiRequired
 	}
-	// ADD_REACTIONS is the correct gate here; Discord lets anyone *remove*
-	// their own reaction regardless of perm, so only the "add" branch
-	// is checked.
 	if add && guildID != "" && !s.authz.CanAddReactions(ctx, userID, guildID) {
 		return ErrInsufficientPermissions
 	}
@@ -691,8 +661,6 @@ func (s *Service) toggleReaction(ctx context.Context, userID, channelID, guildID
 		return ErrInvalidUUID
 	}
 
-	// Don't allow reacting to deleted messages — matches GetMessage's
-	// tombstone-hiding behavior.
 	msg, err := s.repo.GetMessage(ctx, chUUID, msgUUID)
 	if err != nil {
 		return ErrMessageNotFound
@@ -712,16 +680,9 @@ func (s *Service) toggleReaction(ctx context.Context, userID, channelID, guildID
 	if add {
 		evtType = streamv1.ChatEventType_CHAT_EVENT_REACTION_ADD
 	}
-	// Build the rich snapshot via buildMessageEvent so the event carries the
-	// full per-emoji reactions list + attachments + reply info — receivers
-	// can replace their local state wholesale instead of recomputing from
-	// incremental deltas. This is what makes multi-device sync "just work":
-	// every subscribed device (including the reactor's own other devices)
-	// receives an authoritative state snapshot on every mutation.
+
 	atts := s.loadAttachments(ctx, chUUID, msgUUID)
 	payload := s.buildMessageEvent(ctx, evtType, channelID, guildID, userID, msg, atts)
-	// Reaction-specific field. The reactor's identity already rides on
-	// SenderId (set by buildMessageEvent), so no separate user_id is needed.
 	payload.Emoji = emoji
 	s.publishChannelEvent(ctx, guildID, channelID, payload)
 	return nil

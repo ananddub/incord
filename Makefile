@@ -35,13 +35,13 @@ sqlc:
 
 # Database migrations
 migrate-up:
-	migrate -path db/timescale/migrations -database "postgres://ndiscord:ndiscord@localhost:5432/ndiscord?sslmode=disable" up
+	goose -dir db/timescale/migrations postgres "postgres://ndiscord:ndiscord@localhost:5432/ndiscord?sslmode=disable" up
 
 migrate-down:
-	migrate -path db/timescale/migrations -database "postgres://ndiscord:ndiscord@localhost:5432/ndiscord?sslmode=disable" down 1
+	goose -dir db/timescale/migrations postgres "postgres://ndiscord:ndiscord@localhost:5432/ndiscord?sslmode=disable" down
 
 migrate-create:
-	migrate create -ext sql -dir db/timescale/migrations -seq $(name)
+	goose -dir db/timescale/migrations create $(name) sql
 
 # Testing
 test:
@@ -84,4 +84,3 @@ clean:
 # any target that wants to pop a dev URL in the browser.
 chrome:
 	flatpak run com.google.Chrome --new-window >/dev/null 2>&1 &
-

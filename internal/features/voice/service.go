@@ -172,12 +172,8 @@ type UserProfileResolver interface {
 	LookupBasicProfile(ctx context.Context, userID string) (username, avatarURL string)
 }
 
-// SetProfileResolver wires the user profile resolver.
 func (s *Service) SetProfileResolver(r UserProfileResolver) { s.profile = r }
 
-// buildToken returns a signed JWT granting the user publish+subscribe rights
-// in the given room for the configured TTL. User metadata (profile JSON) is
-// embedded so other participants see it immediately on join.
 func (s *Service) buildToken(room, identity string) (string, error) {
 	at := auth.NewAccessToken(s.cfg.APIKey, s.cfg.APISecret)
 	grant := &auth.VideoGrant{
@@ -190,9 +186,6 @@ func (s *Service) buildToken(room, identity string) (string, error) {
 		SetIdentity(identity).
 		SetValidFor(tokenTTL)
 
-	// Embed user profile as participant metadata — LiveKit stores it and
-	// the webhook relays it, so every client sees username + avatar
-	// without extra lookups.
 	if s.profile != nil {
 		username, avatarURL := s.profile.LookupBasicProfile(context.Background(), identity)
 		meta := fmt.Sprintf(`{"userId":"%s","username":"%s","avatarUrl":"%s"}`, identity, username, avatarURL)
@@ -457,8 +450,6 @@ func (s *Service) JoinDMCall(ctx context.Context, userID, channelID string, vide
 	}
 
 	roomName := channelID
-	// CreateRoom is idempotent — caller may have already created it but the
-	// room could also have been reaped if empty, so re-create defensively.
 	if _, err := s.roomClient.CreateRoom(ctx, &livekit.CreateRoomRequest{
 		Name:            roomName,
 		EmptyTimeout:    60,
@@ -481,7 +472,6 @@ func (s *Service) JoinDMCall(ctx context.Context, userID, channelID string, vide
 		Timestamp:     timestamppb.Now(),
 	}
 	for _, mid := range members {
-		// _ = s.lpb.Publish(realtime.DmCall(mid), payload)
 		realtime.Publish(s.lpb, realtime.DmCall(mid), payload)
 	}
 

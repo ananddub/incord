@@ -371,7 +371,9 @@ func (s *Service) publishDMChannelCreated(ctx context.Context, ch db.Channel, me
 	s.publishDMChannelEvent(ctx, streamv1.ChannelLifecycleType_CHANNEL_LIFECYCLE_CREATE, ch, memberIDs)
 }
 
-func (s *Service) publishDMChannelEvent(ctx context.Context, eventType streamv1.ChannelLifecycleType, ch db.Channel, memberIDs []string) {
+func (s *Service) publishDMChannelEvent(ctx context.Context,
+	eventType streamv1.ChannelLifecycleType,
+	ch db.Channel, memberIDs []string) {
 	if s.lpb == nil {
 		return
 	}

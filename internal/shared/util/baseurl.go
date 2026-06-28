@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/ananddub/ndiscord_backend/internal/shared/config"
 )
@@ -16,5 +17,8 @@ func GetMinioBaseURL() string {
 }
 
 func GetBaseURl(key string) string {
+	if strings.HasPrefix(key,"http") || strings.HasPrefix(key,"https") {
+		return key	
+	}
 	return GetMinioBaseURL() + key
 }

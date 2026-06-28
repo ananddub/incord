@@ -178,7 +178,7 @@ var allowedAvatarContentTypes = map[string]bool{
 }
 
 func (s *Service) ResolveAvatarURL(ctx context.Context, key string) string {
-	return util.GetMinioBaseURL() + key
+	return util.GetBaseURl(key)
 }
 
 func (s *Service) UploadAvatar(ctx context.Context, userID pgtype.UUID, filename, contentType string, data []byte) (db.User, string, error) {
