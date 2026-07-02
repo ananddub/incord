@@ -12,3 +12,4 @@ RETURNING *;
 
 -- name: DeleteMediaFile :exec
 UPDATE media_files SET deleted = TRUE, updated_at = NOW() WHERE id = $1;
+
